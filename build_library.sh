@@ -1,22 +1,32 @@
 #!/bin/bash
 
-# create library directory
-mkdir ./lib
 
-# build glew
-make -C ./glew
-mkdir -p ./lib/GLEW/tmp && cp -rf ./GLEW/tmp/* ./lib/GLEW/tmp
-# cp -rf ./GLEW/tmp ./lib/GLEW
-mkdir -p ./lib/GLEW/lib && cp -rf ./GLEW/lib/* ./lib/GLEW/lib
-# cp -rf ./GLEW/lib ./lib/GLEW
-mkdir -p ./lib/GLEW/bin && cp -rf ./GLEW/bin/* ./lib/GLEW/bin
-# cp -rf ./GLEW/bin ./lib/GLEW
+# (1) on Ubuntu, install build tools first.
+# ------------------------------------------------
+# sudo apt-get install build-essential libxmu-dev libxi-dev libgl-dev libglu-dev
 
-cp -rf ./GLEW/glew.pc ./lib/GLEW/glew.pc
 
-# build된 파일만 쏙! 나머지 자원은 정리.
-make clean -C ./GLEW
+# (2) on MacOS, ??
+# ------------------------------------------------
+# 이건 클러스터에서 테스트 진행할 것.
 
-# build glfw
-cmake -S ./GLFW -B ./lib/GLFW/build
-make -C ./lib/GLFW/build
+
+# build GLEW
+# https://github.com/nigels-com/glew
+# ------------------------------------------------
+# (1) build with make
+	# make -C ./GLEW
+	# sudo make install -C ./GLEW
+	# make clean -C ./GLEW
+	
+# (2) build with cmake
+cd ./GLEW/build
+cmake ./cmake
+make glew_s # build the glew static library
+cd ../../
+
+
+# build GLFW
+# ------------------------------------------------
+cmake -S ./GLFW -B ./GLFW/build
+make -C ./GLFW/build

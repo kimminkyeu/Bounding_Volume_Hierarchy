@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/scoop.dir/scoop.cpp.o -o scoop  /home/minkyeki/scoop/GLEW/build/lib/libGLEW.a /home/minkyeki/scoop/GLFW/build/src/libglfw3.a 

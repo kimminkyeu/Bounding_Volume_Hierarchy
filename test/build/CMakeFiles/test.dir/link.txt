@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/test.dir/test.cpp.o -o test  /home/minkyeki/scoop/test/lib/lib_test.a 

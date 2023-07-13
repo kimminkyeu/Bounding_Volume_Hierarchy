@@ -1,2 +1,10 @@
-./lib
+
+# ignore binary files
+# ----------------------------
+./GLEW/build/lib # ignore library file built by cmake
+./GLFW/build # ignore library dir made by cmake
+
+# ignore Clion dev diretory
+# ----------------------------
 ./cmake-build-debug
+.idea

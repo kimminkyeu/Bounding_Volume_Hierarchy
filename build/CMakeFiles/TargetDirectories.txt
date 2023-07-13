@@ -1,0 +1,5 @@
+/home/minkyeki/scoop/build/CMakeFiles/scoop.dir
+/home/minkyeki/scoop/build/CMakeFiles/re.dir
+/home/minkyeki/scoop/build/CMakeFiles/fclean.dir
+/home/minkyeki/scoop/build/CMakeFiles/edit_cache.dir
+/home/minkyeki/scoop/build/CMakeFiles/rebuild_cache.dir
