@@ -1,3 +1,0 @@
-/home/minkyeki/scoop/test/build/CMakeFiles/test.dir
-/home/minkyeki/scoop/test/build/CMakeFiles/edit_cache.dir
-/home/minkyeki/scoop/test/build/CMakeFiles/rebuild_cache.dir
