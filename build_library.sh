@@ -18,5 +18,5 @@ cp -rf ./GLEW/glew.pc ./lib/GLEW/glew.pc
 make clean -C ./GLEW
 
 # build glfw
-# cmake -S ./GLFW -B ./lib/GLFW/build
-# make -C ./lib/GLFW/build
+cmake -S ./GLFW -B ./lib/GLFW/build
+make -C ./lib/GLFW/build

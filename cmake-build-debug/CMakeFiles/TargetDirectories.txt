@@ -1,0 +1,3 @@
+/goinfre/minkyeki/scoop/cmake-build-debug/CMakeFiles/scoop.dir
+/goinfre/minkyeki/scoop/cmake-build-debug/CMakeFiles/edit_cache.dir
+/goinfre/minkyeki/scoop/cmake-build-debug/CMakeFiles/rebuild_cache.dir
