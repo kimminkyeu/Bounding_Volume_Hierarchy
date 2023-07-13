@@ -1,6 +1,7 @@
 
 # ignore binary files
 # ----------------------------
+./build
 ./GLEW/build/lib # ignore library file built by cmake
 ./GLFW/build # ignore library dir made by cmake
 
