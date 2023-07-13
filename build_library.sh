@@ -5,13 +5,18 @@ mkdir ./lib
 
 # build glew
 make -C ./glew
-cp -r -f ./GLEW/tmp ./lib/GLEW
-cp -r -f ./GLEW/lib ./lib/GLEW
-cp -r -f ./GLEW/bin ./lib/GLEW
-cp -r -f ./GLEW/glew.pc ./lib/GLEW/glew.pc
+mkdir -p ./lib/GLEW/tmp && cp -rf ./GLEW/tmp/* ./lib/GLEW/tmp
+# cp -rf ./GLEW/tmp ./lib/GLEW
+mkdir -p ./lib/GLEW/lib && cp -rf ./GLEW/lib/* ./lib/GLEW/lib
+# cp -rf ./GLEW/lib ./lib/GLEW
+mkdir -p ./lib/GLEW/bin && cp -rf ./GLEW/bin/* ./lib/GLEW/bin
+# cp -rf ./GLEW/bin ./lib/GLEW
+
+cp -rf ./GLEW/glew.pc ./lib/GLEW/glew.pc
+
 # build된 파일만 쏙! 나머지 자원은 정리.
 make clean -C ./GLEW
 
 # build glfw
-cmake -S ./GLFW -B ./lib/GLFW/build
-make -C ./lib/GLFW/build
+# cmake -S ./GLFW -B ./lib/GLFW/build
+# make -C ./lib/GLFW/build
