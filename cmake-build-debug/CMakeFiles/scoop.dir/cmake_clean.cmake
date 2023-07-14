@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/scoop.dir/scoop.cpp.o"
-  "CMakeFiles/scoop.dir/scoop.cpp.o.d"
+  "CMakeFiles/scoop.dir/src/scoop.cpp.o"
+  "CMakeFiles/scoop.dir/src/scoop.cpp.o.d"
   "scoop"
   "scoop.pdb"
 )

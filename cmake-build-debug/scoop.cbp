@@ -106,7 +106,7 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/home/minkyeki/scoop/scoop.cpp">
+		<Unit filename="/home/minkyeki/scoop/src/scoop.cpp">
 			<Option target="scoop"/>
 		</Unit>
 		<Unit filename="/home/minkyeki/scoop/CMakeLists.txt">

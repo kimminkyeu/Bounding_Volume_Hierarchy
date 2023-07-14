@@ -8,7 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/home/minkyeki/scoop/scoop.cpp" "CMakeFiles/scoop.dir/scoop.cpp.o" "gcc" "CMakeFiles/scoop.dir/scoop.cpp.o.d"
+  "/home/minkyeki/scoop/src/scoop.cpp" "CMakeFiles/scoop.dir/src/scoop.cpp.o" "gcc" "CMakeFiles/scoop.dir/src/scoop.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

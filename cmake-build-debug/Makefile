@@ -155,29 +155,29 @@ fclean/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/fclean.dir/build.make CMakeFiles/fclean.dir/build
 .PHONY : fclean/fast
 
-scoop.o: scoop.cpp.o
-.PHONY : scoop.o
+src/scoop.o: src/scoop.cpp.o
+.PHONY : src/scoop.o
 
 # target to build an object file
-scoop.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/scoop.dir/build.make CMakeFiles/scoop.dir/scoop.cpp.o
-.PHONY : scoop.cpp.o
+src/scoop.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scoop.dir/build.make CMakeFiles/scoop.dir/src/scoop.cpp.o
+.PHONY : src/scoop.cpp.o
 
-scoop.i: scoop.cpp.i
-.PHONY : scoop.i
+src/scoop.i: src/scoop.cpp.i
+.PHONY : src/scoop.i
 
 # target to preprocess a source file
-scoop.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/scoop.dir/build.make CMakeFiles/scoop.dir/scoop.cpp.i
-.PHONY : scoop.cpp.i
+src/scoop.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scoop.dir/build.make CMakeFiles/scoop.dir/src/scoop.cpp.i
+.PHONY : src/scoop.cpp.i
 
-scoop.s: scoop.cpp.s
-.PHONY : scoop.s
+src/scoop.s: src/scoop.cpp.s
+.PHONY : src/scoop.s
 
 # target to generate assembly for a file
-scoop.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/scoop.dir/build.make CMakeFiles/scoop.dir/scoop.cpp.s
-.PHONY : scoop.cpp.s
+src/scoop.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/scoop.dir/build.make CMakeFiles/scoop.dir/src/scoop.cpp.s
+.PHONY : src/scoop.cpp.s
 
 # Help Target
 help:
@@ -190,9 +190,9 @@ help:
 	@echo "... fclean"
 	@echo "... re"
 	@echo "... scoop"
-	@echo "... scoop.o"
-	@echo "... scoop.i"
-	@echo "... scoop.s"
+	@echo "... src/scoop.o"
+	@echo "... src/scoop.i"
+	@echo "... src/scoop.s"
 .PHONY : help
 
 

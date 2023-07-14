@@ -69,28 +69,28 @@ include CMakeFiles/scoop.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/scoop.dir/flags.make
 
-CMakeFiles/scoop.dir/scoop.cpp.o: CMakeFiles/scoop.dir/flags.make
-CMakeFiles/scoop.dir/scoop.cpp.o: /home/minkyeki/scoop/scoop.cpp
-CMakeFiles/scoop.dir/scoop.cpp.o: CMakeFiles/scoop.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/minkyeki/scoop/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/scoop.dir/scoop.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/scoop.dir/scoop.cpp.o -MF CMakeFiles/scoop.dir/scoop.cpp.o.d -o CMakeFiles/scoop.dir/scoop.cpp.o -c /home/minkyeki/scoop/scoop.cpp
+CMakeFiles/scoop.dir/src/scoop.cpp.o: CMakeFiles/scoop.dir/flags.make
+CMakeFiles/scoop.dir/src/scoop.cpp.o: /home/minkyeki/scoop/src/scoop.cpp
+CMakeFiles/scoop.dir/src/scoop.cpp.o: CMakeFiles/scoop.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/minkyeki/scoop/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/scoop.dir/src/scoop.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/scoop.dir/src/scoop.cpp.o -MF CMakeFiles/scoop.dir/src/scoop.cpp.o.d -o CMakeFiles/scoop.dir/src/scoop.cpp.o -c /home/minkyeki/scoop/src/scoop.cpp
 
-CMakeFiles/scoop.dir/scoop.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/scoop.dir/scoop.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minkyeki/scoop/scoop.cpp > CMakeFiles/scoop.dir/scoop.cpp.i
+CMakeFiles/scoop.dir/src/scoop.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/scoop.dir/src/scoop.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minkyeki/scoop/src/scoop.cpp > CMakeFiles/scoop.dir/src/scoop.cpp.i
 
-CMakeFiles/scoop.dir/scoop.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/scoop.dir/scoop.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minkyeki/scoop/scoop.cpp -o CMakeFiles/scoop.dir/scoop.cpp.s
+CMakeFiles/scoop.dir/src/scoop.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/scoop.dir/src/scoop.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minkyeki/scoop/src/scoop.cpp -o CMakeFiles/scoop.dir/src/scoop.cpp.s
 
 # Object files for target scoop
 scoop_OBJECTS = \
-"CMakeFiles/scoop.dir/scoop.cpp.o"
+"CMakeFiles/scoop.dir/src/scoop.cpp.o"
 
 # External object files for target scoop
 scoop_EXTERNAL_OBJECTS =
 
-scoop: CMakeFiles/scoop.dir/scoop.cpp.o
+scoop: CMakeFiles/scoop.dir/src/scoop.cpp.o
 scoop: CMakeFiles/scoop.dir/build.make
 scoop: /home/minkyeki/scoop/dependency/GLEW/build/lib/libGLEW.a
 scoop: /home/minkyeki/scoop/dependency/GLFW/build/src/libglfw3.a

@@ -22,11 +22,14 @@ endif()
 set(NAME scoop)
 set(CMAKE_CXX_STANDARD 20) # Cpp compiler version
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(SOURCE_FILES
+        src/scoop.cpp
+    )
 
 # configure cmake project
 # ----------------------------------------------------------------------------
-project(${NAME}) # set project name
-add_executable(${NAME} scoop.cpp)
+project( ${NAME} ) # set project name
+add_executable( ${NAME} ${SOURCE_FILES} )
 
 # OPENGL
 # ----------------------------------------------------------------------------
