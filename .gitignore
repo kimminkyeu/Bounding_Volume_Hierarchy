@@ -2,6 +2,12 @@
 # ignore binary files
 # ----------------------------
 ./build
+./cmake-build-debug
+.idea
+
+# GLFW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
+# ----------------------------
+dependency/GLFW/build                     # ignore library dir made by cmake>
 
 # GLEW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
 # ----------------------------
@@ -15,11 +21,3 @@ dependency/GLEW/build/CMakeCache.txt
 dependency/GLEW/build/glew.pc
 dependency/GLEW/build/Makefile
 
-# GLFW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
-# ----------------------------
-./dependency/GLFW/build                     # ignore library dir made by cmake>
-
-# ignore Clion dev diretory
-# ----------------------------
-./cmake-build-debug
-.idea
