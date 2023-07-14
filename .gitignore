@@ -2,8 +2,9 @@
 # ignore binary files
 # ----------------------------
 ./build
-./GLEW/build/lib # ignore library file built by cmake
-./GLFW/build # ignore library dir made by cmake
+./dependency/GLEW/build/lib                 # ignore library file built by cmake.
+./dependency/GLEW/build/CMakeCache.txt      # 디렉토리 변경시 cache를 지워야 함.
+./dependency/GLFW/build                     # ignore library dir made by cmake>
 
 # ignore Clion dev diretory
 # ----------------------------

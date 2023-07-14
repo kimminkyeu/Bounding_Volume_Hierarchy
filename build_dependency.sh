@@ -20,13 +20,13 @@
 	# make clean -C ./GLEW
 	
 # (2) build with cmake
-cd ./GLEW/build
+cd ./dependency/GLEW/build
 cmake ./cmake
 make glew_s # build the glew static library
-cd ../../
+cd ../../../
 
 
 # build GLFW
 # ------------------------------------------------
-cmake -S ./GLFW -B ./GLFW/build
-make -C ./GLFW/build
+cmake -S ./dependency/GLFW -B ./dependency/GLFW/build
+make -C ./dependency/GLFW/build

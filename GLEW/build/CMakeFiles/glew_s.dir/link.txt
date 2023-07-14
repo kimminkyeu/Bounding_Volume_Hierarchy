@@ -1,2 +1,0 @@
-/usr/bin/ar qc lib/libGLEW.a CMakeFiles/glew_s.dir/home/minkyeki/scoop/GLEW/src/glew.c.o
-/usr/bin/ranlib lib/libGLEW.a
