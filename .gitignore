@@ -1,12 +1,26 @@
 
 # ignore binary files
 # ----------------------------
-./build
-./dependency/GLEW/build/lib                 # ignore library file built by cmake.
-./dependency/GLEW/build/CMakeCache.txt      # 디렉토리 변경시 cache를 지워야 함.
-./dependency/GLFW/build                     # ignore library dir made by cmake>
+build
+
+# GLEW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
+# ----------------------------
+dependency/GLEW/build/**
+!dependency/GLEW/build/cmake
+!dependency/GLEW/build/vc6
+!dependency/GLEW/build/vc10
+!dependency/GLEW/build/vc12
+!dependency/GLEW/build/vc14
+!dependency/GLEW/build/vc15
+!dependency/GLEW/build/glew.rc
+!dependency/GLEW/build/glewinfo.rc
+!dependency/GLEW/build/visulinfo.rc
+
+# GLFW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
+# ----------------------------
+dependency/GLFW/build                     # ignore library dir made by cmake>
 
 # ignore Clion dev diretory
 # ----------------------------
-./cmake-build-debug
+cmake-build-debug
 .idea
