@@ -5,16 +5,14 @@ build
 
 # GLEW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
 # ----------------------------
-dependency/GLEW/build/**
-!dependency/GLEW/build/cmake
-!dependency/GLEW/build/vc6
-!dependency/GLEW/build/vc10
-!dependency/GLEW/build/vc12
-!dependency/GLEW/build/vc14
-!dependency/GLEW/build/vc15
-!dependency/GLEW/build/glew.rc
-!dependency/GLEW/build/glewinfo.rc
-!dependency/GLEW/build/visulinfo.rc
+dependency/GLEW/build/bin
+dependency/GLEW/build/CMakeFiles
+dependency/GLEW/build/lib
+dependency/GLEW/build/cmake_install.cmake
+dependency/GLEW/build/cmake_uninstall.cmake
+dependency/GLEW/build/CMakeCache.txt
+dependency/GLEW/build/glew.pc
+dependency/GLEW/build/Makefile
 
 # GLFW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
 # ----------------------------
