@@ -5,6 +5,7 @@ build
 
 # GLEW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
 # ----------------------------
+!dependency/GLEW/build
 dependency/GLEW/build/bin
 dependency/GLEW/build/CMakeFiles
 dependency/GLEW/build/lib
