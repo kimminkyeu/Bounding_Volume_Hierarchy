@@ -1,8 +1,8 @@
 
 # ignore binary files
 # ----------------------------
-./build
-./cmake-build-debug
+build
+cmake-build-debug
 .idea
 
 # GLFW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
