@@ -16,7 +16,7 @@
 # ------------------------------------------------
 # (1) build with make
 	# make -C ./GLEW
-	# sudo make install -C ./GLEW
+	# sudo make install -C ./GLEW  #시스템에 직접 GLEW 설치
 	# make clean -C ./GLEW
 	
 # (2) build with cmake
@@ -26,7 +26,7 @@ make glew_s # build the glew static library
 cd ../../../
 
 
-# build GLFW
+# build GLFW with cmake
 # ------------------------------------------------
 cmake -S ./dependency/GLFW -B ./dependency/GLFW/build
 make -C ./dependency/GLFW/build
