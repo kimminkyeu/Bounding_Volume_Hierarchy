@@ -7,13 +7,20 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+// Hello, Triangle example.
+//https://heinleinsgame.tistory.com/7
+
+#ifndef PROJECT_ROOT_DIR // cmake에서 설정해주도록 함.
+# define PROJECT_ROOT_DIR "../" // ??
+#endif
+
 // window dimensions
 const GLint WIDTH = 800;
 const GLint HEIGHT = 600;
 
 // VAO(Vertex Array Object) : 1개 vertex에 들어있는 데이터 명세
 // VBO(Vertex Buffer Object) : vertex 자체
-GLuint VAO, VBO, shader;
+GLuint VAO, VBO, shaderProgram;
 
 void create_triangle()
 {
@@ -22,17 +29,15 @@ void create_triangle()
 			1.0f, -1.0f, 0.0f, 	// v1. x y z
 			0.0f, 1.0f, 0.0f 	// v2. x y z
 	};
-	// (1) create VAO
-	glGenVertexArrays(1, &VAO); // store id to VAO variable
-	glBindVertexArray(VAO);
 
-	// (2) create VBO
+	glGenVertexArrays(1, &VAO); // store id to VAO variable
 	glGenBuffers(1, &VBO);
+
+	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(verticies), verticies, GL_STATIC_DRAW);
 
-	// ! what is stride?? what is index?
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
 	glEnableVertexAttribArray(0);
 
 	// unbind data
@@ -44,15 +49,16 @@ void add_shader(GLuint theProgram, const std::string& shader_code, GLenum shader
 {
 	GLuint theShader = glCreateShader(shaderType);
 	const GLint len = shader_code.length();
-	glShaderSource(theShader, 1, (const GLchar *const *)shader_code.c_str(), &len);
+	const char* src = shader_code.c_str();
+	glShaderSource(theShader, 1, &src, &len);
 	glCompileShader(theShader);
 
 	GLint result = 0;
 	GLchar eLog[1024] = { 0, };
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &result);
+	glGetShaderiv(theShader, GL_COMPILE_STATUS, &result);
 	if (!result)
 	{
-		glGetShaderInfoLog(shader, sizeof(eLog), nullptr, eLog);
+		glGetShaderInfoLog(theShader, sizeof(eLog), nullptr, eLog);
 		std::cout << eLog << "\n";
 		return ;
 	}
@@ -62,6 +68,8 @@ void add_shader(GLuint theProgram, const std::string& shader_code, GLenum shader
 // read file.
 std::string convert_shader_file_to_string(const std::string& path)
 {
+	std::cout << path << "\n";
+
 	std::ifstream t(path);
 	if (t.fail()) {
 		return {""};
@@ -73,42 +81,43 @@ std::string convert_shader_file_to_string(const std::string& path)
 
 void compile_shaders()
 {
-	shader = glCreateProgram();
+	std::string project_root_dir = PROJECT_ROOT_DIR;
+	std::string vertex_shader_path = project_root_dir + std::string("/src/vertex_shader.glsl");
+	std::string fragment_shader_path = project_root_dir + std::string("/src/fragment_shader.glsl");
+	std::string vertex_shader_code = convert_shader_file_to_string(vertex_shader_path);
+	std::string fragment_shader_code = convert_shader_file_to_string(fragment_shader_path);
 
-	if (!shader)
-	{
-		std::cout << "Shader program creation failure\n";
-		return ;
-	}
-	std::string vertex_shader = convert_shader_file_to_string("../src/vertex_shader.glsl");
-	std::string fragment_shader = convert_shader_file_to_string("../src/fragment_shader.glsl");
-	if (vertex_shader.empty() || fragment_shader.empty())
+	if (vertex_shader_code.empty() || fragment_shader_code.empty())
 	{
 		assert(false && "shader file to string error");
 		// ...
 	}
 	else
 	{
-		std::cout << vertex_shader << "\n";
-
-		add_shader(shader, vertex_shader, GL_VERTEX_SHADER);
-		add_shader(shader, fragment_shader, GL_FRAGMENT_SHADER);
+		shaderProgram = glCreateProgram();
+		if (!shaderProgram)
+		{
+			std::cout << "Shader program creation failure\n";
+			return ;
+		}
+		add_shader(shaderProgram, vertex_shader_code, GL_VERTEX_SHADER);
+		add_shader(shaderProgram, fragment_shader_code, GL_FRAGMENT_SHADER);
 		GLint result = 0;
 		GLchar eLog[1024] = {0,}; // shader 디버깅은 어렵기 떄문에 이런 방식으로 처리.
 
-		glLinkProgram(shader);
-		glGetProgramiv(shader, GL_LINK_STATUS, &result);
+		glLinkProgram(shaderProgram);
+		glGetProgramiv(shaderProgram, GL_LINK_STATUS, &result);
 		if (!result) {
 			memset(eLog, 0, sizeof(eLog));
-			glGetProgramInfoLog(shader, sizeof(eLog), nullptr, eLog);
+			glGetProgramInfoLog(shaderProgram, sizeof(eLog), nullptr, eLog);
 			std::cout << eLog << "\n";
 		}
 
-		glValidateProgram(shader);
-		glGetProgramiv(shader, GL_VALIDATE_STATUS, &result);
+		glValidateProgram(shaderProgram);
+		glGetProgramiv(shaderProgram, GL_VALIDATE_STATUS, &result);
 		if (!result) {
 			memset(eLog, 0, sizeof(eLog));
-			glGetProgramInfoLog(shader, sizeof(eLog), nullptr, eLog);
+			glGetProgramInfoLog(shaderProgram, sizeof(eLog), nullptr, eLog);
 			std::cout << eLog << "\n";
 		}
 	}
@@ -163,9 +172,8 @@ int main()
 	// Setup Viewport size (OpenGL functionality)
 	glViewport(0, 0, bufferWidth, bufferHeight);
 
-	//
-	create_triangle();
 	compile_shaders();
+	create_triangle();
 
 	// Loop until mainWindow closed
 	while (!glfwWindowShouldClose(mainWindow))
@@ -178,7 +186,7 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// ------------------------------------
-		glUseProgram(shader); // let GPU use the given shader program
+		glUseProgram(shaderProgram); // let GPU use the given shader program
 
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -191,6 +199,8 @@ int main()
 		// 3개를 쓰기도 하지만, 여기선 2개만 사용.
 		glfwSwapBuffers(mainWindow);
 	}
+
+	glfwTerminate();
 	return (0);
 }
 

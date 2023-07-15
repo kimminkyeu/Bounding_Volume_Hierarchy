@@ -17,7 +17,7 @@ else()
     # ... ?
 endif()
 
-# set cmake vairable
+# set cmake variable
 # ----------------------------------------------------------------------------
 set(NAME scoop)
 set(CMAKE_CXX_STANDARD 20) # Cpp compiler version
@@ -30,6 +30,14 @@ set(SOURCE_FILES
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name
 add_executable( ${NAME} ${SOURCE_FILES} )
+
+# set cmake to add define variable to specific target.
+# ----------------------------------------------------------------------------
+# 이 행위를 통해, 실행 파일 내부 에서 fopen등 함수 사용시 CMakelist.txt 파일 기준 절대경로 설정하기 위함.
+target_compile_definitions( ${NAME}
+        PRIVATE
+        PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}"
+        )
 
 # OPENGL
 # ----------------------------------------------------------------------------
