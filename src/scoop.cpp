@@ -29,7 +29,7 @@ float curAngle = 0;
 // VBO(Vertex Buffer Object) : vertex 자체
 // IBO(Indexed Buffer Object) : vertex 묶음 (면).
 GLuint VAO, VBO, shaderProgram, IBO;
-GLint MATRIX_LOCATION;
+GLint MODEL_LOCATION, PROJECTION_LOCATION;
 
 void create_triangle()
 {
@@ -147,8 +147,11 @@ void compile_shaders()
 			std::cout << "[glGetProgramInfoLog: validation]" << eLog << "\n";
 		}
 	}
+	// **************************************************************************
 	// shader 프로그램의 uniform 변수중 이름이 "matrix"인 친구를 찾아 그 location를 반환.
-	MATRIX_LOCATION = glGetUniformLocation(shaderProgram, "matrix");
+	MODEL_LOCATION = glGetUniformLocation(shaderProgram, "model");
+	PROJECTION_LOCATION = glGetUniformLocation(shaderProgram, "projection");
+	// **************************************************************************
 }
 
 int main()
@@ -206,6 +209,8 @@ int main()
 	create_triangle();
 	compile_shaders();
 
+	glm::mat4 projectionMatrix = glm::perspective(45.0f, (GLfloat)bufferWidth/(GLfloat)bufferHeight, 0.1f, 100.0f);
+
 	// Loop until mainWindow closed
 	while (!glfwWindowShouldClose(mainWindow))
 	{
@@ -226,13 +231,17 @@ int main()
 		glUseProgram(shaderProgram); // let GPU use the given shader program
 
 		glm::mat4 matrix(1.0f); // init unit matrix
-		matrix = glm::scale(matrix, glm::vec3(0.4f, 0.4, 0.4f));
+		// [t] * [r] * [s] * [pos]
+		matrix = glm::translate(matrix, glm::vec3(0.0f, 0.0f, -2.0f));
 		matrix = glm::rotate(matrix, curAngle * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		matrix = glm::scale(matrix, glm::vec3(0.4f, 0.4, 0.4f));
 		// transpose = 전치 행렬. 행우선 연산이 아닌 열우선 연산일 수 도 있기 때문.
 		// 참고! ctrl + p 누르면 파라미터 정보 뜸.
 
 		// same as [(from shader) uniform mat4 MATRIX = matrix (from src)], 즉 shader 변수로 값 대입.
-		glUniformMatrix4fv(MATRIX_LOCATION, 1, GL_FALSE, glm::value_ptr(matrix));
+		glUniformMatrix4fv(MODEL_LOCATION, 1, GL_FALSE, glm::value_ptr(matrix));
+		glUniformMatrix4fv(PROJECTION_LOCATION, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+
 		glBindVertexArray(VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr); // already bind IBO
