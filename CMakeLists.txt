@@ -7,15 +7,15 @@ cmake_minimum_required(VERSION 3.24) # set cmake version
 # let the preprocessor know about the system name
 # ----------------------------------------------------------------------------
 # Link: https://coderefinery.github.io/cmake-workshop/environment/
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    # ... ?
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    # ... ?
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    # ... ?
-else()
-    # ... ?
-endif()
+#    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+#        # ... ?
+#    elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+#        # ... ?
+#    elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+#        # ... ?
+#    else()
+#        # ... ?
+#    endif()
 
 # set cmake variable
 # ----------------------------------------------------------------------------
@@ -30,6 +30,15 @@ set(SOURCE_FILES
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name
 add_executable( ${NAME} ${SOURCE_FILES} )
+
+# run build_dependency.sh script before compilation (ex. GLEW, GLFW)
+# ----------------------------------------------------------------------------
+ADD_CUSTOM_COMMAND(
+        TARGET ${NAME}
+        COMMAND ${CMAKE_SOURCE_DIR}/build_dependency.sh
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} # where CMakeLists.txt is located
+        COMMENT "Building project dependency binaries [GLEW, GLFW]..."
+)
 
 # set cmake to add define variable to specific target.
 # ----------------------------------------------------------------------------
@@ -51,7 +60,7 @@ include_directories( SYSTEM # to use '#include <...>'
         ${CMAKE_SOURCE_DIR}/dependency/GLFW/include
         )
 
-# link library (archive files)
+# link libraries (archive files)
 # ----------------------------------------------------------------------------
 target_link_libraries( ${NAME}
         PRIVATE # --> [?] : 참고 https://cmake.org/pipermail/cmake/2016-May/063400.html
@@ -59,8 +68,24 @@ target_link_libraries( ${NAME}
         # -lGL --> (find_package 명령어와 OpenGL::GL이 대신함)
         ${CMAKE_SOURCE_DIR}/dependency/GLEW/build/lib/libGLEW.a
         ${CMAKE_SOURCE_DIR}/dependency/GLFW/build/src/libglfw3.a
-        -lX11
         )
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux") # Linux
+    target_link_libraries( ${NAME}
+            PRIVATE
+            -lX11 )
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin") # MacOS
+    target_link_libraries( ${NAME}
+            PRIVATE
+            "-framework Cocoa"
+            "-framework IOKit"
+            )
+    # ... ?
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows") # Windows
+    # ... ?
+else()
+    # ... ?
+endif()
 
 # Add custom rule (ex make fclean, re)
 # ----------------------------------------------------------------------------
