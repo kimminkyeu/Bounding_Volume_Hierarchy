@@ -40,24 +40,35 @@ ADD_CUSTOM_COMMAND(
         COMMENT "Building project dependency binaries [GLEW, GLFW]..."
 )
 
-# set cmake to add define variable to specific target.
+# Set cmake to add define variable to specific target.
 # ----------------------------------------------------------------------------
 # 이 행위를 통해, 실행 파일 내부 에서 fopen등 함수 사용시 CMakelist.txt 파일 기준 절대경로 설정하기 위함.
 target_compile_definitions( ${NAME}
         PRIVATE
         PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}"
+        GLM_FORCE_SWIZZLE # force GLM to report the configuration as part of the build log
         )
 
-# OPENGL
+# OpenGL
 # ----------------------------------------------------------------------------
 # 시스템에서 패키지를 찾고, 그 위치와 바이너리 이름들을 변수로 자동 저장해준다.
 find_package( OpenGL REQUIRED ) # stops processing with an error message if the package cannot be found.
+message(STATUS "OpenGL included at ${OPENGL_INCLUDE_DIR}")
 
-# include path
+# GLM math library
+# ----------------------------------------------------------------------------
+# https://github.com/g-truc/glm/blob/master/manual.md#-15-finding-glm-with-cmake
+set(glm_DIR ${CMAKE_SOURCE_DIR}/dependency/glm/cmake/glm) # if necessary
+find_package( glm REQUIRED )
+target_link_libraries( ${NAME} PRIVATE glm::glm )
+message(STATUS "GLM included at ${GLM_INCLUDE_DIR}")
+
+# set include path for GLEW, GLFW
 # ----------------------------------------------------------------------------
 include_directories( SYSTEM # to use '#include <...>'
         ${CMAKE_SOURCE_DIR}/dependency/GLEW/include
         ${CMAKE_SOURCE_DIR}/dependency/GLFW/include
+        ${CMAKE_SOURCE_DIR}/dependency/glm/glm
         )
 
 # link libraries (archive files)

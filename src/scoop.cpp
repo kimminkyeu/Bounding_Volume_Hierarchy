@@ -4,8 +4,13 @@
 #include <string>
 #include <fstream> // for ifstream
 #include <sstream> // for stringstream
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 // Hello, Triangle example.
 //https://heinleinsgame.tistory.com/7
@@ -17,6 +22,14 @@
 // window dimensions
 const GLint WIDTH = 800;
 const GLint HEIGHT = 600;
+constexpr float toRadians = 3.14159265f / 100.0f;
+
+// testing animation
+GLint uniformModel; // ! 여기서 이 변수는 쉐이더 변수를 가리키는 id를 저장하는 것.
+bool direction = true;
+float triOffset = 0.0f;
+float triMaxOffset = 0.7f;
+float triIncrement = 0.01f;
 
 // VAO(Vertex Array Object) : 1개 vertex에 들어있는 데이터 명세
 // VBO(Vertex Buffer Object) : vertex 자체
@@ -35,11 +48,10 @@ void create_triangle()
 
 	glBindVertexArray(VAO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(verticies), verticies, GL_STATIC_DRAW);
-
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
-	glEnableVertexAttribArray(0);
-
+	// bind data
+		glBufferData(GL_ARRAY_BUFFER, sizeof(verticies), verticies, GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
+		glEnableVertexAttribArray(0);
 	// unbind data
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
@@ -59,7 +71,7 @@ void add_shader(GLuint theProgram, const std::string& shader_code, GLenum shader
 	if (!result)
 	{
 		glGetShaderInfoLog(theShader, sizeof(eLog), nullptr, eLog);
-		std::cout << eLog << "\n";
+		std::cout << "[glGetShaderInfoLog]" << eLog << "\n";
 		return ;
 	}
 	glAttachShader(theProgram, theShader);
@@ -110,7 +122,7 @@ void compile_shaders()
 		if (!result) {
 			memset(eLog, 0, sizeof(eLog));
 			glGetProgramInfoLog(shaderProgram, sizeof(eLog), nullptr, eLog);
-			std::cout << eLog << "\n";
+			std::cout << "[glGetProgramInfoLog: linking shader" << eLog << "\n";
 		}
 
 		glValidateProgram(shaderProgram);
@@ -118,8 +130,13 @@ void compile_shaders()
 		if (!result) {
 			memset(eLog, 0, sizeof(eLog));
 			glGetProgramInfoLog(shaderProgram, sizeof(eLog), nullptr, eLog);
-			std::cout << eLog << "\n";
+			std::cout << "[glGetProgramInfoLog: validation]" << eLog << "\n";
 		}
+
+		// 쉐이더에서 사용하는 변수를 여기서 접근하기 위함. (xMove 변수를 여기서 접근)
+		uniformModel = glGetUniformLocation(shaderProgram, "model");
+
+
 	}
 }
 
@@ -172,14 +189,32 @@ int main()
 	// Setup Viewport size (OpenGL functionality)
 	glViewport(0, 0, bufferWidth, bufferHeight);
 
-	compile_shaders();
 	create_triangle();
+	compile_shaders();
 
 	// Loop until mainWindow closed
 	while (!glfwWindowShouldClose(mainWindow))
 	{
 		// Get + Handle user input events.
 		glfwPollEvents(); // send endpoint repeatedly.
+
+
+		// change shader's variable
+		// -----------------------
+		if (direction)
+		{
+			triOffset += triIncrement;
+		}
+		else
+		{
+			triOffset -= triIncrement;
+		}
+		if (abs(triOffset) >= triMaxOffset)
+		{
+			direction = !direction;
+		}
+		// -----------------------
+
 
 		// Clear window
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -188,10 +223,16 @@ int main()
 		// ------------------------------------
 		glUseProgram(shaderProgram); // let GPU use the given shader program
 
-		glBindVertexArray(VAO);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-		glBindVertexArray(0);
 
+		glm::mat4 model(1.0f);
+		model = glm::translate(model, glm::vec3(triOffset, 0.0f, 0.0f));
+		model = glm::rotate(model, 45 * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+
+		glBindVertexArray(VAO);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+		glBindVertexArray(0);
 		glUseProgram(0); // unbind
 		// ------------------------------------
 
