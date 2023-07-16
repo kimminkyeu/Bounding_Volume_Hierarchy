@@ -23,31 +23,52 @@
 constexpr GLint WIDTH = 800;
 constexpr GLint HEIGHT = 600;
 constexpr float toRadians = 3.14159265f / 100.0f;
+float curAngle = 0;
 
 // VAO(Vertex Array Object) : 1개 vertex에 들어있는 데이터 명세
 // VBO(Vertex Buffer Object) : vertex 자체
-GLuint VAO, VBO, shaderProgram;
+// IBO(Indexed Buffer Object) : vertex 묶음 (면).
+GLuint VAO, VBO, shaderProgram, IBO;
+GLint MATRIX_LOCATION;
 
 void create_triangle()
 {
-	GLfloat verticies[9] = {
+	unsigned int indices[] = {
+			0, 3, 1,
+			1, 3, 2,
+			2, 3, 0,
+			0, 1, 2
+	};
+
+	GLfloat verticies[] = {
 			-1.0f, -1.0f, 0.0f,	// v0. x y z
+			0.0f, -1.0f, 1.0f,
 			1.0f, -1.0f, 0.0f, 	// v1. x y z
 			0.0f, 1.0f, 0.0f 	// v2. x y z
 	};
 
+	// VAO
 	glGenVertexArrays(1, &VAO); // store id to VAO variable
-	glGenBuffers(1, &VBO);
-
 	glBindVertexArray(VAO);
+
+	// IBO
+	glGenBuffers(1, &IBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+	// VBO
+	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	// bind data
+
+		// bind data
 		glBufferData(GL_ARRAY_BUFFER, sizeof(verticies), verticies, GL_STATIC_DRAW);
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
 		glEnableVertexAttribArray(0);
-	// unbind data
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
+
+	// WARN: you should unbind IBO/VBO after you unbind the VAO!
+	glBindVertexArray(0); // unbind VAO
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); // unbind IBO
+	glBindBuffer(GL_ARRAY_BUFFER, 0); // unbind VBO
 }
 
 void add_shader(GLuint theProgram, const std::string& shader_code, GLenum shaderType)
@@ -126,6 +147,8 @@ void compile_shaders()
 			std::cout << "[glGetProgramInfoLog: validation]" << eLog << "\n";
 		}
 	}
+	// shader 프로그램의 uniform 변수중 이름이 "matrix"인 친구를 찾아 그 location를 반환.
+	MATRIX_LOCATION = glGetUniformLocation(shaderProgram, "matrix");
 }
 
 int main()
@@ -174,6 +197,9 @@ int main()
 		return (1);
 	}
 
+	// 약간 야매 방식. depth buffer 없이 실시간 검사로 일단 테스트 (임시 방편)
+	glEnable(GL_DEPTH_TEST);
+
 	// Setup Viewport size (OpenGL functionality)
 	glViewport(0, 0, bufferWidth, bufferHeight);
 
@@ -186,17 +212,33 @@ int main()
 		// Get + Handle user input events.
 		glfwPollEvents(); // send endpoint repeatedly.
 
+		curAngle += 0.05f;
+		if (curAngle >= 360)
+		{
+			curAngle -= 360;
+		}
 
 		// Clear window
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// ------------------------------------
 		glUseProgram(shaderProgram); // let GPU use the given shader program
 
+		glm::mat4 matrix(1.0f); // init unit matrix
+		matrix = glm::scale(matrix, glm::vec3(0.4f, 0.4, 0.4f));
+		matrix = glm::rotate(matrix, curAngle * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+		// transpose = 전치 행렬. 행우선 연산이 아닌 열우선 연산일 수 도 있기 때문.
+		// 참고! ctrl + p 누르면 파라미터 정보 뜸.
+
+		// same as [(from shader) uniform mat4 MATRIX = matrix (from src)], 즉 shader 변수로 값 대입.
+		glUniformMatrix4fv(MATRIX_LOCATION, 1, GL_FALSE, glm::value_ptr(matrix));
 		glBindVertexArray(VAO);
-			glDrawArrays(GL_TRIANGLES, 0, 3);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr); // already bind IBO
+
 		glBindVertexArray(0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		glUseProgram(0); // unbind
 		// ------------------------------------
 

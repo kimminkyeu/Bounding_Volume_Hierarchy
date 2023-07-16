@@ -5,10 +5,10 @@
 layout (location = 0) in vec3 pos; // input data of vertex shader
 out vec4 vCol; // output data of vertex shader
 
-// -1이 0이 되게 하고 싶은데...
+uniform mat4 matrix; // used in main code.
 
 void main()
 {
-    gl_Position = vec4(0.4 * pos.x, 0.4 * pos.y, pos.z, 1.0f);
+    gl_Position = matrix * vec4(pos, 1.0f);
     vCol = vec4(clamp(pos, 0.0f, 1.0f), 1.0f); // because of -1.0f position in triangle...
 }
