@@ -1,4 +1,4 @@
-#version 330
+#version 330 core
 // version is 3.3.0
 
 in vec4 vCol; // input data (from vertex shader)

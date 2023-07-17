@@ -1,9 +1,8 @@
 #include <iostream>
 #include <cstring>
 #include <cassert>
-#include <string>
-#include <fstream> // for ifstream
-#include <sstream> // for stringstream
+
+#include <vector>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -12,12 +11,14 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Mesh.h"
+
 // Hello, Triangle example.
 //https://heinleinsgame.tistory.com/7
-
 #ifndef PROJECT_ROOT_DIR // cmake에서 설정해주도록 함.
 # define PROJECT_ROOT_DIR "../" // ??
 #endif
+
 
 // window dimensions
 constexpr GLint WIDTH = 800;
@@ -25,51 +26,14 @@ constexpr GLint HEIGHT = 600;
 constexpr float toRadians = 3.14159265f / 100.0f;
 float curAngle = 0;
 
+std::vector< Mesh* > meshList;
+
 // VAO(Vertex Array Object) : 1개 vertex에 들어있는 데이터 명세
 // VBO(Vertex Buffer Object) : vertex 자체
 // IBO(Indexed Buffer Object) : vertex 묶음 (면).
-GLuint VAO, VBO, shaderProgram, IBO;
+
+GLuint shaderProgram;
 GLint MODEL_LOCATION, PROJECTION_LOCATION;
-
-void create_triangle()
-{
-	unsigned int indices[] = {
-			0, 3, 1,
-			1, 3, 2,
-			2, 3, 0,
-			0, 1, 2
-	};
-
-	GLfloat verticies[] = {
-			-1.0f, -1.0f, 0.0f,	// v0. x y z
-			0.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, 0.0f, 	// v1. x y z
-			0.0f, 1.0f, 0.0f 	// v2. x y z
-	};
-
-	// VAO
-	glGenVertexArrays(1, &VAO); // store id to VAO variable
-	glBindVertexArray(VAO);
-
-	// IBO
-	glGenBuffers(1, &IBO);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-	// VBO
-	glGenBuffers(1, &VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
-		// bind data
-		glBufferData(GL_ARRAY_BUFFER, sizeof(verticies), verticies, GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
-		glEnableVertexAttribArray(0);
-
-	// WARN: you should unbind IBO/VBO after you unbind the VAO!
-	glBindVertexArray(0); // unbind VAO
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); // unbind IBO
-	glBindBuffer(GL_ARRAY_BUFFER, 0); // unbind VBO
-}
 
 void add_shader(GLuint theProgram, const std::string& shader_code, GLenum shaderType)
 {
@@ -89,20 +53,6 @@ void add_shader(GLuint theProgram, const std::string& shader_code, GLenum shader
 		return ;
 	}
 	glAttachShader(theProgram, theShader);
-}
-
-// read file.
-std::string convert_shader_file_to_string(const std::string& path)
-{
-	std::cout << path << "\n";
-
-	std::ifstream t(path);
-	if (t.fail()) {
-		return {""};
-	}
-	std::stringstream buffer;
-	buffer << t.rdbuf();
-	return buffer.str();
 }
 
 void compile_shaders()
@@ -152,6 +102,31 @@ void compile_shaders()
 	MODEL_LOCATION = glGetUniformLocation(shaderProgram, "model");
 	PROJECTION_LOCATION = glGetUniformLocation(shaderProgram, "projection");
 	// **************************************************************************
+}
+
+void create_triangle()
+{
+	unsigned int indices[] = {
+			0, 3, 1,
+			1, 3, 2,
+			2, 3, 0,
+			0, 1, 2
+	};
+
+	GLfloat verticies[] = {
+			-1.0f, -1.0f, 0.0f,	// v0. x y z
+			0.0f, -1.0f, 1.0f,
+			1.0f, -1.0f, 0.0f, 	// v1. x y z
+			0.0f, 1.0f, 0.0f 	// v2. x y z
+	};
+
+	Mesh *obj1_ptr = new Mesh();
+	obj1_ptr->CreateMesh(verticies, indices, 12, 12);
+	meshList.push_back(obj1_ptr);
+
+	Mesh *obj2_ptr = new Mesh();
+	obj1_ptr->CreateMesh(verticies, indices, 12, 12);
+	meshList.push_back(obj1_ptr);
 }
 
 int main()
@@ -217,7 +192,7 @@ int main()
 		// Get + Handle user input events.
 		glfwPollEvents(); // send endpoint repeatedly.
 
-		curAngle += 0.05f;
+		curAngle += 0.5f;
 		if (curAngle >= 360)
 		{
 			curAngle -= 360;
@@ -231,31 +206,28 @@ int main()
 		glUseProgram(shaderProgram); // let GPU use the given shader program
 
 		glm::mat4 matrix(1.0f); // init unit matrix
-		// [t] * [r] * [s] * [pos]
-		matrix = glm::translate(matrix, glm::vec3(0.0f, 0.0f, -2.0f));
-		matrix = glm::rotate(matrix, curAngle * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
-		matrix = glm::scale(matrix, glm::vec3(0.4f, 0.4, 0.4f));
-		// transpose = 전치 행렬. 행우선 연산이 아닌 열우선 연산일 수 도 있기 때문.
-		// 참고! ctrl + p 누르면 파라미터 정보 뜸.
-
-		// same as [(from shader) uniform mat4 MATRIX = matrix (from src)], 즉 shader 변수로 값 대입.
-		glUniformMatrix4fv(MODEL_LOCATION, 1, GL_FALSE, glm::value_ptr(matrix));
 		glUniformMatrix4fv(PROJECTION_LOCATION, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 
-		glBindVertexArray(VAO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-		glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, nullptr); // already bind IBO
+		// [t] * [s] * [pos]d
+		matrix = glm::translate(matrix, glm::vec3(1.0f, 0.0f, -2.5f));
+		matrix = glm::scale(matrix, glm::vec3(0.4f, 0.4, 0.4f));
+		glUniformMatrix4fv(MODEL_LOCATION, 1, GL_FALSE, glm::value_ptr(matrix));
+		meshList[0]->RenderMesh();
 
-		glBindVertexArray(0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		matrix = glm::mat4(1.0f);
+		matrix = glm::translate(matrix, glm::vec3(-1.0f, 0.0f, -2.5f));
+		matrix = glm::scale(matrix, glm::vec3(0.4f, 0.4, 0.4f));
+		glUniformMatrix4fv(MODEL_LOCATION, 1, GL_FALSE, glm::value_ptr(matrix));
+		meshList[1]->RenderMesh();
+
 		glUseProgram(0); // unbind
 		// ------------------------------------
-
 		// 2 Buffer (그리는 것과 그릴 예정인 것, 이 두개를 이용한 버퍼링)
-		// 3개를 쓰기도 하지만, 여기선 2개만 사용.
 		glfwSwapBuffers(mainWindow);
 	}
-
+	for (auto &itr: meshList) {
+		delete itr;
+	}
 	glfwTerminate();
 	return (0);
 }

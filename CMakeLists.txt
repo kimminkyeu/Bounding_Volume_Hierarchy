@@ -10,12 +10,14 @@ include( ${CMAKE_SOURCE_DIR}/utils.cmake ) # custom print_message() function.
 
 # set cmake variable
 # ----------------------------------------------------------------------------
-set(NAME scoop)
-set(CMAKE_CXX_STANDARD 20) # Cpp compiler version
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(SOURCE_FILES
+set( NAME scoop )
+set( CMAKE_CXX_STANDARD 20 ) # Cpp compiler version
+set( CMAKE_CXX_STANDARD_REQUIRED True )
+set( SOURCE_FILES
         src/scoop.cpp
-    )
+        src/Mesh.cpp
+        src/Shader.cpp
+        )
 
 # configure cmake project
 # ----------------------------------------------------------------------------
