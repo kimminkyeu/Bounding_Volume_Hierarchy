@@ -11,10 +11,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "Mesh.h"
+#include "Mesh.h" // Mesh Class
+#include "ShaderProgram.h" // ShaderProgram Class
 
-// Hello, Triangle example.
-//https://heinleinsgame.tistory.com/7
 #ifndef PROJECT_ROOT_DIR // cmake에서 설정해주도록 함.
 # define PROJECT_ROOT_DIR "../" // ??
 #endif
@@ -27,84 +26,14 @@ constexpr float toRadians = 3.14159265f / 100.0f;
 float curAngle = 0;
 
 std::vector< Mesh* > meshList;
+std::vector< ShaderProgram* > shaderList;
 
 // VAO(Vertex Array Object) : 1개 vertex에 들어있는 데이터 명세
 // VBO(Vertex Buffer Object) : vertex 자체
 // IBO(Indexed Buffer Object) : vertex 묶음 (면).
 
-GLuint shaderProgram;
-GLint MODEL_LOCATION, PROJECTION_LOCATION;
-
-void add_shader(GLuint theProgram, const std::string& shader_code, GLenum shaderType)
-{
-	GLuint theShader = glCreateShader(shaderType);
-	const GLint len = shader_code.length();
-	const char* src = shader_code.c_str();
-	glShaderSource(theShader, 1, &src, &len);
-	glCompileShader(theShader);
-
-	GLint result = 0;
-	GLchar eLog[1024] = { 0, };
-	glGetShaderiv(theShader, GL_COMPILE_STATUS, &result);
-	if (!result)
-	{
-		glGetShaderInfoLog(theShader, sizeof(eLog), nullptr, eLog);
-		std::cout << "[glGetShaderInfoLog]" << eLog << "\n";
-		return ;
-	}
-	glAttachShader(theProgram, theShader);
-}
-
-void compile_shaders()
-{
-	std::string project_root_dir = PROJECT_ROOT_DIR;
-	std::string vertex_shader_path = project_root_dir + std::string("/src/vertex_shader.glsl");
-	std::string fragment_shader_path = project_root_dir + std::string("/src/fragment_shader.glsl");
-	std::string vertex_shader_code = convert_shader_file_to_string(vertex_shader_path);
-	std::string fragment_shader_code = convert_shader_file_to_string(fragment_shader_path);
-
-	if (vertex_shader_code.empty() || fragment_shader_code.empty())
-	{
-		assert(false && "shader file to string error");
-		// ...
-	}
-	else
-	{
-		shaderProgram = glCreateProgram();
-		if (!shaderProgram)
-		{
-			std::cout << "Shader program creation failure\n";
-			return ;
-		}
-		add_shader(shaderProgram, vertex_shader_code, GL_VERTEX_SHADER);
-		add_shader(shaderProgram, fragment_shader_code, GL_FRAGMENT_SHADER);
-		GLint result = 0;
-		GLchar eLog[1024] = {0,}; // shader 디버깅은 어렵기 떄문에 이런 방식으로 처리.
-
-		glLinkProgram(shaderProgram);
-		glGetProgramiv(shaderProgram, GL_LINK_STATUS, &result);
-		if (!result) {
-			memset(eLog, 0, sizeof(eLog));
-			glGetProgramInfoLog(shaderProgram, sizeof(eLog), nullptr, eLog);
-			std::cout << "[glGetProgramInfoLog: linking shader" << eLog << "\n";
-		}
-
-		glValidateProgram(shaderProgram);
-		glGetProgramiv(shaderProgram, GL_VALIDATE_STATUS, &result);
-		if (!result) {
-			memset(eLog, 0, sizeof(eLog));
-			glGetProgramInfoLog(shaderProgram, sizeof(eLog), nullptr, eLog);
-			std::cout << "[glGetProgramInfoLog: validation]" << eLog << "\n";
-		}
-	}
-	// **************************************************************************
-	// shader 프로그램의 uniform 변수중 이름이 "matrix"인 친구를 찾아 그 location를 반환.
-	MODEL_LOCATION = glGetUniformLocation(shaderProgram, "model");
-	PROJECTION_LOCATION = glGetUniformLocation(shaderProgram, "projection");
-	// **************************************************************************
-}
-
-void create_triangle()
+// 나중에 Triangle Object로 변경할 것.
+void createObject()
 {
 	unsigned int indices[] = {
 			0, 3, 1,
@@ -112,7 +41,6 @@ void create_triangle()
 			2, 3, 0,
 			0, 1, 2
 	};
-
 	GLfloat verticies[] = {
 			-1.0f, -1.0f, 0.0f,	// v0. x y z
 			0.0f, -1.0f, 1.0f,
@@ -129,26 +57,26 @@ void create_triangle()
 	meshList.push_back(obj1_ptr);
 }
 
+void createShaders()
+{
+	ShaderProgram* shader1 = new ShaderProgram();
+	shader1->createFromString();
+	shaderList.push_back(shader1);
+}
+
 int main()
 {
-	// Init GLFW
-	if (!glfwInit())
+	if (!glfwInit()) // Init GLFW
 	{
 		std::cout << "GLFW Init failed\n";
 		glfwTerminate();
 		return (1);
 	}
-
 	// Setup GLFW window properties
-	// OpenGL version
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	// Core profile = No Backwards Compatibility
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	// Allow forward compatibility
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
-	// nullptr != 0 (값 0과 구분)
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // OpenGL major version
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3); // OpenGL minor version
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // Core profile = No Backwards Compatibility
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Allow forward compatibility
 	GLFWwindow *mainWindow = glfwCreateWindow(WIDTH, HEIGHT, "Test Window", nullptr, nullptr);
 	if (!mainWindow)
 	{
@@ -156,33 +84,28 @@ int main()
 		glfwTerminate();
 		return (1);
 	}
-
-	// Get Buffer size information (data for window rendering)
-	int bufferWidth, bufferHeight;
+	int bufferWidth, bufferHeight; // Get Buffer size information (data for window rendering)
 	glfwGetFramebufferSize(mainWindow, &bufferWidth, &bufferHeight);
+	glfwMakeContextCurrent(mainWindow); // Set context for GLEW to use (그럼 multiple context 존재? 여러 화면?)
+	glewExperimental = GL_TRUE; // Allow modern extension features
 
-	// Set context for GLEW to use (그럼 multiple context 존재? 여러 화면?)
-	glfwMakeContextCurrent(mainWindow);
-
-	// Allow modern extension features
-	glewExperimental = GL_TRUE;
-
-	if (glewInit() != GLEW_OK)
+	if (glewInit() != GLEW_OK) // Check init state
 	{
 		std::cout << "GLEW init failed\n";
 		glfwDestroyWindow(mainWindow);
 		glfwTerminate();
 		return (1);
 	}
+	glEnable(GL_DEPTH_TEST); // 약간 야매 방식. depth buffer 없이 실시간 검사로 일단 테스트 (임시 방편)
+	glViewport(0, 0, bufferWidth, bufferHeight); // Setup Viewport size (OpenGL functionality)
 
-	// 약간 야매 방식. depth buffer 없이 실시간 검사로 일단 테스트 (임시 방편)
-	glEnable(GL_DEPTH_TEST);
+	// ---------------------------------------------
 
-	// Setup Viewport size (OpenGL functionality)
-	glViewport(0, 0, bufferWidth, bufferHeight);
+	createObject();
+	createShaders();
 
-	create_triangle();
-	compile_shaders();
+	GLuint uniformProjection = 0;
+	GLuint uniformModel = 0;
 
 	glm::mat4 projectionMatrix = glm::perspective(45.0f, (GLfloat)bufferWidth/(GLfloat)bufferHeight, 0.1f, 100.0f);
 
@@ -197,34 +120,36 @@ int main()
 		{
 			curAngle -= 360;
 		}
-
 		// Clear window
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// ------------------------------------
-		glUseProgram(shaderProgram); // let GPU use the given shader program
+		glUseProgram(shaderList[0]->)
+		uniformModel = shaderList[0]->getUniformModelLocation();
+		uniformProjection = shaderList[0]->getUniformProjectionLocation();
 
 		glm::mat4 matrix(1.0f); // init unit matrix
-		glUniformMatrix4fv(PROJECTION_LOCATION, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-
+		glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, glm::value_ptr(projectionMatrix)); // GPU 변수 location에 값 대입.
 		// [t] * [s] * [pos]d
 		matrix = glm::translate(matrix, glm::vec3(1.0f, 0.0f, -2.5f));
 		matrix = glm::scale(matrix, glm::vec3(0.4f, 0.4, 0.4f));
-		glUniformMatrix4fv(MODEL_LOCATION, 1, GL_FALSE, glm::value_ptr(matrix));
+
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(matrix)); // GPU 변수 location에 값 대입.
 		meshList[0]->RenderMesh();
 
 		matrix = glm::mat4(1.0f);
 		matrix = glm::translate(matrix, glm::vec3(-1.0f, 0.0f, -2.5f));
 		matrix = glm::scale(matrix, glm::vec3(0.4f, 0.4, 0.4f));
-		glUniformMatrix4fv(MODEL_LOCATION, 1, GL_FALSE, glm::value_ptr(matrix));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(matrix)); // GPU 변수 location에 값 대입.
 		meshList[1]->RenderMesh();
 
+
 		glUseProgram(0); // unbind
-		// ------------------------------------
-		// 2 Buffer (그리는 것과 그릴 예정인 것, 이 두개를 이용한 버퍼링)
-		glfwSwapBuffers(mainWindow);
+		glfwSwapBuffers(mainWindow); // 2 Buffer (그리는 것과 그릴 예정인 것, 이 두개를 이용한 버퍼링)
 	}
+
+
 	for (auto &itr: meshList) {
 		delete itr;
 	}

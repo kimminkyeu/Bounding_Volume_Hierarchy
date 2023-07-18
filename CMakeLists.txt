@@ -16,7 +16,7 @@ set( CMAKE_CXX_STANDARD_REQUIRED True )
 set( SOURCE_FILES
         src/scoop.cpp
         src/Mesh.cpp
-        src/Shader.cpp
+        src/ShaderProgram.cpp
         )
 
 # configure cmake project
