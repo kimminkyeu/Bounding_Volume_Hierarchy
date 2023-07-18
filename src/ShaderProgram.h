@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream> // for ifstream
 #include <sstream> // for stringstream
+#include <cassert>
 
 class ShaderProgram
 {
@@ -20,15 +21,19 @@ private:
 
 public:
 	ShaderProgram();
+	ShaderProgram(const std::string& vertex_shader_path, const std::string& fragment_shader_path);
 	~ShaderProgram();
 
 	// compile and attach shader to shaderProgram
-	void compileAndAttachShader(const std::string& shaderPath, GLenum shaderType);
-
+	int attachShader(const std::string& shaderPath, GLenum shaderType);
+	// link shaderProgram to GPU + load uniform variable location
+	int linkToGPU();
+	// change member uniform variable. (Projection)
+	void setUniformModel(/* glm mat 4 */);
+	// change member uniform variable. (Projection)
+	void setUniformProjection(/* glm mat 4 */);
+	// delete program.
 	void clearShader();
-
-	// link shaderProgram to GPU
-	void linkToGPU();
 
 	GLuint getUniformProjectionLocation() const;
 	GLuint getUniformModelLocation() const;

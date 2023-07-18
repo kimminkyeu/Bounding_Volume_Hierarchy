@@ -129,12 +129,13 @@ int main()
 		uniformModel = shaderList[0]->getUniformModelLocation();
 		uniformProjection = shaderList[0]->getUniformProjectionLocation();
 
-		glm::mat4 matrix(1.0f); // init unit matrix
 		glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, glm::value_ptr(projectionMatrix)); // GPU 변수 location에 값 대입.
+
+
 		// [t] * [s] * [pos]d
+		glm::mat4 matrix(1.0f); // init unit matrix
 		matrix = glm::translate(matrix, glm::vec3(1.0f, 0.0f, -2.5f));
 		matrix = glm::scale(matrix, glm::vec3(0.4f, 0.4, 0.4f));
-
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(matrix)); // GPU 변수 location에 값 대입.
 		meshList[0]->RenderMesh();
 
