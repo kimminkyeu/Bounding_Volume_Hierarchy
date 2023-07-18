@@ -5,19 +5,26 @@
 #ifndef SCOOP_SHADERPROGRAM_H
 #define SCOOP_SHADERPROGRAM_H
 
-#include <GL/glew.h>
-#include <string> // for std::string
+#include <string>
 #include <iostream>
-#include <fstream> // for ifstream
-#include <sstream> // for stringstream
-#include <cassert>
+#include <fstream> // ifstream
+#include <sstream> // stringstream
+#include <cassert> // assert
+#include <cstring> // memset
+
+#include <GL/glew.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 class ShaderProgram
 {
 private:
-	GLuint m_ProgramID;
-	GLuint m_uniformProjectionLocation;
-	GLuint m_uniformModelLocation;
+	GLuint	m_ProgramID;
+	GLint	m_uniformProjectionLocation;
+	GLint	m_uniformModelLocation;
+	char	m_ShadersBitmap; // 최소 요건 쉐이더 2개(F, V)가 세팅이 되어 있는지 체크.
+	//               F V    ( F=fragment_shader, V=vertex_shader )
+	// [ 0 0 0 0 0 0 0 0 ] 8bit
 
 public:
 	ShaderProgram();
@@ -26,17 +33,22 @@ public:
 
 	// compile and attach shader to shaderProgram
 	int attachShader(const std::string& shaderPath, GLenum shaderType);
+
 	// link shaderProgram to GPU + load uniform variable location
 	int linkToGPU();
+
 	// change member uniform variable. (Projection)
-	void setUniformModel(/* glm mat 4 */);
+	void setUniformModel(const GLfloat *value);
+
 	// change member uniform variable. (Projection)
-	void setUniformProjection(/* glm mat 4 */);
+	void setUniformProjection(const GLfloat *value);
+
 	// delete program.
 	void clearShader();
 
-	GLuint getUniformProjectionLocation() const;
-	GLuint getUniformModelLocation() const;
+	// get location of uniform variables inside GPU...
+	GLint getUniformProjectionLocation() const;
+	GLint getUniformModelLocation() const;
 	GLuint getProgramID() const;
 
 private:
