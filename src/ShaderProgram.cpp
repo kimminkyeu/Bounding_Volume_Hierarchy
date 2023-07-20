@@ -9,11 +9,20 @@
 static const char ESSENTIAL_SHADERS_LOADED = (1 << 1) | (1 << 0);
 
 ShaderProgram::ShaderProgram()
-	: m_ProgramID(0), m_uniformModelLocation(0), m_uniformProjectionLocation(0), m_ShadersBitmap(0)
+	: m_ProgramID(0), m_uniformModelLocation(0), m_uniformProjectionLocation(0), m_uniformViewLocation(0), m_ShadersBitmap(0)
 {}
 
+ShaderProgram::ShaderProgram(const std::string& vertex_shader_path, const std::string& fragment_shader_path)
+	: ShaderProgram::ShaderProgram()
+{
+	std::string vShaderPath = std::string(PROJECT_ROOT_DIR) + std::string(vertex_shader_path);
+	this->attachShader(vShaderPath, GL_VERTEX_SHADER);
+	std::string fShaderPath = std::string(PROJECT_ROOT_DIR) + std::string(fragment_shader_path);
+	this->attachShader(fShaderPath, GL_FRAGMENT_SHADER);
+}
+
 ShaderProgram::~ShaderProgram()
-{ this->clearShader(); }
+{ this->deleteFromGPU(); }
 
 std::string ShaderProgram::_readFileToString(const std::string& path)
 {
@@ -110,17 +119,27 @@ int ShaderProgram::linkToGPU()
 	// find uniform variable inside the program. then, save its ID to member variable m_*.
 	m_uniformModelLocation = glGetUniformLocation(m_ProgramID, "model");
 	assert((m_uniformModelLocation >= 0) && "uniform model not found in shader");
+
+	// find uniform variable inside the program. then, save its ID to member variable m_*.
+	m_uniformViewLocation = glGetUniformLocation(m_ProgramID, "view");
+	assert((m_uniformModelLocation >= 0) && "uniform view not found in shader");
+
 	return (0);
 }
 
-void ShaderProgram::setUniformModel(const GLfloat *value)
+void ShaderProgram::setUniformModel(const GLfloat *value) const
 {
 	glUniformMatrix4fv(m_uniformModelLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
 }
 
-void ShaderProgram::setUniformProjection(const GLfloat *value)
+void ShaderProgram::setUniformProjection(const GLfloat *value) const
 {
 	glUniformMatrix4fv(m_uniformProjectionLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
+}
+
+void ShaderProgram::setUniformView(const GLfloat *value) const
+{
+	glUniformMatrix4fv(m_uniformViewLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
 }
 
 GLint ShaderProgram::getUniformModelLocation() const
@@ -129,10 +148,13 @@ GLint ShaderProgram::getUniformModelLocation() const
 GLint ShaderProgram::getUniformProjectionLocation() const
 { return m_uniformProjectionLocation; }
 
+GLint ShaderProgram::getUniformViewLocation() const
+{ return m_uniformViewLocation; }
+
 GLuint ShaderProgram::getProgramID() const
 { return this->m_ProgramID; }
 
-void ShaderProgram::clearShader()
+void ShaderProgram::deleteFromGPU()
 {
 	// delete program from GPU memory
 	if (m_ProgramID)
@@ -142,5 +164,6 @@ void ShaderProgram::clearShader()
 	}
 	m_uniformModelLocation = 0;
 	m_uniformProjectionLocation = 0;
+	m_uniformViewLocation = 0;
 	m_ShadersBitmap = 0;
 }

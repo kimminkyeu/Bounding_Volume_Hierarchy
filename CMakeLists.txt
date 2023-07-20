@@ -18,7 +18,7 @@ set( SOURCE_FILES
         src/Mesh.cpp
         src/ShaderProgram.cpp
         src/scoop.cpp
-        )
+        src/Camera.cpp)
 
 # configure cmake project
 # ----------------------------------------------------------------------------

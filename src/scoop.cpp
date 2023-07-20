@@ -1,19 +1,15 @@
-#include <iostream>
+
 #include <vector>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
-
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Camera.h"
 #include "Window.h" // GLFW wrapper
 #include "Mesh.h" // Mesh Class
 #include "ShaderProgram.h" // ShaderProgram Class
-
-#ifndef PROJECT_ROOT_DIR // cmake에서 설정해주도록 함.
-# define PROJECT_ROOT_DIR "../" // ??
-#endif
 
 std::vector< Mesh* > meshList;
 std::vector< ShaderProgram* > shaderProgramList;
@@ -50,14 +46,13 @@ int main()
 	createObject();
 
 	// ------------------------------------
-	auto* shaderProc = new ShaderProgram();
-	std::string vShaderPath = std::string(PROJECT_ROOT_DIR) + std::string("/src/shader/vertex_shader.glsl");
-	shaderProc->attachShader(vShaderPath, GL_VERTEX_SHADER);
-	std::string fShaderPath = std::string(PROJECT_ROOT_DIR) + std::string("/src/shader/fragment_shader.glsl");
-	shaderProc->attachShader(fShaderPath, GL_FRAGMENT_SHADER);
+	auto* shaderProc = new ShaderProgram("/src/shader/vertex_shader.glsl", \
+										"/src/shader/fragment_shader.glsl");
 	shaderProc->linkToGPU();
 	shaderProgramList.push_back(shaderProc);
 	// ------------------------------------
+
+	Camera camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f, 0.01f, 0.1f);
 
 	glm::mat4 projectionMatrix = glm::perspective(45.0f, (GLfloat)mainWindow.getBufferWidth()/(GLfloat)mainWindow.getBufferHeight(), 0.1f, 100.0f);
 
@@ -66,6 +61,7 @@ int main()
 	{
 		// Get + Handle user input events.
 		glfwPollEvents(); // send endpoint repeatedly.
+		camera.keyControl(mainWindow.getKeys());
 
 		// Clear window
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -77,6 +73,15 @@ int main()
 
 		// set projection
 		shaderProgramList[0]->setUniformProjection(glm::value_ptr(projectionMatrix));
+
+
+		// tmp. remove later
+		// **********************************************
+		glm::mat4 view = camera.calculateViewMatrix(); // init unit matrix
+		shaderProgramList[0]->setUniformView(glm::value_ptr(view));
+		// **********************************************
+
+
 
 		// first mesh
 		glm::mat4 matrix(1.0f); // init unit matrix
