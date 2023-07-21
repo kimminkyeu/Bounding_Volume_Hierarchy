@@ -1,28 +1,35 @@
 
-# set cmake version
+# CMAKE SETTING
 # -------------------------------------------------
 # https://cmake.org/cmake/help/latest/guide/tutorial/index.html
 cmake_minimum_required(VERSION 3.24) # set cmake version
-
+# https://cmake.org/cmake/help/latest/command/set.html
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE) # close DEPRECATION WARNING...
 # include cmake custom util functions (ex. color message)
-# ----------------------------------------------------------------------------
 include( ${CMAKE_SOURCE_DIR}/utils.cmake ) # custom print_message() function.
 
-# set cmake variable
-# ----------------------------------------------------------------------------
+# set variable
+# ********************************************
+set( DEBUG_MODE 1 ) # DEBUG MODE --> use Log
+# *******************************************
+
 set( NAME scoop )
 set( CMAKE_CXX_STANDARD 20 ) # Cpp compiler version
 set( CMAKE_CXX_STANDARD_REQUIRED True )
 set( SOURCE_FILES
         # before refactor
-        src/Window.cpp
-        src/Mesh.cpp
-        src/ShaderProgram.cpp
-        src/scoop.cpp
-        src/Camera.cpp
+#        src/Window.cpp
+#        src/Mesh.cpp
+#        src/ShaderProgram.cpp
+#        src/scoop.cpp
+#        src/Camera.cpp
 
         # refactor ver2
+        src2/Lunar/EntryPoint.h     # main function
         src2/Lunar/Application.cpp
+        src2/Lunar/Log.cpp
+
+        src2/App/src/App.cpp
         )
 
 # configure cmake project
@@ -44,6 +51,7 @@ add_executable( ${NAME} ${SOURCE_FILES} )
 # 이 행위를 통해, 실행 파일 내부 에서 fopen등 함수 사용시 CMakelist.txt 파일 기준 절대경로 설정하기 위함.
 target_compile_definitions( ${NAME}
         PRIVATE
+        DEBUG_MODE
         PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}"
         GLM_FORCE_SWIZZLE # force GLM to report the configuration as part of the build log
         )
@@ -58,10 +66,18 @@ print_message(STATUS "OpenGL included at ${OPENGL_INCLUDE_DIR}") # path set by "
 # GLM math library
 # ----------------------------------------------------------------------------
 # https://github.com/g-truc/glm/blob/master/manual.md#-15-finding-glm-with-cmake
-set(glm_DIR ${CMAKE_SOURCE_DIR}/dependency/glm/cmake/glm) # if necessary
+set( glm_DIR ${CMAKE_SOURCE_DIR}/dependency/glm/cmake/glm ) # if necessary
 find_package( glm CONFIG REQUIRED )
 target_link_libraries( ${NAME} PRIVATE glm::glm )
-print_message(STATUS "GLM included at ${GLM_INCLUDE_DIRS}") # path set by "find_package"
+print_message( STATUS "GLM included at ${GLM_INCLUDE_DIRS}" ) # path set by "find_package"
+
+# spdlog logging library
+# ----------------------------------------------------------------------------
+# https://github.com/gabime/spdlog/blob/v1.x/example/CMakeLists.txt
+set(spdlog_DIR ${CMAKE_SOURCE_DIR}/dependency/spdlog/build) # if necessary
+find_package( spdlog CONFIG REQUIRED )
+target_link_libraries( ${NAME} PRIVATE spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32> )
+print_message( STATUS "SpdLog included at ${CMAKE_SOURCE_DIR}/dependency/spdlog" ) # path set by "find_package"
 
 # set include path for GLEW, GLFW
 # ----------------------------------------------------------------------------
@@ -70,7 +86,13 @@ include_directories( SYSTEM # to use '#include <...>'
         ${CMAKE_SOURCE_DIR}/dependency/GLFW/include
         ${CMAKE_SOURCE_DIR}/dependency/glm/glm
         ${CMAKE_SOURCE_DIR}/dependency/stb_image
+        ${CMAKE_SOURCE_DIR}/dependency/spdlog/include
         )
+
+include_directories(
+        ${CMAKE_SOURCE_DIR}/src2
+        )
+
 
 # link libraries (archive files)
 # ----------------------------------------------------------------------------
@@ -112,3 +134,10 @@ ADD_CUSTOM_TARGET( fclean
         COMMENT "Cleaning executable and binaries..."
         COMMAND make clean # cmake이 생성하는 clean은 fclean과 동일.
         )
+
+if( DEBUG_MODE )
+    print_message(WARNING "--------------------------------------------------------------------")
+    print_message(WARNING "You are building project in Debug mode. (using spdlog library)")
+    print_message(WARNING "If you are building release version, then set DEBUG_MODE to False")
+    print_message(WARNING "--------------------------------------------------------------------")
+endif ()
