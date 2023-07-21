@@ -1,29 +1,11 @@
 #!/bin/bash
 
-# (1) on Ubuntu, install build tools first.
-# ------------------------------------------------
-# sudo apt-get install build-essential libxmu-dev libxi-dev libgl-dev libglu-dev
+# (1) build GLEW      # https://github.com/nigels-com/glew
+  cd ./GLEW/build
+  cmake ./cmake && make glew_s # build the glew static library
+  cd ../../
+# (2) build GLFW      # https://github.com/glfw/glfw
+  cmake -S ./GLFW -B ./GLFW/build && make -C ./GLFW/build
+# (3) build spdlog    # https://github.com/gabime/spdlog
+  cmake -S ./spdlog -B ./spdlog/build && make -C ./spdlog/build -j
 
-# (2) on MacOS
-# ------------------------------------------------
-# ...
-
-# (3) build GLEW
-# https://github.com/nigels-com/glew
-# ------------------------------------------------
-# (3-1) build with make
-	# make -C ./GLEW
-	# sudo make install -C ./GLEW  #시스템에 직접 GLEW 설치
-	# make clean -C ./GLEW
-	
-# (3-2) build with cmake
-cd ./GLEW/build
-cmake ./cmake
-make glew_s # build the glew static library
-cd ../../
-
-
-# (4) build GLFW
-# ------------------------------------------------
-cmake -S ./GLFW -B ./GLFW/build
-make -C ./GLFW/build
