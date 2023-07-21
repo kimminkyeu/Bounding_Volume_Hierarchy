@@ -40,19 +40,20 @@ namespace Lunar {
 		float m_FrameTime = 0.0f;
 		float m_LastFrameTime = 0.0f;
 
-		// 왜 Stack으로 했는지?
-		// A 화면에서 B화면 레이어를 띄운 후 B를 끄면 A가 꺼지는 브라우저 탐험 구조와 동일?
+		// 왜 Layer-Stack 구조로 했는지?
+		// https://www.youtube.com/watch?v=_Kj6BSfM6P4&list=PLlrATfBNZ98dC-V-N3m0Go4deliWHPFwT&index=13&pp=iAQB
+		// A 화면에서 B화면 레이어를 띄운 후 B를 끄면 A가 꺼지는 브라우저 탐험 구조와 동일.
 		std::vector<std::shared_ptr<Layer>> m_LayerStack;
 
 	public:
-		Application(const ApplicationSpecification& appSpec = ApplicationSpecification());
-		~Application();
+		explicit Application(ApplicationSpecification  appSpec = ApplicationSpecification()) noexcept;
+		~Application() noexcept;
 
 		//
-		static Application& Get();
+		static Application& Get() noexcept;
 
 		//
-		void Run(); // run app
+		void Run() noexcept; // run app
 
 		//
 		template<typename T>
@@ -66,21 +67,20 @@ namespace Lunar {
 			m_LayerStack.push_back(std::make_shared<T>());
 		};
 
-		void Close();
+		void Close() noexcept;
+		float GetTime() noexcept;
 
-		float GetTime();
-
-		GLFWwindow* GetWindowHandle() const
+		GLFWwindow* GetWindowHandle() const noexcept
 		{ return m_WindowHandle; }
 
 	private: // Helper function
-		void Init();
-		void Shutdown();
+		void Init() noexcept;
+		void Shutdown() noexcept;
 
 	};
 
 	// Implemented by CLIENT
-	Application* CreateApplication(int argc, char** argv);
+	Application* CreateApplication(int argc, char** argv) noexcept;
 }
 
 
