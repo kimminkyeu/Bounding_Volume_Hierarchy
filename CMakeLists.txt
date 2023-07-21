@@ -64,6 +64,7 @@ include_directories( SYSTEM # to use '#include <...>'
         ${CMAKE_SOURCE_DIR}/dependency/GLEW/include
         ${CMAKE_SOURCE_DIR}/dependency/GLFW/include
         ${CMAKE_SOURCE_DIR}/dependency/glm/glm
+        ${CMAKE_SOURCE_DIR}/dependency/stb_image
         )
 
 # link libraries (archive files)

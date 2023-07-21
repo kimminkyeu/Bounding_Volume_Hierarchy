@@ -56,7 +56,7 @@ void Mesh::CreateMesh(GLfloat* verticies, unsigned int* indicies, unsigned int n
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	// Unbind Vertex Array for later use
-	glBindVertexArray(0);
+//	glBindVertexArray(0); // BUG: 이거 하면 안됨.... mac에서 오류 남...
 }
 
 void Mesh::RenderMesh()
