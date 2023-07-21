@@ -14,11 +14,16 @@ set( NAME scoop )
 set( CMAKE_CXX_STANDARD 20 ) # Cpp compiler version
 set( CMAKE_CXX_STANDARD_REQUIRED True )
 set( SOURCE_FILES
+        # before refactor
         src/Window.cpp
         src/Mesh.cpp
         src/ShaderProgram.cpp
         src/scoop.cpp
-        src/Camera.cpp)
+        src/Camera.cpp
+
+        # refactor ver2
+        src2/Lunar/Application.cpp
+        )
 
 # configure cmake project
 # ----------------------------------------------------------------------------
