@@ -7,6 +7,10 @@
 
 Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
 {
-	//...
-	return (0);
+	Lunar::ApplicationSpecification spec;
+	spec.Name = "Scoop";
+
+	auto* app = new Lunar::Application(spec);
+
+	return (app);
 }

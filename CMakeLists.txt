@@ -27,8 +27,6 @@ set( SOURCE_FILES
         # refactor ver2
         src2/Lunar/EntryPoint.h     # main function
         src2/Lunar/Application.cpp
-        src2/Lunar/Log.cpp
-
         src2/App/src/App.cpp
         )
 

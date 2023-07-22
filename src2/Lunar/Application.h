@@ -24,30 +24,40 @@ namespace Lunar {
 	// NOTE: Application must be single instance.
 	struct ApplicationSpecification
 	{
-		std::string Name = "Lunar App"; // default val
+		const char* Name = "Lunar App"; // default val
 		uint32_t Width = 1600; // default val
 		uint32_t Height = 900; // default val
+	};
+
+	struct WindowData
+	{
+		GLFWwindow* Handle = nullptr;
+		GLint BufferWidth = 0;
+		GLint BufferHeight = 0;
 	};
 
 	class Application
 	{
 	private:
 		ApplicationSpecification m_Specification;
-		GLFWwindow* m_WindowHandle = nullptr;
-		bool m_Running = false;
+		WindowData m_Window;
 
+		bool m_Running = false;
 		float m_TimeStep = 0.0f;
 		float m_FrameTime = 0.0f;
 		float m_LastFrameTime = 0.0f;
 
-		// 왜 Layer-Stack 구조로 했는지?
 		// https://www.youtube.com/watch?v=_Kj6BSfM6P4&list=PLlrATfBNZ98dC-V-N3m0Go4deliWHPFwT&index=13&pp=iAQB
-		// A 화면에서 B화면 레이어를 띄운 후 B를 끄면 A가 꺼지는 브라우저 탐험 구조와 동일.
 		std::vector<std::shared_ptr<Layer>> m_LayerStack;
+
+	private: // Helper function
+		void Init() noexcept;
+		void Shutdown() noexcept;
 
 	public:
 		explicit Application(ApplicationSpecification  appSpec = ApplicationSpecification()) noexcept;
 		~Application() noexcept;
+		GLFWwindow* GetWindowHandle() const noexcept;
 
 		//
 		static Application& Get() noexcept;
@@ -70,12 +80,6 @@ namespace Lunar {
 		void Close() noexcept;
 		float GetTime() noexcept;
 
-		GLFWwindow* GetWindowHandle() const noexcept
-		{ return m_WindowHandle; }
-
-	private: // Helper function
-		void Init() noexcept;
-		void Shutdown() noexcept;
 
 	};
 

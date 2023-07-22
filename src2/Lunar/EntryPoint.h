@@ -14,18 +14,6 @@ bool g_ApplicationRunning = true;
 namespace Lunar {
 	int Main(int argc, char** argv)
 	{
-		Lunar::Log::Init();
-		LOG_WARN("Log Test!");
-		int a = 5;
-		LOG_INFO("Hello, Var={0}", a);
-
-//		auto app = Lunar::CreateApplication(argc, argv);
-//		app->Run();
-//		delete app;
-
-		return (0);
-
-		/*
 		while (g_ApplicationRunning)
 		{
 			Lunar::Application* app = Lunar::CreateApplication(argc, argv);
@@ -33,7 +21,6 @@ namespace Lunar {
 			delete app;
 		}
 		return (0);
-		 */
 	}
 }
 
