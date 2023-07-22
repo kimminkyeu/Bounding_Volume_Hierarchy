@@ -7,24 +7,23 @@
 
 #include <GL/glew.h>
 
-class Mesh
-{
-private:
-	GLuint 	m_VAO;
-	GLuint 	m_VBO;
-	GLuint 	m_IBO;
-	GLsizei	m_indexCount;
-public:
-	Mesh();
+namespace Lunar {
 
-	~Mesh();
-
-	void CreateMesh(GLfloat* verticies, unsigned int *indicies, unsigned int numOfVertices, unsigned int numOfIndicies);
-
-	void RenderMesh();
-	// delete data from GPU
-	void ClearMesh();
-};
-
+	class Mesh
+	{
+	private:
+		GLuint 	m_VAO;
+		GLuint 	m_VBO;
+		GLuint 	m_IBO;
+		GLsizei	m_indexCount;
+	public:
+		Mesh();
+		Mesh(GLfloat* verticies, unsigned int *indicies, unsigned int numOfVertices, unsigned int numOfIndicies);
+		~Mesh();
+		void CreateMesh(GLfloat* verticies, unsigned int *indicies, unsigned int numOfVertices, unsigned int numOfIndicies);
+		void RenderMesh();
+		void ClearMesh(); // delete data from GPU
+	};
+}
 
 #endif //SCOOP_MESH_H

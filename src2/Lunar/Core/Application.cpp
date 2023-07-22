@@ -23,8 +23,8 @@ static void glfw_error_callback(int error_code, const char* description) noexcep
 
 namespace Lunar {
 
-	Application::Application(Lunar::ApplicationSpecification  appSpec) noexcept
-		: m_Specification(std::move(appSpec))
+	Application::Application(const Lunar::ApplicationSpecification& appSpec) noexcept
+		: m_Specification(appSpec)
 	{   // https://stackoverflow.com/questions/51705967/advantages-of-pass-by-value-and-stdmove-over-pass-by-reference
         if (s_Instance == nullptr) // 이미 app이 하나 켜져있으면 더이상 키지 말 것!
         {
@@ -44,7 +44,8 @@ namespace Lunar {
         s_Instance = nullptr;
     }
 
-	//	https://github.com/TheCherno/OpenGL/blob/master/OpenGL-Core/src/Platform/Windows/WindowsWindow.cpp#L20
+	// Initialize GLFW window
+	// https://github.com/TheCherno/OpenGL/blob/master/OpenGL-Core/src/Platform/Windows/WindowsWindow.cpp#L20
 	void Application::Init() noexcept
 	{
 		// Setup GLFW window
@@ -128,7 +129,7 @@ namespace Lunar {
         // set GLFW callbacks
         glfwSetCursorPosCallback(m_Window.Handle, [](GLFWwindow* currentWindow, double xPos, double yPos) -> void
         {
-            LOG_TRACE("Mouse move X={0} Y={0}", xPos, yPos);
+//            LOG_TRACE("Mouse move X={0} Y={0}", xPos, yPos);
         });
 
         // set GLFW callbacks
@@ -183,15 +184,17 @@ namespace Lunar {
         m_Running = true;
         while (!glfwWindowShouldClose(m_Window.Handle) && m_Running)
         {
-            // Poll and handle events (inputs, window resize, etc.)
+			// Poll and handle events (inputs, window resize, etc.)
             glfwPollEvents();
+			// Update every layer
             for (auto& layer : m_LayerStack) {
                 layer->OnUpdate(m_TimeStep);
             }
-            // ...
+            // Swap GLFW Buffer
+			glfwSwapBuffers(m_Window.Handle);
 
             // update time past (for animation)
-            float time = this->GetTime();
+            float time = Application::GetTime();
             m_FrameTime = time - m_LastFrameTime;
             m_TimeStep = glm::min<float>(m_FrameTime, 0.0333f);
             m_LastFrameTime = time;
@@ -225,4 +228,9 @@ namespace Lunar {
     {
         return *s_Instance;
     }
+
+	const WindowData& Application::getWindowData() const
+	{
+		return m_Window;
+	}
 }

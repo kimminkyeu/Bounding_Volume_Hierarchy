@@ -27,7 +27,7 @@ set( SOURCE_FILES
         # refactor ver2
         src2/App/src/App.cpp
         src2/Lunar/Core/Application.cpp
-        src2/Lunar/Input/input.cpp
+        src2/Lunar/Input/Input.cpp
         src2/Lunar/Shader/ShaderProgram.cpp
         src2/Lunar/Mesh/Mesh.cpp
         src2/Lunar/Camera/Camera.cpp

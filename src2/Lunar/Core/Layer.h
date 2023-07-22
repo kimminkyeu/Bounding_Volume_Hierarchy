@@ -32,7 +32,6 @@ namespace Lunar {
 
 		virtual void OnUIRender()
         {};
-
 	};
 }
 

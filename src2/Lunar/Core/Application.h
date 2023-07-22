@@ -56,10 +56,11 @@ namespace Lunar {
 		void Shutdown() noexcept; // clear LayerStack
 
 	public:
-		explicit Application(ApplicationSpecification  appSpec = ApplicationSpecification()) noexcept;
+		explicit Application(const ApplicationSpecification& appSpec = ApplicationSpecification()) noexcept;
 		~Application() noexcept;
 
 		static Application& Get() noexcept;
+		const WindowData& getWindowData() const;
         GLFWwindow* GetWindowHandle() const noexcept;
 
 		void Run() noexcept;
