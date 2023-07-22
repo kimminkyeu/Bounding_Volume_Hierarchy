@@ -9,6 +9,7 @@
 
 #include <string>
 #include <vector>
+#include <stack>
 #include <memory>
 #include <functional> // for lamda callback
 
@@ -51,36 +52,29 @@ namespace Lunar {
 		std::vector<std::shared_ptr<Layer>> m_LayerStack;
 
 	private: // Helper function
-		void Init() noexcept;
-		void Shutdown() noexcept;
+		void Init() noexcept; // initialize GLFW context
+		void Shutdown() noexcept; // clear LayerStack
 
 	public:
 		explicit Application(ApplicationSpecification  appSpec = ApplicationSpecification()) noexcept;
 		~Application() noexcept;
-		GLFWwindow* GetWindowHandle() const noexcept;
 
-		//
 		static Application& Get() noexcept;
+        GLFWwindow* GetWindowHandle() const noexcept;
 
-		//
-		void Run() noexcept; // run app
+		void Run() noexcept;
+        void Close() noexcept;
+        static float GetTime() noexcept;
 
-		//
+		// WHAT IS Layer?? WHY?
 		template<typename T>
 		void PushLayer()
 		{
 			// check if T is derived from Layer class at compile time.
 			static_assert(std::is_base_of_v<Layer, T>, "Pushed type is not subclass of Layer!");
-			// about emplace_back:  오히려 사용 하지 말라...?
-			// https://modoocode.com/326
-//			m_LayerStack.emplace_back(std::make_shared<T>());
 			m_LayerStack.push_back(std::make_shared<T>());
+            m_LayerStack.back()->OnAttach();
 		};
-
-		void Close() noexcept;
-		float GetTime() noexcept;
-
-
 	};
 
 	// Implemented by CLIENT
