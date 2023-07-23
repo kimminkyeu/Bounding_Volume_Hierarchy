@@ -82,6 +82,18 @@ namespace Lunar {
 		// Get Buffer size information (data for window rendering) : https://www.glfw.org/docs/3.3/window_guide.html#window_fbsize
 		glfwGetFramebufferSize(m_Window.Handle, &m_Window.BufferWidth, &m_Window.BufferHeight);
 
+		// TODO: remove later!
+		glewExperimental = GL_TRUE; // Allow modern extension features
+		if (glewInit() != GLEW_OK) // Check init state
+		{
+			glfwDestroyWindow(m_Window.Handle);
+			glfwTerminate();
+			assert(false && "glew initialization failed");
+		}
+		// TODO: remove later!
+		glEnable(GL_DEPTH_TEST); // 약간 야매 방식. depth buffer 없이 실시간 검사로 일단 테스트 (임시 방편)
+		glViewport(0, 0, m_Window.BufferWidth, m_Window.BufferHeight); // Setup Viewport size (OpenGL functionality)
+
 		// set GLFW callbacks
 		glfwSetWindowSizeCallback(m_Window.Handle,[](GLFWwindow* currentWindow, int width, int height) -> void
 		{
@@ -158,19 +170,6 @@ namespace Lunar {
                 }
             }
         });
-
-
-        // TODO: remove later!
-        glewExperimental = GL_TRUE; // Allow modern extension features
-        if (glewInit() != GLEW_OK) // Check init state
-        {
-            glfwDestroyWindow(m_Window.Handle);
-            glfwTerminate();
-            assert(false && "glew initialization failed");
-        }
-        // TODO: remove later!
-        glEnable(GL_DEPTH_TEST); // 약간 야매 방식. depth buffer 없이 실시간 검사로 일단 테스트 (임시 방편)
-        glViewport(0, 0, m_Window.BufferWidth, m_Window.BufferHeight); // Setup Viewport size (OpenGL functionality)
     }
 
     GLFWwindow* Application::GetWindowHandle() const noexcept
@@ -186,6 +185,9 @@ namespace Lunar {
         {
 			// Poll and handle events (inputs, window resize, etc.)
             glfwPollEvents();
+			// Clear window
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			// Update every layer
             for (auto& layer : m_LayerStack) {
                 layer->OnUpdate(m_TimeStep);

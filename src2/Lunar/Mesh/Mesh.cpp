@@ -11,6 +11,7 @@ namespace Lunar {
 	{}
 
 	Mesh::Mesh(GLfloat* verticies, unsigned int* indicies, unsigned int numOfVertices, unsigned int numOfIndicies)
+			: m_VAO(0), m_VBO(0), m_IBO(0), m_indexCount(0)
 	{
 		this->CreateMesh(verticies, indicies, numOfVertices, numOfIndicies);
 	}

@@ -13,6 +13,9 @@ private:
 	std::vector<std::unique_ptr<Lunar::Mesh>> m_MeshList;
 	glm::mat4 m_ProjectionMatrix; // TODO: MOVE THIS TO CAMERA CLASS!!
 
+	GLuint VAO = 0; // TODO: Temp!
+	GLuint VBO = 0;
+
 public:
 	// called once pushed to m_LayerStack
 	void OnAttach() override
@@ -23,6 +26,25 @@ public:
 	   "/src2/App/src/shaders/vertex_shader.glsl",
 	 "/src2/App/src/shaders/fragment_shader.glsl");
 
+		GLfloat verticies[9] = {
+				-1.0f, -1.0f, 0.0f,	// v0. x y z
+				1.0f, -1.0f, 0.0f, 	// v1. x y z
+				0.0f, 1.0f, 0.0f 	// v2. x y z
+		};
+		glGenVertexArrays(1, &VAO); // store id to VAO variable
+		glGenBuffers(1, &VBO);
+		glBindVertexArray(VAO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(verticies), verticies, GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+
+
+		// TODO: 일단 mesh를 쓰지 마. 그냥 삼각형만 띄워보자.
+		/*
 		unsigned int indices[] = {
 				0, 3, 1,
 				1, 3, 2,
@@ -36,6 +58,7 @@ public:
 				0.0f, 1.0f, 0.0f 	// v2. x y z
 		};
 		m_MeshList.push_back(std::make_unique<Lunar::Mesh>(verticies, indices, 12, 12));
+		*/
 
 //		const auto& app = Lunar::Application::Get();
 //		const auto& windowData = app.getWindowData();
@@ -53,10 +76,6 @@ public:
 	// called every render loop
 	void OnUpdate(float ts) override
 	{
-		// Clear window
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 		// Set shader program for single frame parallel rendering.
 		glUseProgram(m_ShaderProgram.getProgramID());
 
@@ -73,11 +92,16 @@ public:
 //		model = glm::scale(model, glm::vec3(0.4f, 0.4, 0.4f));
 //		m_ShaderProgram.setUniformModel(glm::value_ptr(model));
 
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glBindVertexArray(0);
+
+
 		// Render each mesh
 		// TODO: MOVE LOCATION MATRIX TO MESH CLASS.
-		for (auto& mesh : m_MeshList) {
-			mesh->RenderMesh();
-		}
+//		for (auto& mesh : m_MeshList) {
+//			mesh->RenderMesh();
+//		}
 
 		// unbind shader program
 		glUseProgram(0);

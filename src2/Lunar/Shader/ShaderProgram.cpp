@@ -128,11 +128,11 @@ namespace Lunar {
 //		assert((m_uniformProjectionLocation >= 0) && "uniform projection not found in shader");
 //		LOG_INFO("GPU --> Uniform Projection found in location {0}", m_uniformProjectionLocation);
 
-		// find uniform variable inside the program. then, save its ID to member variable m_*.
+//		 find uniform variable inside the program. then, save its ID to member variable m_*.
 //		m_uniformModelLocation = glGetUniformLocation(m_ProgramID, "model");
 //		assert((m_uniformModelLocation >= 0) && "uniform model not found in shader");
 //		LOG_INFO("GPU --> Uniform Model found in location {0}", m_uniformModelLocation);
-//
+
 		// find uniform variable inside the program. then, save its ID to member variable m_*.
 //		m_uniformViewLocation = glGetUniformLocation(m_ProgramID, "view");
 //		assert((m_uniformViewLocation >= 0) && "uniform view not found in shader");
