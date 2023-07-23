@@ -7,6 +7,6 @@ out vec4 fragment_color; // output data
 // Fragment shader interpolates each vertex colors.
 void main()
 {
-//    fragment_color = vertex_color;
-    fragment_color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    fragment_color = vertex_color;
+//    fragment_color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 }

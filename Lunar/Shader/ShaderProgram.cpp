@@ -18,15 +18,21 @@ namespace Lunar {
 	ShaderProgram::ShaderProgram(const std::string& vertex_shader_path, const std::string& fragment_shader_path)
 		: ShaderProgram::ShaderProgram()
 	{
-		std::string vShaderPath = std::string(PROJECT_ROOT_DIR) + std::string(vertex_shader_path);
+		LOG_TRACE("ShaderProgram constructor called");
+		std::string vShaderPath = std::string(PROJECT_ROOT_DIR) + "/" + std::string(vertex_shader_path);
+		LOG_TRACE("vertex shader path: {0}", vShaderPath);
 		this->attachShader(vShaderPath, GL_VERTEX_SHADER);
-		std::string fShaderPath = std::string(PROJECT_ROOT_DIR) + std::string(fragment_shader_path);
+		std::string fShaderPath = std::string(PROJECT_ROOT_DIR) + "/" + std::string(fragment_shader_path);
+		LOG_TRACE("fragment shader path: {0}", fShaderPath);
 		this->attachShader(fShaderPath, GL_FRAGMENT_SHADER);
 		this->linkToGPU();
 	}
 
 	ShaderProgram::~ShaderProgram()
-	{ this->deleteFromGPU(); }
+	{
+		LOG_TRACE("ShaderProgram destructor called");
+		this->deleteFromGPU();
+	}
 
 	std::string ShaderProgram::_readFileToString(const std::string& path)
 	{
@@ -92,13 +98,12 @@ namespace Lunar {
 	int ShaderProgram::linkToGPU()
 	{
 		GLint result = 0;
-		GLchar eLog[1024] = {0,};
-
 		if (m_ShadersBitmap != ESSENTIAL_SHADERS_LOADED)
 		{
 			assert(false && "Essential shaders (vertex, fragment) are not loaded");
 		}
 
+		// Link Program
 		glLinkProgram(this->m_ProgramID);
 		glGetProgramiv(this->m_ProgramID, GL_LINK_STATUS, &result);
 		if (!result)
@@ -108,9 +113,10 @@ namespace Lunar {
 			std::vector<GLchar> infoLog(maxLength);
 			glGetProgramInfoLog(m_ProgramID, maxLength, &maxLength, &infoLog[0]);
 			glDeleteProgram(m_ProgramID);
-			LOG_ERROR("{0}", infoLog.data());
+			LOG_ERROR("LINK ERROR {0}", infoLog.data());
 		}
 
+		// Validate Program
 		glValidateProgram(this->m_ProgramID);
 		glGetProgramiv(this->m_ProgramID, GL_VALIDATE_STATUS, &result);
 		if (!result)
@@ -120,23 +126,21 @@ namespace Lunar {
 			std::vector<GLchar> infoLog(maxLength);
 			glGetProgramInfoLog(m_ProgramID, maxLength, &maxLength, &infoLog[0]);
 			glDeleteProgram(m_ProgramID);
-			LOG_ERROR("{0}", infoLog.data());
+			LOG_ERROR("VALIDATION ERROR {0}", infoLog.data());
 		}
 
-		// find uniform variable inside the program. then, save its ID to member variable m_*.
-//		m_uniformProjectionLocation = glGetUniformLocation(m_ProgramID, "projection");
-//		assert((m_uniformProjectionLocation >= 0) && "uniform projection not found in shader");
-//		LOG_INFO("GPU --> Uniform Projection found in location {0}", m_uniformProjectionLocation);
-
 //		 find uniform variable inside the program. then, save its ID to member variable m_*.
-//		m_uniformModelLocation = glGetUniformLocation(m_ProgramID, "model");
-//		assert((m_uniformModelLocation >= 0) && "uniform model not found in shader");
-//		LOG_INFO("GPU --> Uniform Model found in location {0}", m_uniformModelLocation);
-
-		// find uniform variable inside the program. then, save its ID to member variable m_*.
-//		m_uniformViewLocation = glGetUniformLocation(m_ProgramID, "view");
-//		assert((m_uniformViewLocation >= 0) && "uniform view not found in shader");
-//		LOG_INFO("GPU --> Uniform View found in location {0}", m_uniformViewLocation);
+		m_uniformModelLocation = glGetUniformLocation(m_ProgramID, "model");
+		assert((m_uniformModelLocation >= 0) && "uniform model not found in shader");
+		LOG_TRACE("GPU --> Uniform Model found in location {0}", m_uniformModelLocation);
+//		 find uniform variable inside the program. then, save its ID to member variable m_*.
+		m_uniformViewLocation = glGetUniformLocation(m_ProgramID, "view");
+		assert((m_uniformViewLocation >= 0) && "uniform view not found in shader");
+		LOG_TRACE("GPU --> Uniform View found in location {0}", m_uniformViewLocation);
+//		 find uniform variable inside the program. then, save its ID to member variable m_*.
+		m_uniformProjectionLocation = glGetUniformLocation(m_ProgramID, "projection");
+		assert((m_uniformProjectionLocation >= 0) && "uniform projection not found in shader");
+		LOG_TRACE("GPU --> Uniform Projection found in location {0}", m_uniformProjectionLocation);
 
 		return (0);
 	}

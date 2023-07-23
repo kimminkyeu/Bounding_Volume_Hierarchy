@@ -14,6 +14,8 @@
 namespace Lunar {
 	class Layer
 	{
+	protected:
+		std::string _m_Name = "Default";
 	public:
 		virtual ~Layer() = default;
 

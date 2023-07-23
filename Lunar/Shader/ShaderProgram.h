@@ -24,6 +24,7 @@ namespace Lunar {
 	class ShaderProgram
 	{
 	private:
+
 		GLuint	m_ProgramID;
 		GLint	m_uniformProjectionLocation;
 		GLint	m_uniformViewLocation;
@@ -34,6 +35,7 @@ namespace Lunar {
 
 	public:
 		ShaderProgram();
+//		ShaderProgram(ShaderProgram&& proc) noexcept;
 		~ShaderProgram();
 		// compile and attach shader to shaderProgram
 		int attachShader(const std::string& shaderPath, GLenum shaderType);

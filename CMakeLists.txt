@@ -17,22 +17,15 @@ set( NAME scoop )
 set( CMAKE_CXX_STANDARD 20 ) # Cpp compiler version
 set( CMAKE_CXX_STANDARD_REQUIRED True )
 set( SOURCE_FILES
-        # before refactor
-#        src/Window.cpp
-#        src/Mesh.cpp
-#        src/ShaderProgram.cpp
-#        src/scoop.cpp
-#        src/Camera.cpp
-
-        # refactor ver2
-        src2/App/src/App.cpp
-        src2/Lunar/Core/Application.cpp
-        src2/Lunar/Input/Input.cpp
-        src2/Lunar/Shader/ShaderProgram.cpp
-        src2/Lunar/Mesh/Mesh.cpp
-        src2/Lunar/Camera/Camera.cpp
+    # Project
+        LunarApp/src/App.cpp
+    # Lunar Core
+        Lunar/Core/Application.cpp
+        Lunar/Input/Input.cpp
+        Lunar/Shader/ShaderProgram.cpp
+        Lunar/Mesh/Mesh.cpp
+        Lunar/Camera/Camera.cpp
         )
-
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name
@@ -90,8 +83,9 @@ include_directories( SYSTEM # to use '#include <...>'
         ${CMAKE_SOURCE_DIR}/dependency/spdlog/include
         )
 
+# TODO: Include Lunar
 include_directories(
-        ${CMAKE_SOURCE_DIR}/src2
+        ${CMAKE_SOURCE_DIR}
         )
 
 
