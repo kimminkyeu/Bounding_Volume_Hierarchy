@@ -1,13 +1,14 @@
-
 ---
 ## 1. 참고 설계
-1. The Cherno GameEngine Series (Demo)
+0. Entity Component System (ECS) 방식으로 구조 작성할 것.
+    - https://github.com/skypjack/entt#introduction
+2. The Cherno GameEngine Series (Demo)
     - https://www.youtube.com/watch?v=JxIZbV_XjAs&list=PLlrATfBNZ98dC-V-N3m0Go4deliWHPFwT
-2. GameEngine Series Sandbox ```OpenGL```
+3. GameEngine Series Sandbox ```OpenGL```
     -  https://github.com/TheCherno/OpenGL/blob/master/OpenGL-Core/src/GLCore/Core/Application.cpp
-3. Hazel Engine ```Vulkan```
+4. Hazel Engine ```Vulkan```
     - https://github.com/TheCherno/Hazel
-4. Walnut Framework ```Vulkan```
+5. Walnut Framework ```Vulkan```
     - https://github.com/StudioCherno/Walnut/tree/20f940b9d23946d4836b8549ff3e2c0750c5d985/Walnut/src/Walnut
 ---
 ## 2. 목표
