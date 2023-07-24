@@ -24,8 +24,13 @@ set( SOURCE_FILES
         Lunar/Input/Input.cpp
         Lunar/Shader/ShaderProgram.cpp
         Lunar/Mesh/Mesh.cpp
-        Lunar/Camera/Camera.cpp
-        Lunar/Camera/OrthographicCamera.cpp Lunar/Camera/OrthographicCamera.h Lunar/Camera/EditorCamera.cpp Lunar/Camera/EditorCamera.h Lunar/Camera/EditorCamera.h)
+        # Lunar/Camera/Camera.cpp
+        # Lunar/Camera/OrthographicCamera.cpp
+        # Lunar/Camera/OrthographicCamera.h
+        # Lunar/Camera/EditorCamera.cpp
+        # Lunar/Camera/EditorCamera.h
+        # Lunar/Camera/EditorCamera.h
+        Lunar/Camera/PlayerCamera.cpp Lunar/Camera/PlayerCamera.h Lunar/Input/MouseCodes.h)
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name

@@ -32,10 +32,6 @@ public:
 		LOG_TRACE("Layer [{0}] has been attached", _m_Name);
 
 		// load shader // 아 복사 생성자 만들고 소멸자 호출되서 쉐이더가 터진거였네;;;
-		m_ShaderProgram = std::make_unique<Lunar::ShaderProgram>(
-	   "LunarApp/src/shaders/vertex_shader.glsl",
-	 "LunarApp/src/shaders/fragment_shader.glsl");
-
 		unsigned int indices[] = {
 				0, 3, 1,
 				1, 3, 2,
@@ -49,6 +45,12 @@ public:
 				0.0f, 1.0f, 0.0f 	// v2. x y z
 		};
 		m_MeshList.push_back(std::make_unique<Lunar::Mesh>(verticies, indices, 12, 12));
+
+		// WARN:  VAO가 먼저 잡힌 뒤에 shader를 링크해야 한다.?? 그 이전에 하면 VAO bound error가 발생함...
+		// https://stackoverflow.com/questions/54181078/opengl-3-3-mac-error-validating-program-validation-failed-no-vertex-array-ob
+		m_ShaderProgram = std::make_unique<Lunar::ShaderProgram>(
+				"LunarApp/src/shaders/vertex_shader.glsl",
+				"LunarApp/src/shaders/fragment_shader.glsl");
 
 		const auto& app = Lunar::Application::Get();
 		const auto& windowData = app.getWindowData();

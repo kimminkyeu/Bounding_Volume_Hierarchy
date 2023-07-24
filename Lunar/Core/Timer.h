@@ -27,10 +27,11 @@ namespace Lunar {
             m_Start = std::chrono::high_resolution_clock::now();
         }
 
+		// 현재 까지 경과한 시간을 반환
         float Elapsed()
         {
             const auto timePast = std::chrono::high_resolution_clock::now() - m_Start;
-            const auto nanoSec = std::chrono::duration_cast<std::chrono::nanoseconds>(v) ;
+            const auto nanoSec = std::chrono::duration_cast<std::chrono::nanoseconds>(timePast) ;
             return nanoSec.count() * 0.001f * 0.001f * 0.001f;
         }
 
@@ -38,7 +39,6 @@ namespace Lunar {
         {
             return Elapsed() * 1000.0f;
         }
-
 
     };
 
