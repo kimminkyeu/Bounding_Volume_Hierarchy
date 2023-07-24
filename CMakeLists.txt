@@ -26,7 +26,7 @@ set( SOURCE_FILES
         Lunar/Mesh/Mesh.cpp
         Lunar/Camera/PlayerCamera.cpp # Player's view
         Lunar/Camera/EditorCamera.cpp # Editor View
-        )
+        Lunar/Texture/Texture.cpp Lunar/Texture/Texture.h)
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name

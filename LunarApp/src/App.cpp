@@ -46,13 +46,13 @@ public:
 				0, 3, 1,
 				1, 3, 2,
 				2, 3, 0,
-				0, 1, 2
+				0, 1, 2,
 		};
 		GLfloat verticies[] = {
-				-1.0f, -1.0f, 0.0f,	// v0. x y z
+				-1.0f, -1.0f, 0.0f,
 				0.0f, -1.0f, 1.0f,
-				1.0f, -1.0f, 0.0f, 	// v1. x y z
-				0.0f, 1.0f, 0.0f 	// v2. x y z
+				1.0f, -1.0f, 0.0f,
+				0.0f, 1.0f, 0.0f,
 		};
 		m_MeshList.push_back(std::make_unique<Lunar::Mesh>(verticies, indices, 12, 12));
 
