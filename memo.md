@@ -1,15 +1,9 @@
 
-1. GLEW 빌드. (하위 디렉토리) --> makefile
-    ------------------------------------
-    - https://github.com/nigels-com/glew
+### 0726
 
-        make -C ./glew (=path to glew)
+1. window 크기 변경시 적절한 반영
 
-
-
-2. GLFW 빌드. --> cmake (cmake이 시스템에 따라 헤더파일을 자동생성)
-    ------------------------------------
-    - https://www.glfw.org/docs/latest/compile.html
-
-        cmake -S {path/to/glfw} -B {path/to/build}
-        make -C {path/to/makefile_created_by_cmake}
+   카메라, 뷰, 화면, 오브젝트 등 객체가 많아지다보니 각 객체간의 관계가 복잡해짐... 특히 , 화면비가 바뀌었을 때 카메라와 window 모두에게 glfwCallback을 전달해야 하는데.  이 부분 설계가 복잡해짐. 어떻게 해야 하지??
+2. glfw 콜백 시스템 구성.
+3. giszmo (x y z 회전 밑 이동 pivot) 구현
+4. 쿼터니언 카메라 구현과 그 원리 이해 (수식) --> EditorCamera.h 참고

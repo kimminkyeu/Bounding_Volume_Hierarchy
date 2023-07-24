@@ -6,6 +6,7 @@
 #define SCOOP_INPUT_H
 
 #include "KeyCodes.h"
+#include "MouseCodes.h"
 
 #include <glm/glm.hpp>
 
@@ -14,12 +15,11 @@ namespace Lunar {
     class Input
     {
     public:
-        static bool IsKeyDown(KeyCode keycode);
-        static bool IsMouseButtonDown(MouseButton button);
-
+        static bool IsKeyPressed(KeyCode keycode);
+        static bool IsMouseButtonPressed(MouseCode button);
         static glm::vec2 GetMousePosition();
-
-        static void SetCursorMode(CursorMode mode);
+		static float GetMouseX();
+		static float GetMouseY();
     };
 
 }

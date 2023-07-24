@@ -95,6 +95,7 @@ namespace Lunar {
 		glViewport(0, 0, m_Window.BufferWidth, m_Window.BufferHeight); // Setup Viewport size (OpenGL functionality)
 
 		// set GLFW callbacks
+		// 아놔 복잡하네... 이거 어떻게 처리하니...
 		glfwSetWindowSizeCallback(m_Window.Handle,[](GLFWwindow* currentWindow, int width, int height) -> void
 		{
 			auto currentWindowDataPtr = (Lunar::WindowData *)glfwGetWindowUserPointer(currentWindow);
@@ -102,6 +103,11 @@ namespace Lunar {
 			currentWindowDataPtr->BufferHeight = height;
 			LOG_TRACE("Window Resize: W={0} H={0}", width, height);
 			// TODO: Add appropriate event callback. Ex) window 100, height 200일 때 특정 event 호출!
+			glViewport(0, 0, width, height);
+
+			// TODO: Refactor Camera system... 여기서 이렇게 접근하는게 비효율적임.
+			// TODO: 일단 임시 방편으로 했는데, Camera한테 화면비가 바뀌었다는 걸 말해줘야 projection 등을 수정할 수 있음.
+
 		});
 
         // set GLFW callbacks
@@ -109,6 +115,11 @@ namespace Lunar {
 		{
             g_ApplicationRunning = false;
 			LOG_WARN("Closing Window...");
+		});
+
+		glfwSetScrollCallback(m_Window.Handle, [](GLFWwindow* window, double xOffset, double yOffset) -> void
+		{
+			LOG_TRACE("Mouse Scroll: xOffset={0} yOffset={0}", xOffset, yOffset);
 		});
 
         // set GLFW callbacks
@@ -185,7 +196,7 @@ namespace Lunar {
         {
 			// Poll and handle events (inputs, window resize, etc.)
             glfwPollEvents();
-			// Clear window
+			// Clear window to black.
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			// Update every layer

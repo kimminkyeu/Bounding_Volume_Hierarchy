@@ -2,21 +2,21 @@
 // Created by USER on 2023-07-24.
 //
 
-//#include "hzpch.h"
 #include "EditorCamera.h"
-
 #include "Lunar/Input/Input.h"
 #include "Lunar/Input/KeyCodes.h" // including Mouse Code.
+#include "Lunar/Input/MouseCodes.h"
 
 #include <glfw/glfw3.h>
 
-#define GLM_ENABLE_EXPERIMENTAL
+#define GLM_ENABLE_EXPERIMENTAL //  ??
 #include <glm/gtx/quaternion.hpp>
 
 namespace Lunar {
 
 	EditorCamera::EditorCamera(float fov, float aspectRatio, float nearClip, float farClip)
-			: m_FOV(fov), m_AspectRatio(aspectRatio), m_NearClip(nearClip), m_FarClip(farClip), Camera(glm::perspective(glm::radians(fov), aspectRatio, nearClip, farClip))
+			: m_FOV(fov), m_AspectRatio(aspectRatio), m_NearClip(nearClip), m_FarClip(farClip),
+			  CameraBase(glm::perspective(glm::radians(fov), aspectRatio, nearClip, farClip))
 	{
 		UpdateView();
 	}
@@ -27,6 +27,7 @@ namespace Lunar {
 		m_Projection = glm::perspective(glm::radians(m_FOV), m_AspectRatio, m_NearClip, m_FarClip);
 	}
 
+	// Re-calculate ViewMatrix
 	void EditorCamera::UpdateView()
 	{
 		// m_Yaw = m_Pitch = 0.0f; // Lock the camera's rotation
@@ -64,40 +65,34 @@ namespace Lunar {
 
 	void EditorCamera::OnUpdate(float ts)
 	{
-		if (Input::IsKeyDown(Key::LeftAlt))
+		if (Input::IsKeyPressed(Key::LeftAlt))
 		{
 			const glm::vec2& mouse{Input::GetMousePosition()};
 			glm::vec2 delta = (mouse - m_InitialMousePosition) * 0.003f;
 			m_InitialMousePosition = mouse;
 
-			if (Input::IsMouseButtonDown(Mouse::ButtonMiddle))
+			if (Input::IsMouseButtonPressed(Mouse::ButtonMiddle))
 				MousePan(delta);
 			else if (Input::IsMouseButtonPressed(Mouse::ButtonLeft))
 				MouseRotate(delta);
 			else if (Input::IsMouseButtonPressed(Mouse::ButtonRight))
 				MouseZoom(delta.y);
 		}
-
 		UpdateView();
 	}
 
-	void EditorCamera::OnEvent(Event& e)
-	{
-		EventDispatcher dispatcher(e);
-		dispatcher.Dispatch<MouseScrolledEvent>(HZ_BIND_EVENT_FN(EditorCamera::OnMouseScroll));
-	}
-
-	bool EditorCamera::OnMouseScroll(MouseScrolledEvent& e)
-	{
-		float delta = e.GetYOffset() * 0.1f;
-		MouseZoom(delta);
-		UpdateView();
-		return false;
-	}
+//	bool EditorCamera::OnMouseScroll(MouseScrolledEvent& e)
+//	{
+//		float delta = e.GetYOffset() * 0.1f;
+//		MouseZoom(delta);
+//		UpdateView();
+//		return false;
+//	}
 
 	void EditorCamera::MousePan(const glm::vec2& delta)
 	{
 		auto [xSpeed, ySpeed] = PanSpeed();
+		// TODO: need to understand m_FocalPoint Re-calculation.
 		m_FocalPoint += -GetRightDirection() * delta.x * xSpeed * m_Distance;
 		m_FocalPoint += GetUpDirection() * delta.y * ySpeed * m_Distance;
 	}
@@ -108,6 +103,7 @@ namespace Lunar {
 		m_Yaw += yawSign * delta.x * RotationSpeed();
 		m_Pitch += delta.y * RotationSpeed();
 	}
+
 
 	void EditorCamera::MouseZoom(float delta)
 	{
@@ -136,6 +132,7 @@ namespace Lunar {
 
 	glm::vec3 EditorCamera::CalculatePosition() const
 	{
+		// initial m_Distance is 10.0f
 		return m_FocalPoint - GetForwardDirection() * m_Distance;
 	}
 
@@ -143,5 +140,4 @@ namespace Lunar {
 	{
 		return glm::quat(glm::vec3(-m_Pitch, -m_Yaw, 0.0f));
 	}
-
 }

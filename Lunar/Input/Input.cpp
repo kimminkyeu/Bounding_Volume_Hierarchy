@@ -8,17 +8,17 @@
 // https://github.com/StudioCherno/Walnut/blob/master/Walnut/src/Walnut/Input/Input.cpp
 namespace Lunar {
 
-    bool Input::IsKeyDown(KeyCode keycode)
+    bool Input::IsKeyPressed(Lunar::KeyCode keycode)
     {
         GLFWwindow* windowHandle = Application::Get().GetWindowHandle();
         int state = glfwGetKey(windowHandle, (int)keycode);
         return state == GLFW_PRESS || state == GLFW_REPEAT;
     }
 
-    bool Input::IsMouseButtonDown(MouseButton button)
+    bool Input::IsMouseButtonPressed(MouseCode code)
     {
         GLFWwindow* windowHandle = Application::Get().GetWindowHandle();
-        int state = glfwGetMouseButton(windowHandle, (int)button);
+        int state = glfwGetMouseButton(windowHandle, (int)code);
         return state == GLFW_PRESS;
     }
 
@@ -31,9 +31,13 @@ namespace Lunar {
         return { (float)x, (float)y };
     }
 
-    void Input::SetCursorMode(CursorMode mode)
-    {
-        GLFWwindow* windowHandle = Application::Get().GetWindowHandle();
-        glfwSetInputMode(windowHandle, GLFW_CURSOR, GLFW_CURSOR_NORMAL + (int)mode);
-    }
+	float Input::GetMouseX()
+	{
+		return GetMousePosition().x;
+	}
+
+	float Input::GetMouseY()
+	{
+		return GetMousePosition().y;
+	}
 }

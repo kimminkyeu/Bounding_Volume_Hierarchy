@@ -5,6 +5,7 @@
 #ifndef SCOOP_MOUSECODES_H
 #define SCOOP_MOUSECODES_H
 
+// https://github.com/TheCherno/Hazel/blob/master/Hazel/src/Hazel/Core/MouseCodes.h
 namespace Lunar
 {
 	using MouseCode = uint16_t;

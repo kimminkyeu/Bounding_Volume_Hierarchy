@@ -5,19 +5,29 @@
 #include "Lunar/Core/EntryPoint.h" // main code here
 #include "Lunar/Shader/ShaderProgram.h"
 #include "Lunar/Mesh/Mesh.h"
+#include "Lunar/Camera/EditorCamera.h"
 
 class ExampleLayer final : public Lunar::Layer
 {
 private:
 	std::unique_ptr<Lunar::ShaderProgram> m_ShaderProgram;
 	std::vector<std::unique_ptr<Lunar::Mesh>> m_MeshList;
-	glm::mat4 m_ProjectionMatrix; // TODO: MOVE THIS TO CAMERA CLASS!!
+//	glm::mat4 m_ProjectionMatrix; // TODO: MOVE THIS TO CAMERA CLASS!!
+	Lunar::EditorCamera m_EditorCamera;
 
 public:
 	ExampleLayer()
-		: m_ProjectionMatrix(glm::mat4(1.0f))
 	{
 		this->_m_Name = "Example";
+		const auto& app = Lunar::Application::Get();
+
+		// ******* Init Camera *********
+		auto width = app.getWindowData().BufferWidth;
+		auto height = app.getWindowData().BufferHeight;
+		auto aspectRatio = (float)width / (float)height;
+		m_EditorCamera = Lunar::EditorCamera(45.0f, aspectRatio, 0.1f, 100.0f);
+		// *****************************
+
 		LOG_TRACE("Layer [{0}] constructor called", _m_Name);
 	}
 
@@ -54,7 +64,6 @@ public:
 
 		const auto& app = Lunar::Application::Get();
 		const auto& windowData = app.getWindowData();
-		m_ProjectionMatrix = glm::perspective(45.0f, (GLfloat)windowData.BufferWidth/(GLfloat)windowData.BufferHeight, 0.1f, 100.0f);
 	}
 
 	// called once popped from m_LayerStack
@@ -68,19 +77,19 @@ public:
 	// called every render loop
 	void OnUpdate(float ts) override
 	{
-		// Set shader program for single frame parallel rendering.
+		// 0. Set shader program for single frame parallel rendering.
 		glUseProgram(m_ShaderProgram->getProgramID());
 
-		// Set Projection (TODO: move this to Camera class)
-		m_ShaderProgram->setUniformProjection(glm::value_ptr(m_ProjectionMatrix));
+		// 1. update camera
+		m_EditorCamera.OnUpdate(ts);
 
-		glm::mat4 view(1.0f); // TODO: move to CAMERA!
-		m_ShaderProgram->setUniformView(glm::value_ptr(view));
+		// Set View, Projection Matrix (from Editor Camera)
+		m_ShaderProgram->setUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+		m_ShaderProgram->setUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 
+		// TODO: Move to ******************* Object Class ******************
 		// Set Model
 		glm::mat4 model(1.0f); // init unit matrix
-		model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.5f));
-		model = glm::scale(model, glm::vec3(0.4f, 0.4, 0.4f));
 		m_ShaderProgram->setUniformModel(glm::value_ptr(model));
 
 		// Render each mesh
@@ -88,6 +97,7 @@ public:
 		for (auto& mesh : m_MeshList) {
 			mesh->RenderMesh();
 		}
+		// ********************************************************************
 
 		// unbind shader program
 		glUseProgram(0);
@@ -97,11 +107,14 @@ public:
     {
         // ....
     }
+
+	Lunar::EditorCamera* GetActiveCameraPtr()
+	{ return &m_EditorCamera; }
 };
 
 Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
 {
-	Lunar::ApplicationSpecification spec {"Scoop", 600, 600 };
+	Lunar::ApplicationSpecification spec {"Scoop", 1200, 800 };
 
 	auto* app = new Lunar::Application(spec);
     app->PushLayer<ExampleLayer>();
