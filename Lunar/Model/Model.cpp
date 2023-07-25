@@ -17,14 +17,18 @@ namespace Lunar {
 
 	}
 
-	void Model::LoadModel(const std::string& fileName)
+	void Model::LoadModel(const std::string& filePath)
 	{
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(fileName, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
+
+		std::string fullTexturePath = std::string(PROJECT_ROOT_DIR) + "/" + std::string(filePath);
+		const aiScene* scene = importer.ReadFile(fullTexturePath,
+						 aiProcess_Triangulate | aiProcess_FlipUVs |
+						        aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
 
 		if (!scene)
 		{
-			LOG_ERROR("Model {0} import failed: {0}", fileName, importer.GetErrorString());
+			LOG_ERROR("Model {0} import failed: {0}", fullTexturePath, importer.GetErrorString());
 			return ;
 		}
 		LoadNode(scene->mRootNode, scene);
@@ -53,20 +57,20 @@ namespace Lunar {
 			vertices.insert(vertices.end(),
 					{ mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z });
 
-			// 만약 Texture 가 없을 경우
+			// Texture 가 있을 경우.
 			if(mesh->mTextureCoords[0])
 			{
 				vertices.insert(vertices.end(),
 					{ mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y });
 			}
-			else
+			else // 만약 Texture 가 없을 경우
 			{
 				vertices.insert(vertices.end(),
 					{ 0.0f, 0.0f });
 			}
-			// Normals
-			vertices.insert(vertices.end(),
-					{ mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z });
+			// Normals (근데 OBJ에 normal이 없는데...?)
+//			vertices.insert(vertices.end(),
+//					{ -mesh->mNormals[i].x, -mesh->mNormals[i].y, -mesh->mNormals[i].z });
 		}
 
 		// Update Indices
@@ -80,6 +84,8 @@ namespace Lunar {
 		}
 
 		Mesh* newMesh = new Mesh();
+
+		// NOTE: Create VAO for each Mesh
 		newMesh->CreateMesh(&vertices[0], &indices[0], vertices.size(), indices.size());
 		m_MeshList.push_back(newMesh);
 		m_MeshToTexture.push_back(mesh->mMaterialIndex);
@@ -102,8 +108,11 @@ namespace Lunar {
 				if(material->GetTexture(aiTextureType_DIFFUSE, 0, &path) == AI_SUCCESS)
 				{
 					int idx = std::string(path.data).rfind('\\');
-					std::string fileName = std::string(path.data).substr(idx + 1);
-					std::string texPath = std::string("Textures/") + fileName;
+//					std::string filePath = std::string(path.data).substr(0, idx);
+//					std::string fileName = std::string(path.data).substr(idx + 1);
+//					std::string texPath = std::string("") + fileName;
+					std::string texPath = path.data;
+					LOG_TRACE("Model Texture Path: {0}", texPath);
 					m_TextureList[i] = new Texture(texPath);
 					if (!m_TextureList[i]->LoadTextureRGB())
 					{
@@ -115,8 +124,8 @@ namespace Lunar {
 			}
 			if (!m_TextureList[i])
 			{
-				m_TextureList[i] = new Texture("Textures/plain.png");
-				m_TextureList[i]->LoadTextureRGBA();
+//				m_TextureList[i] = new Texture("LunarApp/assets/brick_wall.png");
+//				m_TextureList[i]->LoadTextureRGBA();
 			}
 		}
 	}

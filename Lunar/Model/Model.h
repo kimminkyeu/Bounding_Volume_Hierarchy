@@ -22,7 +22,7 @@ namespace Lunar {
 	public:
 		Model();
 		~Model();
-		void LoadModel(const std::string& fileName);
+		void LoadModel(const std::string& filePath);
 		void RenderModel();
 		void ClearModel();
 	private:

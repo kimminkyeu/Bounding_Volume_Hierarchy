@@ -29,7 +29,7 @@ set( SOURCE_FILES
         Lunar/Texture/Texture.cpp
         Lunar/Model/Model.cpp
 
-        )
+        Lunar/Light/Light.cpp Lunar/Light/Light.h)
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name
@@ -88,6 +88,7 @@ include_directories( SYSTEM # to use '#include <...>'
 
     # TODO: Delete Later !! *************************
         ${CMAKE_SOURCE_DIR}/dependency/assimp/include
+        ${CMAKE_SOURCE_DIR}/dependency/assimp/build/include
     # TODO: *****************************************
 
         )

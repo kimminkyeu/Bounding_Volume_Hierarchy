@@ -11,3 +11,8 @@
 ### 0725
 1. scop 과제는 obj loading library를 사용할 수 없음.
    직접 데이터를 파싱해야만 함.
+
+- 일단 obj 파일에 normal 데이터와 uv 데이터는 없다.
+- 또한 f가 indices, 즉 한 면을 구성하는 점들을 의미한다.
+- 그럼 내가 obj를 로드한 뒤에, 각 점의 normal과 (3점의 좌표를 아니까 가능하긴 함) uv를 자동으로 만들어주어야 하나?
+- https://winterbloed.be/reading-an-obj-file-in-processing/

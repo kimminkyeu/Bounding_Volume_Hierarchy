@@ -26,40 +26,45 @@ namespace Lunar {
 	private:
 
 		GLuint	m_ProgramID;
-		GLint	m_uniformProjectionLocation;
-		GLint	m_uniformViewLocation;
-		GLint	m_uniformModelLocation;
+		GLint	m_UniformProjectionLocation;
+		GLint	m_UniformViewLocation;
+		GLint	m_UniformModelLocation;
 		char	m_ShadersBitmap; // 최소 요건 쉐이더 2개(F, V)가 세팅이 되어 있는지 체크.
 		//               F V    ( F=fragment_shader, V=vertex_shader )
 		// [ 0 0 0 0 0 0 0 0 ] 8bit
+
+		GLint	m_UniformAmbientIntensityLocation;
+		GLint	m_UniformAmbientColorLocation;
 
 	public:
 		ShaderProgram();
 //		ShaderProgram(ShaderProgram&& proc) noexcept;
 		~ShaderProgram();
 		// compile and attach shader to shaderProgram
-		int attachShader(const std::string& shaderPath, GLenum shaderType);
+		int AttachShader(const std::string& shaderPath, GLenum shaderType);
 		// link shaderProgram to GPU + load uniform variable location
-		int linkToGPU();
+		int LinkToGPU();
 		// attach 후 GPU에 link하는 과정 포함한 생성자.
 		ShaderProgram(const std::string& vertex_shader_path, const std::string& fragment_shader_path);
-		// change member uniform variable. (Model)
-		void setUniformModel(const GLfloat *value) const;
-		// change member uniform variable. (View)
-		void setUniformView(const GLfloat* value) const;
-		// change member uniform variable. (Projection)
-		void setUniformProjection(const GLfloat *value) const;
+
+		void SetUniformModel(const GLfloat *value) const;
+		void SetUniformView(const GLfloat* value) const;
+		void SetUniformProjection(const GLfloat *value) const;
+
+
 		// delete program.
-		void deleteFromGPU();
+		void DeleteFromGPU();
 
 		// get location of uniform variables inside GPU...
-		GLint getUniformProjectionLocation() const;
-		GLint getUniformModelLocation() const;
-		GLint getUniformViewLocation() const;
-		GLuint getProgramID() const;
+		GLuint GetProgramID() const;
+		GLint GetUniformProjectionLocation() const;
+		GLint GetUniformModelLocation() const;
+		GLint GetUniformViewLocation() const;
+		GLint GetUniformAmbientColorLocation() const;
+		GLint GetUniformAmbientIntensityLocation() const;
 
 	private:
-		static std::string _readFileToString(const std::string& path);
+		static std::string _ReadFileToString(const std::string& path);
 	};
 }
 

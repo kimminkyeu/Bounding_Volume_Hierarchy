@@ -12,7 +12,7 @@ static const char ESSENTIAL_SHADERS_LOADED = (1 << 1) | (1 << 0);
 namespace Lunar {
 
 	ShaderProgram::ShaderProgram()
-		: m_ProgramID(0), m_uniformModelLocation(-1), m_uniformProjectionLocation(-1), m_uniformViewLocation(-1), m_ShadersBitmap(0)
+		: m_ProgramID(0), m_UniformModelLocation(-1), m_UniformProjectionLocation(-1), m_UniformViewLocation(-1), m_ShadersBitmap(0)
 	{}
 
 	ShaderProgram::ShaderProgram(const std::string& vertex_shader_path, const std::string& fragment_shader_path)
@@ -22,21 +22,21 @@ namespace Lunar {
 		LOG_TRACE("ShaderProgram constructor called");
 		std::string vShaderPath = std::string(PROJECT_ROOT_DIR) + "/" + std::string(vertex_shader_path);
 		LOG_TRACE("vertex shader path: {0}", vShaderPath);
-		this->attachShader(vShaderPath, GL_VERTEX_SHADER);
+		this->AttachShader(vShaderPath, GL_VERTEX_SHADER);
 		std::string fShaderPath = std::string(PROJECT_ROOT_DIR) + "/" + std::string(fragment_shader_path);
 		LOG_TRACE("fragment shader path: {0}", fShaderPath);
-		this->attachShader(fShaderPath, GL_FRAGMENT_SHADER);
+		this->AttachShader(fShaderPath, GL_FRAGMENT_SHADER);
 		// 2. compile shader
-		this->linkToGPU();
+		this->LinkToGPU();
 	}
 
 	ShaderProgram::~ShaderProgram()
 	{
 		LOG_TRACE("ShaderProgram destructor called");
-		this->deleteFromGPU();
+		this->DeleteFromGPU();
 	}
 
-	std::string ShaderProgram::_readFileToString(const std::string& path)
+	std::string ShaderProgram::_ReadFileToString(const std::string& path)
 	{
 		std::ifstream t(path);
 		if (t.fail()) {
@@ -47,7 +47,7 @@ namespace Lunar {
 		return buffer.str();
 	}
 
-	int ShaderProgram::attachShader(const std::string& shaderPath, GLenum shaderType)
+	int ShaderProgram::AttachShader(const std::string& shaderPath, GLenum shaderType)
 	{
 		if (!m_ProgramID) // if no program exist, then create program first.
 		{
@@ -60,7 +60,7 @@ namespace Lunar {
 		}
 		// compile shader
 		GLuint theShader = glCreateShader(shaderType);
-		std::string shader_code = this->_readFileToString(shaderPath);
+		std::string shader_code = this->_ReadFileToString(shaderPath);
 		assert(!shader_code.empty() && "Shader file-read Error");
 		const GLint len = shader_code.length();
 		const char* src = shader_code.c_str();
@@ -97,7 +97,7 @@ namespace Lunar {
 	}
 
 	// 나중에 glCreateProgram 이 코드 다르게 만들기.
-	int ShaderProgram::linkToGPU()
+	int ShaderProgram::LinkToGPU()
 	{
 		GLint result = 0;
 		if (m_ShadersBitmap != ESSENTIAL_SHADERS_LOADED)
@@ -131,50 +131,57 @@ namespace Lunar {
 			LOG_ERROR("VALIDATION ERROR {0}", infoLog.data());
 		}
 
-//		 find uniform variable inside the program. then, save its ID to member variable m_*.
-		m_uniformModelLocation = glGetUniformLocation(m_ProgramID, "model");
-		assert((m_uniformModelLocation >= 0) && "uniform model not found in shader");
-		LOG_TRACE("GPU --> Uniform Model found in location {0}", m_uniformModelLocation);
-//		 find uniform variable inside the program. then, save its ID to member variable m_*.
-		m_uniformViewLocation = glGetUniformLocation(m_ProgramID, "view");
-		assert((m_uniformViewLocation >= 0) && "uniform view not found in shader");
-		LOG_TRACE("GPU --> Uniform View found in location {0}", m_uniformViewLocation);
-//		 find uniform variable inside the program. then, save its ID to member variable m_*.
-		m_uniformProjectionLocation = glGetUniformLocation(m_ProgramID, "projection");
-		assert((m_uniformProjectionLocation >= 0) && "uniform projection not found in shader");
-		LOG_TRACE("GPU --> Uniform Projection found in location {0}", m_uniformProjectionLocation);
+		m_UniformModelLocation = glGetUniformLocation(m_ProgramID, "model");
+		assert((m_UniformModelLocation >= 0) && "uniform model not found in shader");
+		LOG_TRACE("GPU --> Uniform Model found in location {0}", m_UniformModelLocation);
+
+		m_UniformViewLocation = glGetUniformLocation(m_ProgramID, "view");
+		assert((m_UniformViewLocation >= 0) && "uniform view not found in shader");
+
+		LOG_TRACE("GPU --> Uniform View found in location {0}", m_UniformViewLocation);
+		m_UniformProjectionLocation = glGetUniformLocation(m_ProgramID, "projection");
+		assert((m_UniformProjectionLocation >= 0) && "uniform projection not found in shader");
+		LOG_TRACE("GPU --> Uniform Projection found in location {0}", m_UniformProjectionLocation);
+
+		m_UniformAmbientColorLocation = glGetUniformLocation(m_ProgramID, "directionalLight.color");
+		assert((m_UniformAmbientColorLocation >= 0) && "uniform directionalLight.color not found in shader");
+		LOG_TRACE("GPU --> Uniform directionalLight found in location {0}", m_UniformAmbientColorLocation);
+
+		m_UniformAmbientIntensityLocation = glGetUniformLocation(m_ProgramID, "directionalLight.ambientIntensity");
+		assert((m_UniformAmbientIntensityLocation >= 0) && "uniform directionalLight.ambientIntensity not found in shader");
+		LOG_TRACE("GPU --> Uniform ambientIntensity found in location {0}", m_UniformAmbientIntensityLocation);
 
 		return (0);
 	}
 
-	void ShaderProgram::setUniformModel(const GLfloat *value) const
+	void ShaderProgram::SetUniformModel(const GLfloat *value) const
 	{
-		glUniformMatrix4fv(m_uniformModelLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
+		glUniformMatrix4fv(m_UniformModelLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
 	}
 
-	void ShaderProgram::setUniformProjection(const GLfloat *value) const
+	void ShaderProgram::SetUniformProjection(const GLfloat *value) const
 	{
-		glUniformMatrix4fv(m_uniformProjectionLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
+		glUniformMatrix4fv(m_UniformProjectionLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
 	}
 
-	void ShaderProgram::setUniformView(const GLfloat *value) const
+	void ShaderProgram::SetUniformView(const GLfloat *value) const
 	{
-		glUniformMatrix4fv(m_uniformViewLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
+		glUniformMatrix4fv(m_UniformViewLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
 	}
 
-	GLint ShaderProgram::getUniformModelLocation() const
-	{ return m_uniformModelLocation; }
+	GLint ShaderProgram::GetUniformModelLocation() const
+	{ return m_UniformModelLocation; }
 
-	GLint ShaderProgram::getUniformProjectionLocation() const
-	{ return m_uniformProjectionLocation; }
+	GLint ShaderProgram::GetUniformProjectionLocation() const
+	{ return m_UniformProjectionLocation; }
 
-	GLint ShaderProgram::getUniformViewLocation() const
-	{ return m_uniformViewLocation; }
+	GLint ShaderProgram::GetUniformViewLocation() const
+	{ return m_UniformViewLocation; }
 
-	GLuint ShaderProgram::getProgramID() const
+	GLuint ShaderProgram::GetProgramID() const
 	{ return this->m_ProgramID; }
 
-	void ShaderProgram::deleteFromGPU()
+	void ShaderProgram::DeleteFromGPU()
 	{
 		// delete program from GPU memory
 		if (m_ProgramID)
@@ -182,9 +189,15 @@ namespace Lunar {
 			glDeleteProgram(m_ProgramID);
 			m_ProgramID = 0;
 		}
-		m_uniformModelLocation = 0;
-		m_uniformProjectionLocation = 0;
-		m_uniformViewLocation = 0;
+		m_UniformModelLocation = 0;
+		m_UniformProjectionLocation = 0;
+		m_UniformViewLocation = 0;
 		m_ShadersBitmap = 0;
 	}
+
+	GLint ShaderProgram::GetUniformAmbientColorLocation() const
+	{ return m_UniformAmbientColorLocation; };
+
+	GLint ShaderProgram::GetUniformAmbientIntensityLocation() const
+	{ return m_UniformAmbientIntensityLocation; };
 }

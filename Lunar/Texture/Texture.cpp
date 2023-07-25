@@ -72,13 +72,10 @@ namespace Lunar {
 		glBindTexture(GL_TEXTURE_2D, m_TextureID);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		// GL_LINEAR : try to blend pixels
-		// GL_NEAREST :
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // GL_LINEAR : try to blend pixels // GL_NEAREST :
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		// internal format = automatic mipMap generation (0)
-		// PNG 이미지는 투명도가 존재하기 때문에, GL_RGBA로 format 지정함.
+		// internal format = automatic mipMap generation (0) // PNG 이미지는 투명도가 존재하기 때문에, GL_RGBA로 format 지정함.
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_Width, m_Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, 0);
