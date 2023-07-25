@@ -7,7 +7,6 @@
 
 #include <string>
 #include <GL/glew.h>
-#include "stb_image.h"
 #include "Lunar/Core/Log.h"
 
 namespace Lunar {
@@ -27,7 +26,8 @@ namespace Lunar {
 		Texture(const std::string& fileLocation);
 		~Texture();
 
-		void LoadTexture();
+		bool LoadTextureRGB();
+		bool LoadTextureRGBA();
 		void UseTexture();
 		void ClearTexture();
 

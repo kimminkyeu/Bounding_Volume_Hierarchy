@@ -26,7 +26,10 @@ set( SOURCE_FILES
         Lunar/Mesh/Mesh.cpp
         Lunar/Camera/PlayerCamera.cpp # Player's view
         Lunar/Camera/EditorCamera.cpp # Editor View
-        Lunar/Texture/Texture.cpp Lunar/Texture/Texture.h)
+        Lunar/Texture/Texture.cpp
+        Lunar/Model/Model.cpp
+
+        )
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name
@@ -82,6 +85,11 @@ include_directories( SYSTEM # to use '#include <...>'
         ${CMAKE_SOURCE_DIR}/dependency/glm/glm
         ${CMAKE_SOURCE_DIR}/dependency/stb_image
         ${CMAKE_SOURCE_DIR}/dependency/spdlog/include
+
+    # TODO: Delete Later !! *************************
+        ${CMAKE_SOURCE_DIR}/dependency/assimp/include
+    # TODO: *****************************************
+
         )
 
 # TODO: Include Lunar
@@ -98,6 +106,10 @@ target_link_libraries( ${NAME}
         # -lGL --> (find_package 명령어와 OpenGL::GL이 대신함)
         ${CMAKE_SOURCE_DIR}/dependency/GLEW/build/lib/libGLEW.a
         ${CMAKE_SOURCE_DIR}/dependency/GLFW/build/src/libglfw3.a
+
+    # TODO: Delete Later !! **************************************************
+        ${CMAKE_SOURCE_DIR}/dependency/assimp/build/bin/libassimp.5.2.5.dylib
+    # TODO: ******************************************************************
         )
 
 # Link: https://coderefinery.github.io/cmake-workshop/environment/

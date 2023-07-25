@@ -8,19 +8,16 @@ cmake-build-debug
 !./dependency/glm
 
 ./dependency/spdlog/build
-# GLFW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
-# ----------------------------
-./dependency/GLFW/build                     # ignore library dir made by cmake>
+./dependency/assimp/build
+./dependency/GLFW/build
 
-# GLEW 초기 상태 유지. (cmake이 생성하는 모든 결과를 무시)
-# ----------------------------
 !./dependency/GLEW/build
-./dependency/GLEW/build/bin
-./dependency/GLEW/build/CMakeFiles
-./dependency/GLEW/build/lib
-./dependency/GLEW/build/cmake_install.cmake
-./dependency/GLEW/build/cmake_uninstall.cmake
-./dependency/GLEW/build/CMakeCache.txt
-./dependency/GLEW/build/glew.pc
-./dependency/GLEW/build/Makefile
+    ./dependency/GLEW/build/bin
+    ./dependency/GLEW/build/CMakeFiles
+    ./dependency/GLEW/build/lib
+    ./dependency/GLEW/build/cmake_install.cmake
+    ./dependency/GLEW/build/cmake_uninstall.cmake
+    ./dependency/GLEW/build/CMakeCache.txt
+    ./dependency/GLEW/build/glew.pc
+    ./dependency/GLEW/build/Makefile
 

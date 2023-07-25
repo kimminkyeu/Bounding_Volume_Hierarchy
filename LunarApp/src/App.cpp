@@ -6,14 +6,15 @@
 #include "Lunar/Shader/ShaderProgram.h"
 #include "Lunar/Mesh/Mesh.h"
 #include "Lunar/Camera/EditorCamera.h"
+#include "Lunar/Texture/Texture.h"
 
 class ExampleLayer final : public Lunar::Layer
 {
 private:
 	std::unique_ptr<Lunar::ShaderProgram> m_ShaderProgram;
 	std::vector<std::unique_ptr<Lunar::Mesh>> m_MeshList;
-//	glm::mat4 m_ProjectionMatrix; // TODO: MOVE THIS TO CAMERA CLASS!!
 	Lunar::EditorCamera m_EditorCamera;
+	Lunar::Texture m_BrickTexture {"LunarApp/resources/brick_wall.png"};
 
 public:
 	ExampleLayer()
@@ -49,12 +50,15 @@ public:
 				0, 1, 2,
 		};
 		GLfloat verticies[] = {
-				-1.0f, -1.0f, 0.0f,
-				0.0f, -1.0f, 1.0f,
-				1.0f, -1.0f, 0.0f,
-				0.0f, 1.0f, 0.0f,
+		//          X          Y          Z          U         V
+				-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+				0.0f, -1.0f, 1.0f, 0.5f, 0.0f,
+				1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+				0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
 		};
-		m_MeshList.push_back(std::make_unique<Lunar::Mesh>(verticies, indices, 12, 12));
+		m_MeshList.push_back(std::make_unique<Lunar::Mesh>(verticies, indices, 20, 12));
+
+		m_BrickTexture.LoadTextureRGBA();
 
 		// WARN:  VAO가 먼저 잡힌 뒤에 shader를 링크해야 한다.?? 그 이전에 하면 VAO bound error가 발생함...
 		// https://stackoverflow.com/questions/54181078/opengl-3-3-mac-error-validating-program-validation-failed-no-vertex-array-ob
@@ -92,7 +96,9 @@ public:
 		glm::mat4 model(1.0f); // init unit matrix
 		m_ShaderProgram->setUniformModel(glm::value_ptr(model));
 
+
 		// Render each mesh
+		m_BrickTexture.UseTexture(); // 모든 객체가 이 텍스쳐를 사용.
 		// TODO: MOVE LOCATION MATRIX TO MESH CLASS.
 		for (auto& mesh : m_MeshList) {
 			mesh->RenderMesh();
