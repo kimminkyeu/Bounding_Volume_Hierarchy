@@ -107,11 +107,22 @@ target_link_libraries( ${NAME}
         # -lGL --> (find_package 명령어와 OpenGL::GL이 대신함)
         ${CMAKE_SOURCE_DIR}/dependency/GLEW/build/lib/libGLEW.a
         ${CMAKE_SOURCE_DIR}/dependency/GLFW/build/src/libglfw3.a
-
-    # TODO: Delete Later !! **************************************************
-        ${CMAKE_SOURCE_DIR}/dependency/assimp/build/bin/libassimp.5.2.5.dylib
-    # TODO: ******************************************************************
         )
+
+# TODO: Delete Later !! **************************************************
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux") # Linux
+    target_link_libraries( ${NAME}
+            PRIVATE
+            ${CMAKE_SOURCE_DIR}/dependency/assimp/build/bin/libassimp.so
+            )
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin") # MacOS
+    target_link_libraries( ${NAME}
+            PRIVATE
+            ${CMAKE_SOURCE_DIR}/dependency/assimp/build/bin/libassimp.5.2.5.dylib
+            )
+    # ... ?
+endif ()
+# TODO: ******************************************************************
 
 # Link: https://coderefinery.github.io/cmake-workshop/environment/
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux") # Linux
