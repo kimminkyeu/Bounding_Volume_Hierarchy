@@ -5,12 +5,11 @@ build
 cmake-build-debug
 .idea
 
-!./dependency/glm
-
+./dependency/GLFW/build
 ./dependency/spdlog/build
 ./dependency/assimp/build
-./dependency/GLFW/build
 
+!./dependency/glm
 !./dependency/GLEW/build
     ./dependency/GLEW/build/bin
     ./dependency/GLEW/build/CMakeFiles
