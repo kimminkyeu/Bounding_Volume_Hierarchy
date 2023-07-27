@@ -132,24 +132,26 @@ namespace Lunar {
 		}
 
 		m_UniformModelLocation = glGetUniformLocation(m_ProgramID, "model");
-//		assert((m_UniformModelLocation >= 0) && "uniform model not found in shader");
-//		LOG_TRACE("GPU --> Uniform Model found in location {0}", m_UniformModelLocation);
+		assert((m_UniformModelLocation >= 0) && "uniform model not found in shader");
+		LOG_TRACE("GPU --> Uniform Model found in location {0}", m_UniformModelLocation);
 
 		m_UniformViewLocation = glGetUniformLocation(m_ProgramID, "view");
-//		assert((m_UniformViewLocation >= 0) && "uniform view not found in shader");
-//		LOG_TRACE("GPU --> Uniform View found in location {0}", m_UniformViewLocation);
+		assert((m_UniformViewLocation >= 0) && "uniform view not found in shader");
+		LOG_TRACE("GPU --> Uniform View found in location {0}", m_UniformViewLocation);
 
 		m_UniformProjectionLocation = glGetUniformLocation(m_ProgramID, "projection");
-//		assert((m_UniformProjectionLocation >= 0) && "uniform projection not found in shader");
-//		LOG_TRACE("GPU --> Uniform Projection found in location {0}", m_UniformProjectionLocation);
+		assert((m_UniformProjectionLocation >= 0) && "uniform projection not found in shader");
+		LOG_TRACE("GPU --> Uniform Projection found in location {0}", m_UniformProjectionLocation);
 
+		/*
 		m_UniformAmbientColorLocation = glGetUniformLocation(m_ProgramID, "directionalLight.color");
-//		assert((m_UniformAmbientColorLocation >= 0) && "uniform directionalLight.color not found in shader");
-//		LOG_TRACE("GPU --> Uniform directionalLight found in location {0}", m_UniformAmbientColorLocation);
+		assert((m_UniformAmbientColorLocation >= 0) && "uniform directionalLight.color not found in shader");
+		LOG_TRACE("GPU --> Uniform directionalLight found in location {0}", m_UniformAmbientColorLocation);
 
 		m_UniformAmbientIntensityLocation = glGetUniformLocation(m_ProgramID, "directionalLight.ambientIntensity");
-//		assert((m_UniformAmbientIntensityLocation >= 0) && "uniform directionalLight.ambientIntensity not found in shader");
-//		LOG_TRACE("GPU --> Uniform ambientIntensity found in location {0}", m_UniformAmbientIntensityLocation);
+		assert((m_UniformAmbientIntensityLocation >= 0) && "uniform directionalLight.ambientIntensity not found in shader");
+		LOG_TRACE("GPU --> Uniform ambientIntensity found in location {0}", m_UniformAmbientIntensityLocation);
+		*/
 
 		return (0);
 	}

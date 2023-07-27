@@ -18,7 +18,7 @@ namespace Lunar {
 
 	Texture::~Texture()
 	{
-
+		this->ClearTexture();
 	}
 
 	void Texture::UseTexture()
@@ -29,56 +29,34 @@ namespace Lunar {
 		// 이렇게 하면, frag_shader의 texture unit 0 를 접근하면 위 texture가 불러와지는 거임.
 	}
 
-	bool Texture::LoadTextureRGB()
+	void Texture::LoadTexture()
 	{
 		std::string fullTexturePath = std::string(PROJECT_ROOT_DIR) + "/" + std::string(m_FileLocation);
 		unsigned char* textureData = stbi_load(fullTexturePath.c_str(), &m_Width, &m_Height, &m_Channels, 0);
 		if (!textureData)
 		{
 			LOG_ERROR("Failed to find texture at {0}", fullTexturePath);
-			return false;
+			return;
 		}
-		LOG_TRACE("Loaded texture path: {0}", fullTexturePath);
+		else
+		{
+			LOG_INFO("Loaded texture path: {0}. Width={1} Height={2} Channel={3}byte", fullTexturePath, m_Width, m_Height, m_Channels);
+		}
 		glGenTextures(1, &m_TextureID);
 		glBindTexture(GL_TEXTURE_2D, m_TextureID);
+
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		// GL_LINEAR : try to blend pixels
-		// GL_NEAREST :
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-		// internal format = automatic mipMap generation (0)
-		// PNG 이미지는 투명도가 존재하기 때문에, GL_RGBA로 format 지정함.
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Width, m_Height, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		stbi_image_free(textureData);
-		return (true);
-	}
-
-	// if load success, return true
-	bool Texture::LoadTextureRGBA()
-	{
-		std::string fullTexturePath = std::string(PROJECT_ROOT_DIR) + "/" + std::string(m_FileLocation);
-		unsigned char* textureData = stbi_load(fullTexturePath.c_str(), &m_Width, &m_Height, &m_Channels, 0);
-		if (!textureData)
-		{
-			LOG_ERROR("Failed to find texture at {0}", fullTexturePath);
-			return false;
-		}
-		LOG_TRACE("Loaded texture path: {0}", fullTexturePath);
-		glGenTextures(1, &m_TextureID);
-		glBindTexture(GL_TEXTURE_2D, m_TextureID);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // GL_LINEAR : try to blend pixels // GL_NEAREST :
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		// GL_LINEAR : try to blend pixels // GL_NEAREST :
 
 		// internal format = automatic mipMap generation (0) // PNG 이미지는 투명도가 존재하기 때문에, GL_RGBA로 format 지정함.
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_Width, m_Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureData);
 		glGenerateMipmap(GL_TEXTURE_2D);
+
 		glBindTexture(GL_TEXTURE_2D, 0);
+
 		stbi_image_free(textureData);
 	}
 

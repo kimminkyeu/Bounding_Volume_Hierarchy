@@ -5,6 +5,7 @@ layout (location = 0) in vec3 position_in; // input data of vertex shader
 layout (location = 1) in vec2 texture_in; // input data of vertex shader
 
 out vec2 TexCoord;
+out vec4 vColorTest;
 
 uniform mat4 model; // Model position
 uniform mat4 view; // Camera View
@@ -16,4 +17,5 @@ void main(void)
 {
     gl_Position = projection * view * model * vec4(position_in, 1.0f);
     TexCoord = texture_in;
+    vColorTest = vec4(clamp(position_in, 0.0f, 1.0f), 1.0f);
 }

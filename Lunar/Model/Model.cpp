@@ -32,7 +32,7 @@ namespace Lunar {
 			return ;
 		}
 		LoadNode(scene->mRootNode, scene);
-		LoadMaterials(scene);
+//		LoadMaterials(scene);
 	}
 
 	void Model::LoadNode(aiNode* node, const aiScene* scene)
@@ -91,6 +91,7 @@ namespace Lunar {
 		m_MeshToTexture.push_back(mesh->mMaterialIndex);
 	}
 
+	/*
 	void Model::LoadMaterials(const aiScene* scene)
 	{
 		m_TextureList.resize(scene->mNumMaterials);
@@ -129,6 +130,7 @@ namespace Lunar {
 			}
 		}
 	}
+ */
 
 	// !!!! MOST IMPORTANT
 	void Model::RenderModel()

@@ -24,11 +24,11 @@ set( SOURCE_FILES
         Lunar/Input/Input.cpp
         Lunar/Shader/ShaderProgram.cpp
         Lunar/Mesh/Mesh.cpp
-        Lunar/Camera/PlayerCamera.cpp # Player's view
+#        Lunar/Camera/PlayerCamera.cpp # Player's view
         Lunar/Camera/EditorCamera.cpp # Editor View
         Lunar/Texture/Texture.cpp
         Lunar/Model/Model.cpp
-        Lunar/Light/Light.cpp
+#        Lunar/Light/Light.cpp
         )
 # configure cmake project
 # ----------------------------------------------------------------------------

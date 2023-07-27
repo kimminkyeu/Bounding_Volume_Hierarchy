@@ -26,8 +26,8 @@ namespace Lunar {
 		Texture(const std::string& fileLocation);
 		~Texture();
 
-		bool LoadTextureRGB();
-		bool LoadTextureRGBA();
+		void LoadTexture();
+
 		void UseTexture();
 		void ClearTexture();
 

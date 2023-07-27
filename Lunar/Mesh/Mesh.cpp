@@ -55,7 +55,7 @@ namespace Lunar {
 		glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(verticies[0]) * numOfVertices, verticies, GL_STATIC_DRAW);
 
-		// Set vertex attribute : [ x y z TexU TexV ]
+		// Set vertex attribute : [ x y z U V ]
 		// x y z (stride = X ~ next X 까지의 거리)
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GL_FLOAT), 0);
 		glEnableVertexAttribArray(0);

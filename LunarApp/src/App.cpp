@@ -17,22 +17,12 @@ private:
 	std::vector<std::unique_ptr<Lunar::Mesh>> m_MeshList;
 	Lunar::EditorCamera m_EditorCamera;
 	Lunar::Model m_Model;
-	Lunar::Texture m_BrickTexture {"LunarApp/assets/brick_wall.png"};
-	//	Lunar::Light m_MainLight {0.0f, 0.0f, 0.0f, 1.0f };
+	Lunar::Texture m_BrickTexture;
 
 public:
 	ExampleLayer()
 	{
 		this->_m_Name = "Example";
-		const auto& app = Lunar::Application::Get();
-
-		// ******* Init Camera *********
-		auto width = app.getWindowData().BufferWidth;
-		auto height = app.getWindowData().BufferHeight;
-		auto aspectRatio = (float)width / (float)height;
-		m_EditorCamera = Lunar::EditorCamera(45.0f, aspectRatio, 0.1f, 100.0f);
-		// *****************************
-
 		LOG_TRACE("Layer [{0}] constructor called", _m_Name);
 	}
 
@@ -60,42 +50,46 @@ public:
 				1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
 				0.0f, 1.0f, 0.0f, 0.5f, 1.0f,
 		};
-		m_MeshList.push_back(std::make_unique<Lunar::Mesh>(verticies, indices, 20, 12));
+	// 1. create object
+//		m_MeshList.push_back(std::make_unique<Lunar::Mesh>(verticies, indices, 20, 12));
+		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
 
+	// 2. create shaders
 		m_ShaderProgram = std::make_unique<Lunar::ShaderProgram>(
 				"LunarApp/src/shaders/vertex_shader.glsl",
 				"LunarApp/src/shaders/fragment_shader.glsl");
 
+	// 3. Init Camera
 		const auto& app = Lunar::Application::Get();
-		const auto& windowData = app.getWindowData();
+		auto width = app.getWindowData().BufferWidth;
+		auto height = app.getWindowData().BufferHeight;
+		auto aspectRatio = (float)width / (float)height;
+		m_EditorCamera = Lunar::EditorCamera(45.0f, aspectRatio, 0.1f, 100.0f);
+	// 4. Init Texture
+		m_BrickTexture = Lunar::Texture("LunarApp/assets/brick.png");
+		m_BrickTexture.LoadTexture();
 	}
 
 	// called every render loop
 	void OnUpdate(float ts) override
 	{
-		// Clear window to black.
+	// Clear window to black.
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		// 0. Set shader program for single frame parallel rendering.
-
-		// 1. update camera
+	// 1. update camera
 		m_EditorCamera.OnUpdate(ts);
-
-		// Set View, Projection Matrix (from Editor Camera)
+	// Set View, Projection Matrix (from Editor Camera)
 		glUseProgram(m_ShaderProgram->GetProgramID());
 		m_ShaderProgram->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 		m_ShaderProgram->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 		glm::mat4 model(1.0f); // init unit matrix
 		m_ShaderProgram->SetUniformModel(glm::value_ptr(model));
-
-//		m_MainLight.UseLight(m_ShaderProgram->GetUniformAmbientIntensityLocation(), m_ShaderProgram->GetUniformAmbientColorLocation());
-
-		// Render each mesh
-//		m_BrickTexture.UseTexture(); // 모든 객체가 이 텍스쳐를 사용.
-		// TODO: MOVE LOCATION MATRIX TO MESH CLASS.
+	// Bind texture to fragment shader
+		m_BrickTexture.UseTexture();
+		m_Model.RenderModel();
 		for (auto& mesh : m_MeshList) {
 			mesh->RenderMesh();
 		}
-		// ********************************************************************
 
 		// unbind shader program
 		glUseProgram(0);
@@ -120,7 +114,7 @@ public:
 
 Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
 {
-	Lunar::ApplicationSpecification spec {"Scoop", 1200, 800 };
+	Lunar::ApplicationSpecification spec {"Scoop", 512, 512 };
 
 	auto* app = new Lunar::Application(spec);
     app->PushLayer<ExampleLayer>();
