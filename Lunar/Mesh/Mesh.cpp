@@ -57,11 +57,14 @@ namespace Lunar {
 
 		// Set vertex attribute : [ x y z U V ]
 		// x y z (stride = X ~ next X 까지의 거리)
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GL_FLOAT), 0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), 0);
 		glEnableVertexAttribArray(0);
 		// TexU TexV (stride = U ~ next U 까지의 거리)                            이건 xyz 지나고 첫 TexU 까지의 거리.
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GL_FLOAT), (void *)(sizeof(GL_FLOAT) * 3));
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void *)(sizeof(GL_FLOAT) * 3));
 		glEnableVertexAttribArray(1);
+		// Normal xyz														    vertex x 부터 5칸 뒤가 첫 normal x
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void *)(sizeof(GL_FLOAT) * 5));
+		glEnableVertexAttribArray(2);
 
 
 		// Unbind Buffer for later use

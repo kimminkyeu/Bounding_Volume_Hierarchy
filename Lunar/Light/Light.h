@@ -12,15 +12,18 @@ namespace Lunar {
 	class Light
 	{
 	private:
+		glm::vec3 m_Direction; // light direction
 		glm::vec3 m_AmbientColor;
 		float m_AmbientIntensity;
-
+		float m_DiffuseIntensity;
 
 	public:
 		Light();
-		Light(GLfloat red, GLfloat green, GLfloat blue, GLfloat ambientIntensity);
+		Light(GLfloat red, GLfloat green, GLfloat blue, GLfloat ambientIntensity,
+			  GLfloat xDir, GLfloat yDir, GLfloat zDir, GLfloat diffuseIntensity);
 		~Light();
-		void UseLight(GLint ambientIntensityLocation, GLint ambientColorLocation);
+		void UseLight(GLint ambientIntensityLocation, GLint ambientColorLocation,
+					  GLint diffuseIntensityLocation, GLint directionLocation);
 	};
 }
 

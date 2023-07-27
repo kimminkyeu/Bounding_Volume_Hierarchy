@@ -21,6 +21,8 @@
 
 ---
 ### 0727
+
+##### ERROR
 인터넷에서 다운받은 brick_wall.png가 자꾸 텍스쳐가 안되서..
 (glTexImage2D에서 segfault 발생)...
 그래서 이걸 강의제공 이미지인 brick.png로 바꿧더니 잘됨.
@@ -28,5 +30,18 @@
 1. 후보 1. 강의 제공 이미지는 32bit color 데이터이고 내가 다운받은건 48bit.
 이점 때문에 터진건지?
 2. 후보 2. 그냥 내가 받은 brick_wall.png가 정상 이미지가 아닌 건지? 
+   - 아니 뭐때매 터지는건지를 내가 알아야 이걸 예외처리를 할 거아냐...
 
-- 아니 뭐때매 터지는건지를 내가 알아야 이걸 예외처리를 할 거아냐...
+##### PHONG
+minirt 때 구현한 퐁 쉐이딩과는 조금 다르다.
+- 그리고 수정해야 함~!
+- 지금 normal 계산이 잘 못 됬는지 x방향 lighting이 먹지 않는다.
+
+
+### OBJ loader 구현시 고려할 사항
+```c++
+const aiScene* scene = importer.ReadFile(fullTexturePath,
+                          aiProcess_Triangulate | aiProcess_FlipUVs |
+                          aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
+```
+여기 각 옵션 비트들의 의미를 분석해보면, 42과제에서 teapot1이 뭐가 잘못된 데이터가 들어있고, 이를 어떻게 고쳐야 하는지 설명한다.

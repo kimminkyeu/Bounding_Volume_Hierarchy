@@ -28,7 +28,7 @@ set( SOURCE_FILES
         Lunar/Camera/EditorCamera.cpp # Editor View
         Lunar/Texture/Texture.cpp
         Lunar/Model/Model.cpp
-#        Lunar/Light/Light.cpp
+        Lunar/Light/Light.cpp
         )
 # configure cmake project
 # ----------------------------------------------------------------------------

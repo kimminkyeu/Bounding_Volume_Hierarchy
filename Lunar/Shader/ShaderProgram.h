@@ -33,8 +33,12 @@ namespace Lunar {
 		//               F V    ( F=fragment_shader, V=vertex_shader )
 		// [ 0 0 0 0 0 0 0 0 ] 8bit
 
+		// PHONG : Ambient Color
 		GLint	m_UniformAmbientIntensityLocation;
 		GLint	m_UniformAmbientColorLocation;
+		// PHONG : Diffuse Color
+		GLint	m_UniformDiffuseIntensityLocation;
+		GLint 	m_UniformDirectionLocation;
 
 	public:
 		ShaderProgram();
@@ -44,24 +48,29 @@ namespace Lunar {
 		int AttachShader(const std::string& shaderPath, GLenum shaderType);
 		// link shaderProgram to GPU + load uniform variable location
 		int LinkToGPU();
+		// delete program.
+		void DeleteFromGPU();
 		// attach 후 GPU에 link하는 과정 포함한 생성자.
 		ShaderProgram(const std::string& vertex_shader_path, const std::string& fragment_shader_path);
 
 		void SetUniformModel(const GLfloat *value) const;
 		void SetUniformView(const GLfloat* value) const;
 		void SetUniformProjection(const GLfloat *value) const;
-
-
-		// delete program.
-		void DeleteFromGPU();
+		void SetUniformAmbientColor(const GLfloat* value) const;
+		void SetUniformAmbientIntensity(const GLfloat* value) const;
+		void SetUniformDirectionLocation(const GLfloat* value) const;
 
 		// get location of uniform variables inside GPU...
 		GLuint GetProgramID() const;
 		GLint GetUniformProjectionLocation() const;
 		GLint GetUniformModelLocation() const;
 		GLint GetUniformViewLocation() const;
-		GLint GetUniformAmbientColorLocation() const;
+
+		// Directional Light
+		GLint GetUniformAmbientColorLocation() const; // 근데... 빛이 여러개일 경우도 있을 텐데, 이렇게 쉐이더에 의존적으로 삽입하는게 맞나 싶다?
 		GLint GetUniformAmbientIntensityLocation() const;
+		GLint GetUniformDiffuseIntensityLocation() const;
+		GLint GetUniformDirectionLocation() const;
 
 	private:
 		static std::string _ReadFileToString(const std::string& path);

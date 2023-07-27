@@ -143,7 +143,7 @@ namespace Lunar {
 		assert((m_UniformProjectionLocation >= 0) && "uniform projection not found in shader");
 		LOG_TRACE("GPU --> Uniform Projection found in location {0}", m_UniformProjectionLocation);
 
-		/*
+		// ***************************** PHONG MODEL ******************************
 		m_UniformAmbientColorLocation = glGetUniformLocation(m_ProgramID, "directionalLight.color");
 		assert((m_UniformAmbientColorLocation >= 0) && "uniform directionalLight.color not found in shader");
 		LOG_TRACE("GPU --> Uniform directionalLight found in location {0}", m_UniformAmbientColorLocation);
@@ -151,25 +151,32 @@ namespace Lunar {
 		m_UniformAmbientIntensityLocation = glGetUniformLocation(m_ProgramID, "directionalLight.ambientIntensity");
 		assert((m_UniformAmbientIntensityLocation >= 0) && "uniform directionalLight.ambientIntensity not found in shader");
 		LOG_TRACE("GPU --> Uniform ambientIntensity found in location {0}", m_UniformAmbientIntensityLocation);
-		*/
+
+		m_UniformDiffuseIntensityLocation = glGetUniformLocation(m_ProgramID, "directionalLight.diffuseIntensity");
+		assert((m_UniformDiffuseIntensityLocation >= 0) && "uniform directionalLight.diffuseIntensity not found in shader");
+		LOG_TRACE("GPU --> Uniform diffuseIntensity found in location {0}", m_UniformDiffuseIntensityLocation);
+
+		m_UniformDirectionLocation = glGetUniformLocation(m_ProgramID, "directionalLight.direction");
+		assert((m_UniformDirectionLocation >= 0) && "uniform directionalLight.direction not found in shader");
+		LOG_TRACE("GPU --> Uniform direction found in location {0}", m_UniformDirectionLocation);
 
 		return (0);
 	}
 
 	void ShaderProgram::SetUniformModel(const GLfloat *value) const
-	{
-		glUniformMatrix4fv(m_UniformModelLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
-	}
+	{ glUniformMatrix4fv(m_UniformModelLocation, 1, GL_FALSE, value); }
 
 	void ShaderProgram::SetUniformProjection(const GLfloat *value) const
-	{
-		glUniformMatrix4fv(m_UniformProjectionLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
-	}
+	{ glUniformMatrix4fv(m_UniformProjectionLocation, 1, GL_FALSE, value); }
 
 	void ShaderProgram::SetUniformView(const GLfloat *value) const
-	{
-		glUniformMatrix4fv(m_UniformViewLocation, 1, GL_FALSE, value); // GPU 변수 location에 값 대입.
-	}
+	{ glUniformMatrix4fv(m_UniformViewLocation, 1, GL_FALSE, value); }
+
+	void ShaderProgram::SetUniformAmbientColor(const GLfloat* value) const
+	{ glUniformMatrix4fv(m_UniformAmbientColorLocation, 1, GL_FALSE, value); }
+
+	void ShaderProgram::SetUniformAmbientIntensity(const GLfloat* value) const
+	{ glUniformMatrix4fv(m_UniformAmbientIntensityLocation, 1, GL_FALSE, value); };
 
 	GLint ShaderProgram::GetUniformModelLocation() const
 	{ return m_UniformModelLocation; }
@@ -179,6 +186,19 @@ namespace Lunar {
 
 	GLint ShaderProgram::GetUniformViewLocation() const
 	{ return m_UniformViewLocation; }
+
+	GLint ShaderProgram::GetUniformAmbientColorLocation() const
+	{ return m_UniformAmbientColorLocation; };
+
+	GLint ShaderProgram::GetUniformAmbientIntensityLocation() const
+	{ return m_UniformAmbientIntensityLocation; }
+
+	GLint ShaderProgram::GetUniformDiffuseIntensityLocation() const
+	{ return m_UniformDiffuseIntensityLocation; }
+
+	GLint ShaderProgram::GetUniformDirectionLocation() const // light direction
+	{ return m_UniformDirectionLocation; }
+
 
 	GLuint ShaderProgram::GetProgramID() const
 	{ return this->m_ProgramID; }
@@ -197,9 +217,4 @@ namespace Lunar {
 		m_ShadersBitmap = 0;
 	}
 
-	GLint ShaderProgram::GetUniformAmbientColorLocation() const
-	{ return m_UniformAmbientColorLocation; };
-
-	GLint ShaderProgram::GetUniformAmbientIntensityLocation() const
-	{ return m_UniformAmbientIntensityLocation; };
 }
