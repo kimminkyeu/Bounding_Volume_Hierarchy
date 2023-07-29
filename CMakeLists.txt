@@ -159,6 +159,6 @@ ADD_CUSTOM_TARGET( fclean
 if( DEBUG_MODE )
     print_message(WARNING "--------------------------------------------------------------------")
     print_message(WARNING "You are building project in Debug mode. (using spdlog library)")
-    print_message(WARNING "If you are building release version, then set DEBUG_MODE to False")
+    print_message(WARNING "If you are building release version, then set DEBUG_MODE to False in CmakeList.txt")
     print_message(WARNING "--------------------------------------------------------------------")
 endif ()
