@@ -130,7 +130,9 @@ namespace Lunar {
 	glm::vec3 EditorCamera::CalculatePosition() const
 	{
 		// initial m_Distance is 10.0f
-		return m_FocalPoint - GetForwardDirection() * m_Distance;
+		const auto pos =  m_FocalPoint - GetForwardDirection() * m_Distance;
+//		std::cout << pos.x << " " << pos.y << " " << pos.z << "\n";
+		return pos;
 	}
 
 	glm::quat EditorCamera::GetOrientation() const

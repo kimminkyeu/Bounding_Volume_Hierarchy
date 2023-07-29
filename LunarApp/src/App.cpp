@@ -9,10 +9,7 @@
 #include "Lunar/Texture/Texture.h"
 #include "Lunar/Model/Model.h"
 #include "Lunar/Light/Light.h"
-
-// For Phong Model..
-// 중요한건, 이미 GPU에서 raster화 할때 각 지점간의 normal을 interpolating한다. (이건 내장 행위임)
-// 아래 함수는 우리가 테스트하는 도형이 육각형이 아니라, 피라미드 형태라서 normal를 직접 입력하기 애매해서 구현하는 거다.
+#include "Lunar/Material/Material.h"
 
 // TODO: 이후 obj loader 프로그램을 작성할때, 아래 함수를 참고해서
 // normal 데이터도 함께 동적으로 계산, 추가하자.
@@ -63,13 +60,13 @@ void calculateAverageNormals(unsigned int* indices, unsigned int indicesCount, G
 class ExampleLayer final : public Lunar::Layer
 {
 private:
-
 	std::unique_ptr<Lunar::ShaderProgram> m_ShaderProgram;
 	std::vector<std::unique_ptr<Lunar::Mesh>> m_MeshList;
 	Lunar::EditorCamera m_EditorCamera;
 	Lunar::Model m_Model;
 	Lunar::Texture m_BrickTexture;
 	Lunar::Light m_MainLight;
+	Lunar::Material m_Material;
 
 public:
 	ExampleLayer()
@@ -88,41 +85,18 @@ public:
 	{
 		LOG_TRACE("Layer [{0}] has been attached", _m_Name);
 
-		// load shader // 아 복사 생성자 만들고 소멸자 호출되서 쉐이더가 터진거였네;;;
-		unsigned int indices[] = {
-				0, 3, 1,
-				1, 3, 2,
-				2, 3, 0,
-				0, 1, 2,
-		};
-		GLfloat verticies[] = {
-		//          X          Y          Z           |    U        V        |   Normals (그러나 우리가 직접 계산할 예정)
-				-1.0f, -1.0f, 0.0f,	0.0f, 0.0f,		0.0f, 0.0f, 0.0f,
-				0.0f, -1.0f, 1.0f,	0.5f, 0.0f,		0.0f, 0.0f, 0.0f,
-				1.0f, -1.0f, 0.0f,	1.0f, 0.0f,		0.0f, 0.0f, 0.0f,
-				0.0f, 1.0f, 0.0f,	0.5f, 1.0f,		0.0f, 0.0f, 0.0f,
-		};
-		// TODO: 왜 x축 방향 빛이 계산이 안되지...? Normal 문제가 아닌가?
-		calculateAverageNormals(indices, 12, verticies, 32, 8, 5);
-
-		for (int i=0; i<4; ++i)
-		{
-			for (int j=0; j<8; ++j)
-			{
-				std::cout << verticies[i * 8 + j] << " ";
-			}
-			std::cout << "\n";
-		}
 	// 1. Create object
-		m_MeshList.push_back(std::make_unique<Lunar::Mesh>(verticies, indices, 32, 12));
 		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
 
 	// 2. Create Texture
 		m_BrickTexture = Lunar::Texture("LunarApp/assets/brick.png");
 		m_BrickTexture.LoadTexture();
 
+	// 2. Create Material
+		// ...
+
 	// 3. Create Light
-		m_MainLight = Lunar::Light(1.0f, 1.0f, 1.0f, 0.4f, 2.0f, -1.0f, -1.0f, 0.4f, 1.0f);
+		m_MainLight = Lunar::Light( glm::vec3(2.0f, -1.0f, -1.0f), 0.4f, 0.4f, 0.4f );
 
 	// 3. create shaders
 		m_ShaderProgram = std::make_unique<Lunar::ShaderProgram>(
@@ -143,27 +117,28 @@ public:
 	// Clear window to black.
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		// 0. Set shader program for single frame parallel rendering.
+
 	// 1. update camera
 		m_EditorCamera.OnUpdate(ts);
+
 	// 2. Set View, Projection Matrix (from Editor Camera)
 		glUseProgram(m_ShaderProgram->GetProgramID());
+		// -----------------------------------------
+		m_ShaderProgram->SetUniformShaderMode(Lunar::eShaderMode::Shaded);
+		// -----------------------------------------
+		m_ShaderProgram->SetUniformEyePos(m_EditorCamera.GetPosition());
 		m_ShaderProgram->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 		m_ShaderProgram->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 		glm::mat4 model(1.0f); // init unit matrix
 		m_ShaderProgram->SetUniformModel(glm::value_ptr(model));
+
 	// 3. Bind texture to fragment shader
+		m_Material.UseMaterial(*m_ShaderProgram);
 		m_BrickTexture.UseTexture();
-//		glUniform1i(m_ShaderProgram->GetUniformHasTextureLocation(), 1);
 
 	// 4. Use Light
-		m_MainLight.UseLight(m_ShaderProgram->GetUniformAmbientIntensityLocation(), m_ShaderProgram->GetUniformAmbientColorLocation(),
-							 m_ShaderProgram->GetUniformDiffuseIntensityLocation(), m_ShaderProgram->GetUniformDirectionLocation(),
-							 m_ShaderProgram->GetUniformSpecularIntensityLocation());
-
+		m_MainLight.UseLight(*m_ShaderProgram);
 		m_Model.RenderModel();
-//		for (auto& mesh : m_MeshList) {
-//			mesh->RenderMesh();
-//		}
 
 		// unbind shader program
 		glUseProgram(0);
@@ -190,8 +165,7 @@ public:
 
 Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
 {
-	Lunar::ApplicationSpecification spec {"Scoop", 512, 512 };
-
+	Lunar::ApplicationSpecification spec {"Scoop", 800, 800 };
 	auto* app = new Lunar::Application(spec);
     app->PushLayer<ExampleLayer>();
 	return (app);

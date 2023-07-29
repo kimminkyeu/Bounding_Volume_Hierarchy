@@ -7,24 +7,31 @@
 
 #include <GL/glew.h>
 #include <glm.hpp>
+#include "Lunar/Shader/ShaderProgram.h"
 
 namespace Lunar {
 	class Light
 	{
 	private:
-		glm::vec3 m_Direction; // light direction
-		glm::vec3 m_AmbientColor;
-		float m_AmbientIntensity;
-		float m_DiffuseIntensity;
-		float m_SpecularIntensity;
+		glm::vec3 m_Direction = glm::vec3(0.0, 0.0f, -1.0f);
+		float m_AmbientIntensity = 1.0f;
+		float m_DiffuseIntensity = 1.0f;
+		float m_SpecularIntensity = 1.0f;
 
 	public:
-		Light();
-		Light(GLfloat red, GLfloat green, GLfloat blue, GLfloat ambientIntensity,
-			  GLfloat xDir, GLfloat yDir, GLfloat zDir, GLfloat diffuseIntensity, GLfloat specularIntensity);
+		Light() = default;
+		Light(const glm::vec3& direction, float ambientIntensity, float diffuseIntensity, float specularIntensity);
 		~Light();
-		void UseLight(GLint ambientIntensityLocation, GLint ambientColorLocation,
-					  GLint diffuseIntensityLocation, GLint directionLocation, GLint specularIntensityLocation);
+		void UseLight(const Lunar::ShaderProgram& shader);
+
+		inline void SetDirection(const glm::vec3& dir) { m_Direction = dir; }
+		inline void SetAmbientIntensity(float intensity) { m_AmbientIntensity = intensity; }
+		inline void SetDiffuseIntensity(float intensity) { m_DiffuseIntensity = intensity; }
+		inline void SetSpecularIntensity(float intensity) { m_SpecularIntensity = intensity; }
+
+		inline float GetAmbientIntensity() const { return m_AmbientIntensity; }
+		inline float GetDiffuseIntensity() const { return m_DiffuseIntensity; }
+		inline float GetSpecularIntensity() const { return m_SpecularIntensity; }
 	};
 }
 

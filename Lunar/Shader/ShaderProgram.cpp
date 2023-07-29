@@ -36,17 +36,6 @@ namespace Lunar {
 		this->DeleteFromGPU();
 	}
 
-	std::string ShaderProgram::_ReadFileToString(const std::string& path)
-	{
-		std::ifstream t(path);
-		if (t.fail()) {
-			return {""};
-		}
-		std::stringstream buffer;
-		buffer << t.rdbuf();
-		return buffer.str();
-	}
-
 	int ShaderProgram::AttachShader(const std::string& shaderPath, GLenum shaderType)
 	{
 		if (!m_ProgramID) // if no program exist, then create program first.
@@ -131,40 +120,26 @@ namespace Lunar {
 			LOG_ERROR("VALIDATION ERROR {0}", infoLog.data());
 		}
 
-		m_UniformModelLocation = glGetUniformLocation(m_ProgramID, "model");
-		assert((m_UniformModelLocation >= 0) && "uniform model not found in shader");
-		LOG_TRACE("GPU --> Uniform Model found in location {0}", m_UniformModelLocation);
-
-		m_UniformViewLocation = glGetUniformLocation(m_ProgramID, "view");
-		assert((m_UniformViewLocation >= 0) && "uniform view not found in shader");
-		LOG_TRACE("GPU --> Uniform View found in location {0}", m_UniformViewLocation);
-
-		m_UniformProjectionLocation = glGetUniformLocation(m_ProgramID, "projection");
-		assert((m_UniformProjectionLocation >= 0) && "uniform projection not found in shader");
-		LOG_TRACE("GPU --> Uniform Projection found in location {0}", m_UniformProjectionLocation);
-
-		// ***************************** PHONG MODEL ******************************
-		m_UniformAmbientColorLocation = glGetUniformLocation(m_ProgramID, "directionalLight.color");
-		assert((m_UniformAmbientColorLocation >= 0) && "uniform directionalLight.color not found in shader");
-		LOG_TRACE("GPU --> Uniform directionalLight found in location {0}", m_UniformAmbientColorLocation);
-
-		m_UniformAmbientIntensityLocation = glGetUniformLocation(m_ProgramID, "directionalLight.ambientIntensity");
-		assert((m_UniformAmbientIntensityLocation >= 0) && "uniform directionalLight.ambientIntensity not found in shader");
-		LOG_TRACE("GPU --> Uniform ambientIntensity found in location {0}", m_UniformAmbientIntensityLocation);
-
-		m_UniformDiffuseIntensityLocation = glGetUniformLocation(m_ProgramID, "directionalLight.diffuseIntensity");
-		assert((m_UniformDiffuseIntensityLocation >= 0) && "uniform directionalLight.diffuseIntensity not found in shader");
-		LOG_TRACE("GPU --> Uniform diffuseIntensity found in location {0}", m_UniformDiffuseIntensityLocation);
-
-		m_UniformDirectionLocation = glGetUniformLocation(m_ProgramID, "directionalLight.direction");
-		assert((m_UniformDirectionLocation >= 0) && "uniform directionalLight.direction not found in shader");
-		LOG_TRACE("GPU --> Uniform direction found in location {0}", m_UniformDirectionLocation);
-
-		m_UniformSpecularIntensityLocation = glGetUniformLocation(m_ProgramID, "directionalLight.specularIntensity");
-		assert((m_UniformSpecularIntensityLocation >= 0) && "uniform directionalLight.specularIntensity not found in shader");
-
-		m_UniformHasTextureLocation = glGetUniformLocation(m_ProgramID, "hasTexture");
-		assert((m_UniformHasTextureLocation >= 0) && "uniform bool hasTexture not found in shader");
+		// *************************** Model View Projection ************************
+		m_UniformModelLocation = _GetUniformLocation("Model");
+		m_UniformViewLocation = _GetUniformLocation("View");
+		m_UniformProjectionLocation = _GetUniformLocation("Projection");
+		// ***************************** Phong Shading ******************************
+//		m_UniformAmbientColorLocation = _GetUniformLocation("directionalLight.color");
+		m_UniformDirectionLight.DirectionLocation = _GetUniformLocation("DirectionLight.Direction");
+		m_UniformDirectionLight.AmbientIntensityLocation = _GetUniformLocation("DirectionLight.AmbientIntensity");
+		m_UniformDirectionLight.DiffuseIntensityLocation = _GetUniformLocation("DirectionLight.DiffuseIntensity");
+		m_UniformDirectionLight.SpecularIntensityLocation = _GetUniformLocation("DirectionLight.SpecularIntensity");
+		m_UniformEyePosLocation = _GetUniformLocation("EyePos");
+		m_UniformMaterial.SpecularExponentLocation = _GetUniformLocation("Material.SpecularExponent");
+		m_UniformMaterial.SpecularColorLocation = _GetUniformLocation("Material.SpecularColor");
+		m_UniformMaterial.AmbientColorLocation = _GetUniformLocation("Material.AmbientColor");
+		m_UniformMaterial.DiffuseColorLocation = _GetUniformLocation("Material.DiffuseColor");
+		m_UniformMaterial.IndexOfRefractionLocation = _GetUniformLocation("Material.IndexOfRefraction");
+		m_UniformMaterial.DissolveLocation = _GetUniformLocation("Material.Dissolve");
+		m_UniformMaterial.IlluminationModelLocation = _GetUniformLocation("Material.IlluminationModel");
+		// ***************************** TextureMode ******************************
+		m_UniformShaderModeLocation = _GetUniformLocation("ShaderMode");
 
 		return (0);
 	}
@@ -178,35 +153,11 @@ namespace Lunar {
 	void ShaderProgram::SetUniformView(const GLfloat *value) const
 	{ glUniformMatrix4fv(m_UniformViewLocation, 1, GL_FALSE, value); }
 
-	GLint ShaderProgram::GetUniformModelLocation() const
-	{ return m_UniformModelLocation; }
+	void ShaderProgram::SetUniformEyePos(const glm::vec3& eyePos) const
+	{ glUniform3f(m_UniformEyePosLocation, eyePos.x, eyePos.y, eyePos.z); }
 
-	GLint ShaderProgram::GetUniformProjectionLocation() const
-	{ return m_UniformProjectionLocation; }
-
-	GLint ShaderProgram::GetUniformViewLocation() const
-	{ return m_UniformViewLocation; }
-
-	GLint ShaderProgram::GetUniformAmbientColorLocation() const
-	{ return m_UniformAmbientColorLocation; };
-
-	GLint ShaderProgram::GetUniformAmbientIntensityLocation() const
-	{ return m_UniformAmbientIntensityLocation; }
-
-	GLint ShaderProgram::GetUniformDiffuseIntensityLocation() const
-	{ return m_UniformDiffuseIntensityLocation; }
-
-	GLint ShaderProgram::GetUniformDirectionLocation() const // light direction
-	{ return m_UniformDirectionLocation; }
-
-	GLint ShaderProgram::GetUniformSpecularIntensityLocation() const
-	{ return m_UniformSpecularIntensityLocation; }
-
-	GLint ShaderProgram::GetUniformHasTextureLocation() const
-	{ return m_UniformHasTextureLocation; }
-
-	GLuint ShaderProgram::GetProgramID() const
-	{ return this->m_ProgramID; }
+	void ShaderProgram::SetUniformShaderMode(const eShaderMode& mode) const
+	{ glUniform1ui(m_UniformShaderModeLocation, (unsigned int)mode); }
 
 	void ShaderProgram::DeleteFromGPU()
 	{
@@ -222,4 +173,25 @@ namespace Lunar {
 		m_ShadersBitmap = 0;
 	}
 
+	GLint ShaderProgram::_GetUniformLocation(const char* name)
+	{
+		GLint location = glGetUniformLocation(m_ProgramID, name);
+		if (location < 0)
+		{
+			LOG_ERROR("uniform {0} not found in shader", name);
+			assert(false);
+		}
+		return location;
+	}
+
+	std::string ShaderProgram::_ReadFileToString(const std::string& path)
+	{
+		std::ifstream t(path);
+		if (t.fail()) {
+			return {""};
+		}
+		std::stringstream buffer;
+		buffer << t.rdbuf();
+		return buffer.str();
+	}
 }

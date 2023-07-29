@@ -1,11 +1,27 @@
 # Blender MTL File: '42.blend'
 # Material Count: 1
 
+# define a material name "Material"
 newmtl Material
+# specular exponent
+# ranges between 0 and 1000
 Ns 96.078431
+# ambient color
 Ka 0.000000 0.000000 0.000000
+# diffuse color
 Kd 0.640000 0.640000 0.640000
+# specular color
 Ks 0.500000 0.500000 0.500000
+# optical density (index of refraction)
 Ni 1.000000
+# dissolve (1.0 is default, which means zero transparency)
+# others might use Tr (Tr=1-d)
 d 1.000000
+# define illumination model
 illum 2
+# https://en.wikipedia.org/wiki/Wavefront_.obj_file
+# 0. Color on and Ambient off
+# 1. Color on and Ambient on
+# 2. Highlight on
+# 3. Reflection on and Ray trace on
+# ...

@@ -29,6 +29,7 @@ set( SOURCE_FILES
         Lunar/Texture/Texture.cpp
         Lunar/Model/Model.cpp
         Lunar/Light/Light.cpp
+        Lunar/Material/Material.cpp
         )
 # configure cmake project
 # ----------------------------------------------------------------------------

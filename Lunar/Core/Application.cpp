@@ -33,7 +33,11 @@ namespace Lunar {
 
     Application::~Application() noexcept
     {
-        this->Shutdown();
+		// 아래 정리 함수는 app의 소멸자에서 호출되야함.
+		// 이렇게 안할 경우, (ex. Shutdown 함수에서 glfw 제거)
+		// glfwPollEvents() 함수에서 segfault 발생함.
+        glfwDestroyWindow(m_Window.Handle);
+        glfwTerminate();
         s_Instance = nullptr;
     }
 
@@ -170,13 +174,14 @@ namespace Lunar {
 
     void Application::Shutdown() noexcept {
         // clear stack
+		this->Close();
+		g_ApplicationRunning = false;
         for (auto& layer : m_LayerStack) {
             layer->OnDetach();
         }
         m_LayerStack.clear();
-        glfwDestroyWindow(m_Window.Handle);
-        glfwTerminate();
-        g_ApplicationRunning = false;
+//        glfwDestroyWindow(m_Window.Handle);
+//        glfwTerminate();
     }
 
     /* static function */
