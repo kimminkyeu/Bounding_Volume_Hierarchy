@@ -66,6 +66,7 @@ namespace Lunar {
 	public:
 		ShaderProgram();
 		~ShaderProgram();
+		ShaderProgram& operator=(const ShaderProgram& other) = delete; // NOTE: forbid copy assign operator
 		int AttachShader(const std::string& shaderPath, GLenum shaderType); // compile and attach shader to shaderProgram
 		int LinkToGPU(); // link shaderProgram to GPU + load uniform variable location
 		void DeleteFromGPU(); // delete program.
