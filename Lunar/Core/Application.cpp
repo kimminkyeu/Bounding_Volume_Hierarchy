@@ -2,16 +2,9 @@
 // Created by Minkyeu Kim on 7/21/23.
 //
 
-#include "Application.h"
-
-// Reference
 // https://github.com/StudioCherno/Walnut/blob/3b8e414fdecfc6c8b58816106fe8d912bd172e31/Walnut/src/Walnut/Application.cpp
-// 위 코드를 OpenGL 버전으로 수정하였습니다.
-#include <iostream>
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include "Log.h"
+#include "Application.h"
+#include "Log.h" // 이건 cpp에만 설정.
 
 extern bool g_ApplicationRunning;
 static Lunar::Application* s_Instance = nullptr; // Single instance
@@ -52,7 +45,7 @@ namespace Lunar {
 		glfwSetErrorCallback(glfw_error_callback);
 		if (!glfwInit()) // Init GLFW
 		{
-			std::cerr << "GLFW initialization failed...\n";
+			LOG_ERROR("GLFW initialization failed...");
 			return;
 		}
 		// Setup GLFW window properties
@@ -76,7 +69,7 @@ namespace Lunar {
 		LOG_INFO("  Version: {0}", (const char*)glGetString(GL_VERSION));
 
 		// 윈도우에 따라 getWindowUserPointer가 반환해줄 값을 설정(나를 위함) --> 이후 callback에서 사용.
-		glfwSetWindowUserPointer(m_Window.Handle, &m_Window);
+		glfwSetWindowUserPointer(m_Window.Handle, this);
 		// [SWAP BUFFER SYNC] : https://www.glfw.org/docs/3.3/quick.html#quick_swap_buffers
 		glfwSwapInterval(1);
 		// Get Buffer size information (data for window rendering) : https://www.glfw.org/docs/3.3/window_guide.html#window_fbsize
@@ -98,23 +91,22 @@ namespace Lunar {
 		// 아놔 복잡하네... 이거 어떻게 처리하니...
 		glfwSetWindowSizeCallback(m_Window.Handle,[](GLFWwindow* currentWindow, int width, int height) -> void
 		{
-			auto currentWindowDataPtr = (Lunar::WindowData *)glfwGetWindowUserPointer(currentWindow);
-			currentWindowDataPtr->BufferWidth = width;
-			currentWindowDataPtr->BufferHeight = height;
+			auto app = (Lunar::Application *)glfwGetWindowUserPointer(currentWindow);
+			app->m_Window.BufferWidth = width;
+			app->m_Window.BufferHeight = height;
 			LOG_TRACE("Window Resize: W={0} H={0}", width, height);
-			// TODO: Add appropriate event callback. Ex) window 100, height 200일 때 특정 event 호출!
 			glViewport(0, 0, width, height);
-
-			// TODO: Refactor Camera system... 여기서 이렇게 접근하는게 비효율적임.
-			// TODO: 일단 임시 방편으로 했는데, Camera한테 화면비가 바뀌었다는 걸 말해줘야 projection 등을 수정할 수 있음.
-
+			for (auto &layer : app->m_LayerStack)
+			{
+				layer->OnWindowResize(width, height);
+			}
 		});
 
         // set GLFW callbacks
-		glfwSetWindowCloseCallback(m_Window.Handle,[](GLFWwindow* currentWindow) -> void
+		glfwSetWindowCloseCallback(m_Window.Handle,[](GLFWwindow* window) -> void
 		{
-            g_ApplicationRunning = false;
-			LOG_WARN("Closing Window...");
+			auto app = (Lunar::Application *)glfwGetWindowUserPointer(window);
+			app->Shutdown();
 		});
 
 		glfwSetScrollCallback(m_Window.Handle, [](GLFWwindow* window, double xOffset, double yOffset) -> void
@@ -124,63 +116,22 @@ namespace Lunar {
 
         // set GLFW callbacks
         glfwSetMouseButtonCallback(m_Window.Handle, [](GLFWwindow* window, int button, int action, int mode) -> void
-        {
-            switch (action)
-            {
-                case GLFW_PRESS:
-                {
-                    LOG_TRACE("Pressed {0}", button);
-                    break;
-                }
-                case GLFW_RELEASE:
-                {
-                    LOG_TRACE("Released {0}", button);
-                    break;
-                }
-                case GLFW_REPEAT:
-                {
-                    LOG_TRACE("Repeated {0}", button);
-                    break;
-                }
-                default:
-                {
-                    // ...
-                }
-            }
-        });
+        {});
 
         // set GLFW callbacks
-        glfwSetCursorPosCallback(m_Window.Handle, [](GLFWwindow* currentWindow, double xPos, double yPos) -> void
-        {
-//            LOG_TRACE("Mouse move X={0} Y={0}", xPos, yPos);
-        });
+        glfwSetCursorPosCallback(m_Window.Handle, [](GLFWwindow* window, double xPos, double yPos) -> void
+        {});
 
         // set GLFW callbacks
-        glfwSetKeyCallback(m_Window.Handle,[](GLFWwindow* currentWindow, int key, int code, int action, int mode) -> void
+        glfwSetKeyCallback(m_Window.Handle,[](GLFWwindow* window, int key, int code, int action, int mode) -> void
         {
-            switch (action)
-            {
-                case GLFW_PRESS:
-                {
-                    LOG_TRACE("Pressed {0}", key);
-                    break;
-                }
-                case GLFW_RELEASE:
-                {
-                    LOG_TRACE("Released {0}", key);
-                    break;
-                }
-                case GLFW_REPEAT:
-                {
-                    LOG_TRACE("Repeated {0}", key);
-                    break;
-                }
-                default:
-                {
-                    // ...
-                }
-            }
-        });
+			if (Input::IsKeyPressed(Key::Escape))
+			{
+				auto app = (Lunar::Application *)glfwGetWindowUserPointer(window);
+				app->Shutdown();
+			}
+		});
+
     }
 
     GLFWwindow* Application::GetWindowHandle() const noexcept
@@ -240,7 +191,7 @@ namespace Lunar {
         return *s_Instance;
     }
 
-	const WindowData& Application::getWindowData() const
+	const WindowData& Application::GetWindowData() const
 	{
 		return m_Window;
 	}

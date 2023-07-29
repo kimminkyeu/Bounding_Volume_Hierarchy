@@ -41,27 +41,25 @@ namespace Lunar {
 		EditorCamera(float fov, float aspectRatio, float nearClip, float farClip);
 
 		void OnUpdate(float ts);
-//		void OnEvent(Event& e);
 
 		// recalculate on window resize;
-//		void OnResize(float width, float height);
+		void OnResize(float width, float height);
 
 		inline float GetDistance() const { return m_Distance; }
 		inline void SetDistance(float distance) { m_Distance = distance; }
-
 		inline void SetViewportSize(float width, float height) { m_ViewportWidth = width; m_ViewportHeight = height; UpdateProjection(); }
 
-		const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
-		glm::mat4 GetViewProjection() const { return m_Projection * m_ViewMatrix; }
+		inline const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
+		inline glm::mat4 GetViewProjection() const { return m_Projection * m_ViewMatrix; }
 
 		glm::vec3 GetUpDirection() const;
 		glm::vec3 GetRightDirection() const;
 		glm::vec3 GetForwardDirection() const;
-		const glm::vec3& GetPosition() const { return m_Position; }
+		inline const glm::vec3& GetPosition() const { return m_Position; }
 		glm::quat GetOrientation() const;
 
-		float GetPitch() const { return m_Pitch; }
-		float GetYaw() const { return m_Yaw; }
+		inline float GetPitch() const { return m_Pitch; }
+		inline float GetYaw() const { return m_Yaw; }
 
 	private:
 		void UpdateProjection();
@@ -92,6 +90,7 @@ namespace Lunar {
 		float m_Pitch = 0.0f, m_Yaw = 0.0f;
 
 		float m_ViewportWidth = 1280, m_ViewportHeight = 720;
+
 	};
 };
 

@@ -16,14 +16,15 @@ namespace Lunar {
 		glm::vec3 m_AmbientColor;
 		float m_AmbientIntensity;
 		float m_DiffuseIntensity;
+		float m_SpecularIntensity;
 
 	public:
 		Light();
 		Light(GLfloat red, GLfloat green, GLfloat blue, GLfloat ambientIntensity,
-			  GLfloat xDir, GLfloat yDir, GLfloat zDir, GLfloat diffuseIntensity);
+			  GLfloat xDir, GLfloat yDir, GLfloat zDir, GLfloat diffuseIntensity, GLfloat specularIntensity);
 		~Light();
 		void UseLight(GLint ambientIntensityLocation, GLint ambientColorLocation,
-					  GLint diffuseIntensityLocation, GLint directionLocation);
+					  GLint diffuseIntensityLocation, GLint directionLocation, GLint specularIntensityLocation);
 	};
 }
 

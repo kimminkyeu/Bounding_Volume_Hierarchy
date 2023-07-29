@@ -81,13 +81,10 @@ namespace Lunar {
 		UpdateView();
 	}
 
-//	bool EditorCamera::OnMouseScroll(MouseScrolledEvent& e)
-//	{
-//		float delta = e.GetYOffset() * 0.1f;
-//		MouseZoom(delta);
-//		UpdateView();
-//		return false;
-//	}
+	void EditorCamera::OnResize(float width, float height)
+	{
+		this->SetViewportSize(width, height);
+	}
 
 	void EditorCamera::MousePan(const glm::vec2& delta)
 	{

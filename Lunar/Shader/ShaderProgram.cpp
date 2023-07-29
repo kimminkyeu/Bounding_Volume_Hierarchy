@@ -160,6 +160,12 @@ namespace Lunar {
 		assert((m_UniformDirectionLocation >= 0) && "uniform directionalLight.direction not found in shader");
 		LOG_TRACE("GPU --> Uniform direction found in location {0}", m_UniformDirectionLocation);
 
+		m_UniformSpecularIntensityLocation = glGetUniformLocation(m_ProgramID, "directionalLight.specularIntensity");
+		assert((m_UniformSpecularIntensityLocation >= 0) && "uniform directionalLight.specularIntensity not found in shader");
+
+		m_UniformHasTextureLocation = glGetUniformLocation(m_ProgramID, "hasTexture");
+		assert((m_UniformHasTextureLocation >= 0) && "uniform bool hasTexture not found in shader");
+
 		return (0);
 	}
 
@@ -171,12 +177,6 @@ namespace Lunar {
 
 	void ShaderProgram::SetUniformView(const GLfloat *value) const
 	{ glUniformMatrix4fv(m_UniformViewLocation, 1, GL_FALSE, value); }
-
-	void ShaderProgram::SetUniformAmbientColor(const GLfloat* value) const
-	{ glUniformMatrix4fv(m_UniformAmbientColorLocation, 1, GL_FALSE, value); }
-
-	void ShaderProgram::SetUniformAmbientIntensity(const GLfloat* value) const
-	{ glUniformMatrix4fv(m_UniformAmbientIntensityLocation, 1, GL_FALSE, value); };
 
 	GLint ShaderProgram::GetUniformModelLocation() const
 	{ return m_UniformModelLocation; }
@@ -199,6 +199,11 @@ namespace Lunar {
 	GLint ShaderProgram::GetUniformDirectionLocation() const // light direction
 	{ return m_UniformDirectionLocation; }
 
+	GLint ShaderProgram::GetUniformSpecularIntensityLocation() const
+	{ return m_UniformSpecularIntensityLocation; }
+
+	GLint ShaderProgram::GetUniformHasTextureLocation() const
+	{ return m_UniformHasTextureLocation; }
 
 	GLuint ShaderProgram::GetProgramID() const
 	{ return this->m_ProgramID; }

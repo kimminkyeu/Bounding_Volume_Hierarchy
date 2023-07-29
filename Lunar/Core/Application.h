@@ -5,7 +5,6 @@
 #ifndef SCOOP_APPLICATION_H
 #define SCOOP_APPLICATION_H
 
-#include "Layer.h"
 
 #include <string>
 #include <vector>
@@ -14,6 +13,13 @@
 #include <functional> // for lamda callback
 
 #include <GL/glew.h>
+#include <GLFW/glfw3.h>
+
+#include "Lunar/Core/Layer.h"
+#include "Lunar/Input/Input.h"
+#include "Lunar/Input/KeyCodes.h"
+#include "Lunar/Input/MouseCodes.h"
+
 
 struct GLFWwindow; // forward decl
 
@@ -60,7 +66,7 @@ namespace Lunar {
 		~Application() noexcept;
 
 		static Application& Get() noexcept;
-		const WindowData& getWindowData() const;
+		const WindowData& GetWindowData() const;
         GLFWwindow* GetWindowHandle() const noexcept;
 
 		void Run() noexcept;

@@ -39,6 +39,10 @@ namespace Lunar {
 		// PHONG : Diffuse Color
 		GLint	m_UniformDiffuseIntensityLocation;
 		GLint 	m_UniformDirectionLocation;
+		// PHONG : Specular Color
+		GLint   m_UniformSpecularIntensityLocation;
+		// Boolean for texture mode (if 1, use Texture --> must have valid texture)
+		GLint	m_UniformHasTextureLocation;
 
 	public:
 		ShaderProgram();
@@ -60,17 +64,20 @@ namespace Lunar {
 		void SetUniformAmbientIntensity(const GLfloat* value) const;
 		void SetUniformDirectionLocation(const GLfloat* value) const;
 
-		// get location of uniform variables inside GPU...
+	GLint GetUniformSpecularIntensityLocation() const;
+
+	// get location of uniform variables inside GPU...
 		GLuint GetProgramID() const;
 		GLint GetUniformProjectionLocation() const;
 		GLint GetUniformModelLocation() const;
 		GLint GetUniformViewLocation() const;
-
-		// Directional Light
+	// Directional Light
 		GLint GetUniformAmbientColorLocation() const; // 근데... 빛이 여러개일 경우도 있을 텐데, 이렇게 쉐이더에 의존적으로 삽입하는게 맞나 싶다?
 		GLint GetUniformAmbientIntensityLocation() const;
 		GLint GetUniformDiffuseIntensityLocation() const;
 		GLint GetUniformDirectionLocation() const;
+	// hasTexture boolean variable
+		GLint GetUniformHasTextureLocation() const;
 
 	private:
 		static std::string _ReadFileToString(const std::string& path);

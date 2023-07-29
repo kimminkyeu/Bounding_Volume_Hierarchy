@@ -69,8 +69,8 @@ namespace Lunar {
 					{ 0.0f, 0.0f });
 			}
 			// Normals (근데 OBJ에 normal이 없는데...?)
-//			vertices.insert(vertices.end(),
-//					{ -mesh->mNormals[i].x, -mesh->mNormals[i].y, -mesh->mNormals[i].z });
+			vertices.insert(vertices.end(),
+					{ mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z });
 		}
 
 		// Update Indices

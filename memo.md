@@ -36,6 +36,7 @@
 minirt 때 구현한 퐁 쉐이딩과는 조금 다르다.
 - 그리고 수정해야 함~!
 - 지금 normal 계산이 잘 못 됬는지 x방향 lighting이 먹지 않는다.
+- 고침. normal 계산 잘못한거 맞음 ㅋㅋ
 
 
 ### OBJ loader 구현시 고려할 사항
@@ -45,3 +46,19 @@ const aiScene* scene = importer.ReadFile(fullTexturePath,
                           aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
 ```
 여기 각 옵션 비트들의 의미를 분석해보면, 42과제에서 teapot1이 뭐가 잘못된 데이터가 들어있고, 이를 어떻게 고쳐야 하는지 설명한다.
+
+### 텍스쳐가 없을 경우, 일반 Diffuse Color로 나오게끔 해야 함.
+
+---
+### 0728 문제점 노트
+- 왜 texture가 없으면 shading이 먹지 않는 걸까?
+
+### 0728 뭔가 깨달음 노트
+Teselation이 추가된 이유가 바로 normal interpolation 정밀도 향상을 위한 것 아닐까.
+예를 들어 폴리곤 수를 줄이기 위해 커다란 삼각형 면은 삼각형 한개로 처리한다고 하자.
+이때, 각 삼각형 꼭지점의 normal을 gpu에서 자동 interpolation하다 보면
+실제 빛에 면이 반사되는 것과 다르게 구처럼 빛이 맺힌다.
+평면에 빛을 비추면, flat shading처럼 작동해야하는데 interpolation 때문에 의도와 다르게 되는 것이다.
+tesellation의 목적이 여기에 있다고 생각된다..
+큰 삼각형 polygon을 더 작게 쪼개주면, 그 쪼개진 면 내부 추가좌표들의 normal은 interpolating된 면이 아니다.
+따라서 이 부분이 평면의 정확도를 높혀주는 것으로 보인다.

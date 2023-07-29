@@ -28,8 +28,12 @@ void calculateAverageNormals(unsigned int* indices, unsigned int indicesCount, G
 		unsigned int index1 = indices[i + 1] * vLength;
 		unsigned int index2 = indices[i + 2] * vLength;
 		// index0 을 기준으로 V[0->1] 와  V[0->2] 두개를 CrossProduct하면, 일단 Normal을 구할 수 있다.
-		glm::vec3 v1(vertices[index1] - vertices[index0], vertices[index1 + 1] - vertices[index0 + 1], vertices[index1 + 2] - vertices[index0 + 2]);
-		glm::vec3 v2(vertices[index2] - vertices[index0], vertices[index2 + 1] - vertices[index2 + 1], vertices[index2 + 2] - vertices[index2 + 2]);
+		glm::vec3 v1(vertices[index1] - vertices[index0],
+					 vertices[index1 + 1] - vertices[index0 + 1],
+					 vertices[index1 + 2] - vertices[index0 + 2]);
+		glm::vec3 v2(vertices[index2] - vertices[index0],
+					 vertices[index2 + 1] - vertices[index0 + 1],
+					 vertices[index2 + 2] - vertices[index0 + 2]);
 		glm::vec3 normal = glm::normalize(glm::cross(v1, v2));
 
 		// 이제 normal 값 반영.
@@ -63,7 +67,7 @@ private:
 	std::unique_ptr<Lunar::ShaderProgram> m_ShaderProgram;
 	std::vector<std::unique_ptr<Lunar::Mesh>> m_MeshList;
 	Lunar::EditorCamera m_EditorCamera;
-//	Lunar::Model m_Model;
+	Lunar::Model m_Model;
 	Lunar::Texture m_BrickTexture;
 	Lunar::Light m_MainLight;
 
@@ -111,14 +115,14 @@ public:
 		}
 	// 1. Create object
 		m_MeshList.push_back(std::make_unique<Lunar::Mesh>(verticies, indices, 32, 12));
-//		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
 
 	// 2. Create Texture
 		m_BrickTexture = Lunar::Texture("LunarApp/assets/brick.png");
 		m_BrickTexture.LoadTexture();
 
 	// 3. Create Light
-		m_MainLight = Lunar::Light(1.0f, 1.0f, 1.0f, 0.4f, 1.0f, -2.0f, -1.0f, 1.0f);
+		m_MainLight = Lunar::Light(1.0f, 1.0f, 1.0f, 0.4f, 2.0f, -1.0f, -1.0f, 0.4f, 1.0f);
 
 	// 3. create shaders
 		m_ShaderProgram = std::make_unique<Lunar::ShaderProgram>(
@@ -127,11 +131,10 @@ public:
 
 	// 3. Init Camera
 		const auto& app = Lunar::Application::Get();
-		auto width = app.getWindowData().BufferWidth;
-		auto height = app.getWindowData().BufferHeight;
+		auto width = app.GetWindowData().BufferWidth;
+		auto height = app.GetWindowData().BufferHeight;
 		auto aspectRatio = (float)width / (float)height;
 		m_EditorCamera = Lunar::EditorCamera(45.0f, aspectRatio, 0.1f, 100.0f);
-
 	}
 
 	// called every render loop
@@ -150,14 +153,17 @@ public:
 		m_ShaderProgram->SetUniformModel(glm::value_ptr(model));
 	// 3. Bind texture to fragment shader
 		m_BrickTexture.UseTexture();
+//		glUniform1i(m_ShaderProgram->GetUniformHasTextureLocation(), 1);
+
 	// 4. Use Light
 		m_MainLight.UseLight(m_ShaderProgram->GetUniformAmbientIntensityLocation(), m_ShaderProgram->GetUniformAmbientColorLocation(),
-							 m_ShaderProgram->GetUniformDiffuseIntensityLocation(), m_ShaderProgram->GetUniformDirectionLocation());
+							 m_ShaderProgram->GetUniformDiffuseIntensityLocation(), m_ShaderProgram->GetUniformDirectionLocation(),
+							 m_ShaderProgram->GetUniformSpecularIntensityLocation());
 
-//		m_Model.RenderModel();
-		for (auto& mesh : m_MeshList) {
-			mesh->RenderMesh();
-		}
+		m_Model.RenderModel();
+//		for (auto& mesh : m_MeshList) {
+//			mesh->RenderMesh();
+//		}
 
 		// unbind shader program
 		glUseProgram(0);
@@ -176,8 +182,10 @@ public:
 			mesh->ClearMesh(); // delete mesh buffer (VAO VBO IBO)
 	}
 
-	Lunar::EditorCamera* GetActiveCameraPtr()
-	{ return &m_EditorCamera; }
+	void OnWindowResize(float width, float height) override
+	{
+		m_EditorCamera.OnResize(width, height);
+	}
 };
 
 Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
