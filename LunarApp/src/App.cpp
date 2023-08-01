@@ -124,7 +124,7 @@ public:
 	// 2. Set View, Projection Matrix (from Editor Camera)
 		glUseProgram(m_ShaderProgram->GetProgramID());
 		// -----------------------------------------
-		m_ShaderProgram->SetUniformShaderMode(Lunar::eShaderMode::Shaded);
+		m_ShaderProgram->SetUniformShaderMode(Lunar::eShaderMode::PhongRendered);
 		// -----------------------------------------
 		m_ShaderProgram->SetUniformEyePos(m_EditorCamera.GetPosition());
 		m_ShaderProgram->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
@@ -144,9 +144,14 @@ public:
 		glUseProgram(0);
 	}
 
+	// NOTE: this is ImGui Render function
     void OnUIRender() override
     {
-        // ....
+		ImGui::Begin("Hello");
+
+		ImGui::Button("Button");
+
+		ImGui::End();
     }
 
 	// called once popped from m_LayerStack
@@ -165,7 +170,7 @@ public:
 
 Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
 {
-	Lunar::ApplicationSpecification spec {"Scoop", 800, 800 };
+	Lunar::ApplicationSpecification spec {"Scoop", 1000, 1000 };
 	auto* app = new Lunar::Application(spec);
     app->PushLayer<ExampleLayer>();
 	return (app);

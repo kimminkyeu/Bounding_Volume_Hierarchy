@@ -8,6 +8,7 @@ cmake-build-debug
 ./dependency/GLFW/build
 ./dependency/spdlog/build
 ./dependency/assimp/build
+./dependency/imgui
 
 !./dependency/glm
 !./dependency/GLEW/build

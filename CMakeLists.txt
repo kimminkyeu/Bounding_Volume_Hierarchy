@@ -1,4 +1,6 @@
 
+# TODO: QTGUI 브랜치의 cmake을 참고해서 내용 정리할 것.
+
 # CMAKE SETTING
 # -------------------------------------------------
 # https://cmake.org/cmake/help/latest/guide/tutorial/index.html
@@ -17,6 +19,8 @@ set( NAME scoop )
 set( CMAKE_CXX_STANDARD 20 ) # Cpp compiler version
 set( CMAKE_CXX_STANDARD_REQUIRED True )
 set( SOURCE_FILES
+    # ImGui
+        Lunar/ImGui/ImGuiBuild.cpp # ImGui Source
     # Project
         LunarApp/src/App.cpp
     # Lunar Core
@@ -70,6 +74,11 @@ find_package( glm CONFIG REQUIRED )
 target_link_libraries( ${NAME} PRIVATE glm::glm )
 print_message( STATUS "GLM included at ${GLM_INCLUDE_DIRS}" ) # path set by "find_package"
 
+# ImGui
+# ----------------------------------------------------------------------------
+
+
+
 # spdlog logging library
 # ----------------------------------------------------------------------------
 # https://github.com/gabime/spdlog/blob/v1.x/example/CMakeLists.txt
@@ -91,7 +100,7 @@ include_directories( SYSTEM # to use '#include <...>'
         ${CMAKE_SOURCE_DIR}/dependency/assimp/include
         ${CMAKE_SOURCE_DIR}/dependency/assimp/build/include
     # TODO: *****************************************
-
+        ${CMAKE_SOURCE_DIR}/dependency/imgui
         )
 
 # TODO: Include Lunar

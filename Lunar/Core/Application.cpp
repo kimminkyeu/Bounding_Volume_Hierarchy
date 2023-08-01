@@ -11,7 +11,7 @@ static Lunar::Application* s_Instance = nullptr; // Single instance
 
 static void glfw_error_callback(int error_code, const char* description) noexcept
 {
-	fprintf(stderr, "GLFW Error %d: %s\n", error_code, description);
+	LOG_ERROR("GLFW Error {0}: {1}", error_code, description);
 }
 
 namespace Lunar {
@@ -67,6 +67,24 @@ namespace Lunar {
 		// set the current context
 		glfwMakeContextCurrent(m_Window.Handle); // Set context for GLEW to use (그럼 multiple context 존재? 여러 화면?)
 
+		// set ImGui
+		// https://github.com/ocornut/imgui/blob/master/examples/example_glfw_opengl3/main.cpp
+		IMGUI_CHECKVERSION();
+		ImGui::CreateContext();
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Control.
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Control.
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // IF using Docking Branch
+		// set ImGui Style (Dark or Light)
+		ImGui::StyleColorsDark();
+
+		// setup platform/renderer backends
+		ImGui_ImplGlfw_InitForOpenGL(m_Window.Handle, true);
+		ImGui_ImplOpenGL3_Init("#version 330");
+
+
+
+
 		LOG_INFO("OpenGL Info:");
 		LOG_INFO("  Vendor: {0}", (const char*)glGetString(GL_VENDOR));
 		LOG_INFO("  Renderer: {0}", (const char*)glGetString(GL_RENDERER));
@@ -102,7 +120,7 @@ namespace Lunar {
 			glViewport(0, 0, width, height);
 			for (auto &layer : app->m_LayerStack)
 			{
-				layer->OnWindowResize(width, height);
+				layer->OnWindowResize((float)width, (float)height);
 			}
 		});
 
@@ -144,6 +162,7 @@ namespace Lunar {
     }
 
     // https://github.com/StudioCherno/Walnut/blob/20f940b9d23946d4836b8549ff3e2c0750c5d985/Walnut/src/Walnut/Application.cpp#L554
+	// https://github.com/TheCherno/OpenGL/blob/master/OpenGL-Core/src/GLCore/Core/Application.cpp
     void Application::Run() noexcept
     {
         m_Running = true;
@@ -152,10 +171,24 @@ namespace Lunar {
 			// Poll and handle events (inputs, window resize, etc.)
             glfwPollEvents();
 
+			// Start the Dear ImGui frame
+			ImGui_ImplOpenGL3_NewFrame();
+			ImGui_ImplGlfw_NewFrame();
+			ImGui::NewFrame();
+
 			// Update every layer
             for (auto& layer : m_LayerStack) {
                 layer->OnUpdate(m_TimeStep);
             }
+
+			for (auto& layer : m_LayerStack) {
+				layer->OnUIRender();
+			}
+
+			// (Your code clears your framebuffer, renders your other stuff etc.)
+			ImGui::Render();
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
             // Swap GLFW Buffer
 			glfwSwapBuffers(m_Window.Handle);
 
@@ -182,6 +215,9 @@ namespace Lunar {
         m_LayerStack.clear();
 //        glfwDestroyWindow(m_Window.Handle);
 //        glfwTerminate();
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
+		ImGui::DestroyContext();
     }
 
     /* static function */
