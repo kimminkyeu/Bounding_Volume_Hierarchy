@@ -124,7 +124,7 @@ public:
 	// 2. Set View, Projection Matrix (from Editor Camera)
 		glUseProgram(m_ShaderProgram->GetProgramID());
 		// -----------------------------------------
-		m_ShaderProgram->SetUniformShaderMode(Lunar::eShaderMode::PhongRendered);
+		m_ShaderProgram->SetUniformShaderMode(Lunar::eShaderMode::Shaded);
 		// -----------------------------------------
 		m_ShaderProgram->SetUniformEyePos(m_EditorCamera.GetPosition());
 		m_ShaderProgram->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
@@ -147,11 +147,9 @@ public:
 	// NOTE: this is ImGui Render function
     void OnUIRender() override
     {
-		ImGui::Begin("Hello");
+//		ImGui::Begin("Hello");
 
-		ImGui::Button("Button");
-
-		ImGui::End();
+//		ImGui::End();
     }
 
 	// called once popped from m_LayerStack
@@ -164,6 +162,7 @@ public:
 
 	void OnWindowResize(float width, float height) override
 	{
+		LOG_INFO("Screen resize");
 		m_EditorCamera.OnResize(width, height);
 	}
 };

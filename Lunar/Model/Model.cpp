@@ -91,7 +91,6 @@ namespace Lunar {
 		m_MeshToTexture.push_back(mesh->mMaterialIndex);
 	}
 
-	/*
 	void Model::LoadMaterials(const aiScene* scene)
 	{
 		m_TextureList.resize(scene->mNumMaterials);
@@ -115,7 +114,7 @@ namespace Lunar {
 					std::string texPath = path.data;
 					LOG_TRACE("Model Texture Path: {0}", texPath);
 					m_TextureList[i] = new Texture(texPath);
-					if (!m_TextureList[i]->LoadTextureRGB())
+					if (!m_TextureList[i]->LoadTexture())
 					{
 						LOG_ERROR("Failed to load texture at {0}", texPath);
 						delete m_TextureList[i];
@@ -125,12 +124,11 @@ namespace Lunar {
 			}
 			if (!m_TextureList[i])
 			{
-//				m_TextureList[i] = new Texture("LunarApp/assets/brick_wall.png");
-//				m_TextureList[i]->LoadTextureRGBA();
+				m_TextureList[i] = new Texture("LunarApp/assets/brick.png");
+				m_TextureList[i]->LoadTexture();
 			}
 		}
 	}
- */
 
 	// !!!! MOST IMPORTANT
 	void Model::RenderModel()
