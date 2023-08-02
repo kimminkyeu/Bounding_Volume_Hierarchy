@@ -128,7 +128,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux") # Linux
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin") # MacOS
     target_link_libraries( ${NAME}
             PRIVATE
-            ${CMAKE_SOURCE_DIR}/dependency/assimp/build/bin/libassimp.5.2.5.dylib
+            ${CMAKE_SOURCE_DIR}/dependency/assimp/build/bin/libassimp.5.2.4.dylib
             )
     # ... ?
 endif ()

@@ -85,10 +85,12 @@ public:
 	{
 		LOG_TRACE("Layer [{0}] has been attached", _m_Name);
 
+		// TODO: model load를 실패할 경우, vao가 없다. 따라서 shader load에서 validation error 발생. 이 경우 예외처리를 어떻게 하는게 좋을지?
+
 	// 1. Create object
 //		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
-		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
+		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+//		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
 		m_BrickTexture = Lunar::Texture("LunarApp/assets/brick.png");
