@@ -36,9 +36,12 @@ namespace Lunar {
 		// 아래 정리 함수는 app의 소멸자에서 호출되야함.
 		// 이렇게 안할 경우, (ex. Shutdown 함수에서 glfw 제거)
 		// glfwPollEvents() 함수에서 segfault 발생함.
-        glfwDestroyWindow(m_Window.Handle);
-        glfwTerminate();
         s_Instance = nullptr;
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
+		ImGui::DestroyContext();
+		glfwDestroyWindow(m_Window.Handle);
+		glfwTerminate();
     }
 
 	// Initialize GLFW window
@@ -79,9 +82,8 @@ namespace Lunar {
 		ImGui::StyleColorsDark();
 
 		// setup platform/renderer backends
-		ImGui_ImplGlfw_InitForOpenGL(m_Window.Handle, true);
 		ImGui_ImplOpenGL3_Init("#version 330");
-
+		ImGui_ImplGlfw_InitForOpenGL(m_Window.Handle, true);
 
 
 
@@ -215,9 +217,9 @@ namespace Lunar {
         m_LayerStack.clear();
 //        glfwDestroyWindow(m_Window.Handle);
 //        glfwTerminate();
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplGlfw_Shutdown();
-		ImGui::DestroyContext();
+//		ImGui_ImplOpenGL3_Shutdown();
+//		ImGui_ImplGlfw_Shutdown();
+//		ImGui::DestroyContext();
     }
 
     /* static function */

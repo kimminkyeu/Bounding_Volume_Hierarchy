@@ -86,7 +86,9 @@ public:
 		LOG_TRACE("Layer [{0}] has been attached", _m_Name);
 
 	// 1. Create object
-		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+//		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
 		m_BrickTexture = Lunar::Texture("LunarApp/assets/brick.png");

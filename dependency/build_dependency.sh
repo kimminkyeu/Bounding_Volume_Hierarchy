@@ -2,6 +2,7 @@
 
 # (0) get ImGui       # https://github.com/ocornut/imgui/tree/docking
   git clone -b docking https://github.com/ocornut/imgui.git
+  rm -rf imgui/.git
 
 # (1) build GLEW      # https://github.com/nigels-com/glew
 # TODO: change to Curl or Wget or Forked Repo!
@@ -13,11 +14,19 @@
 # TODO: change to Curl or Wget or Forked Repo!
   cmake -S ./GLFW -B ./GLFW/build && make -C ./GLFW/build
 
-# (3) build spdlog    # https://github.com/gabime/spdlog
+# (3) get GLM
+  git clone -b 0.9.9.8 https://github.com/g-truc/glm.git
+  rm -rf glm/.git
+
+# (4) build spdlog    # https://github.com/gabime/spdlog
 # TODO: change to Curl or Wget or Forked Repo!
+  git clone -b v1.11.0 https://github.com/gabime/spdlog.git
+  rm -rf spdlog/.git
   cmake -S ./spdlog -B ./spdlog/build && make -C ./spdlog/build -j
 
-# (4) build assimp    # https://github.com/assimp/assimp
+# (5) build assimp    # https://github.com/assimp/assimp
 # TODO: change to Curl or Wget or Forked Repo!
+  git clone -b v5.2.5 https://github.com/assimp/assimp.git
+  rm -rf assimp/.git
   cmake -S ./assimp -B ./assimp/build && make -C ./assimp/build -j
 

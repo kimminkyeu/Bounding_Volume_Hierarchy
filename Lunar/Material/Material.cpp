@@ -6,6 +6,11 @@
 
 namespace Lunar {
 
+	Material::Material(const glm::vec3& ambient, const glm::vec3& diffuse, const glm::vec3& specular, float specularExponent, float IOR, float dissolve, float illuminationModel)
+		:  m_AmbientColor(ambient), m_DiffuseColor(diffuse), m_SpecularColor(specular), m_SpecularExponent(specularExponent),
+		  m_IndexOfRefraction(IOR), m_Dissolve(dissolve), m_IlluminationModel(illuminationModel)
+	{}
+
 	void Material::UseMaterial(const ShaderProgram& shader) const
 	{
 		const auto locs = shader.GetUniformMaterial();
