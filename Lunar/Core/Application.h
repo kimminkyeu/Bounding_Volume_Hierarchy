@@ -58,11 +58,13 @@ namespace Lunar {
 		float m_LastFrameTime = 0.0f;
 
 		// https://www.youtube.com/watch?v=_Kj6BSfM6P4&list=PLlrATfBNZ98dC-V-N3m0Go4deliWHPFwT&index=13&pp=iAQB
+//		https://github.com/StudioCherno/Walnut/blob/20f940b9d23946d4836b8549ff3e2c0750c5d985/Walnut/src/Walnut/Application.h
 		std::vector<std::shared_ptr<Layer>> m_LayerStack;
+		std::function<void()> m_MenubarCallback; // for ImGUI
 
 	private: // Helper function
 		void Init() noexcept; // initialize GLFW context
-		void Shutdown() noexcept; // clear LayerStack
+		void StopRenderLoop() noexcept; // set m_Running to false
 
 	public:
 		explicit Application(const ApplicationSpecification& appSpec = ApplicationSpecification()) noexcept;
@@ -73,10 +75,11 @@ namespace Lunar {
         GLFWwindow* GetWindowHandle() const noexcept;
 
 		void Run() noexcept;
-        void Close() noexcept;
+		void Reboot() noexcept; // NOTE: Restart Application. (Keep Layer Stack!!)
+		void Shutdown() noexcept; // clear LayerStack
+
         static float GetTime() noexcept;
 
-		// WHAT IS Layer?? WHY?
 		template<typename T>
 		void PushLayer()
 		{
@@ -85,6 +88,8 @@ namespace Lunar {
 			m_LayerStack.push_back(std::make_shared<T>());
             m_LayerStack.back()->OnAttach();
 		};
+
+		inline void SetMenubarCallback(const std::function<void()>& menubarCallback) { m_MenubarCallback = menubarCallback; }
 	};
 
 	// Implemented by CLIENT

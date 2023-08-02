@@ -88,8 +88,8 @@ public:
 		// TODO: model load를 실패할 경우, vao가 없다. 따라서 shader load에서 validation error 발생. 이 경우 예외처리를 어떻게 하는게 좋을지?
 
 	// 1. Create object
-//		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
@@ -151,9 +151,20 @@ public:
 	// NOTE: this is ImGui Render function
     void OnUIRender() override
     {
-//		ImGui::Begin("Hello");
+		// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
+		ImGui::Begin("Material");
+		{
+			static glm::vec3 diffuse;
+			ImGui::ColorEdit3("Diffuse", glm::value_ptr(diffuse));
+			m_Material.SetDiffuseColor(diffuse);
+		}
+		ImGui::End();
 
-//		ImGui::End();
+//		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		//		ImGui::Begin("Viewport");
+		// ...
+//		ImGui::PopStyleVar();
+
     }
 
 	// called once popped from m_LayerStack
@@ -176,5 +187,20 @@ Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
 	Lunar::ApplicationSpecification spec {"Scoop", 1000, 1000 };
 	auto* app = new Lunar::Application(spec);
     app->PushLayer<ExampleLayer>();
+	app->SetMenubarCallback([app]()-> void
+	{
+		if (ImGui::BeginMenu("File"))
+		{
+			if (ImGui::MenuItem("Exit"))
+			{
+				app->Shutdown(); // sets m_Running to false.
+			}
+			if (ImGui::MenuItem("Restart"))
+			{
+				app->Reboot();
+			}
+			ImGui::EndMenu();
+		}
+	});
 	return (app);
 }
