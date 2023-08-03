@@ -65,9 +65,19 @@ namespace Lunar {
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Control.
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // IF using Docking Branch
+		// NOTE: ViewportsEnable하면, Screen 좌표계가 Display 좌표계로 확대된다.
+		//       따라서, full screen이 아닌 이상 이를 조정해줄 필요가 있다.
+		//       즉 ImGUI가 인식하는 마우스 좌표랑 실제 display 좌표랑 달라진다.
+		//       일단 해결법이 안 떠올라서 해당 기능을 끔.
+		//       https://github.com/ocornut/imgui/wiki/Multi-Viewports
 //		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable Multi-Viewport / Platform Windows
 
+		ImGui::StyleColorsDark();
+//		ImGui::StyleColorsLight();
 //		ImGuiStyle& style = ImGui::GetStyle();
+//		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+//		style.Colors[ImGuiCol_Border] = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
+//		style.Colors[ImGuiCol_FrameBg] = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
 		// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
 //		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 //		{
@@ -75,7 +85,7 @@ namespace Lunar {
 //			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
 //		}
 		// set ImGui Style (Dark or Light)
-		ImGui::StyleColorsDark();
+//		ImGui::StyleColorsDark();
 
 		// setup platform/renderer backends
 		ImGui_ImplOpenGL3_Init("#version 330");
@@ -101,22 +111,17 @@ namespace Lunar {
 		glViewport(0, 0, m_Window.BufferWidth, m_Window.BufferHeight); // Setup Viewport size (OpenGL functionality)
 
 		// set GLFW callbacks
-		/*
 		glfwSetWindowSizeCallback(m_Window.Handle,[](GLFWwindow* currentWindow, int width, int height) -> void
 		{
 			auto app = (Lunar::Application *)glfwGetWindowUserPointer(currentWindow);
 			app->m_Window.BufferWidth = width;
 			app->m_Window.BufferHeight = height;
-//			LOG_TRACE("Window Resize: W={0} H={0}", width, height);
-			for (auto &layer : app->m_LayerStack)
-			{
-				layer->OnWindowResize((float)width, (float)height);
+
+		  	glViewport(0, 0, width, height);
+			for (auto &layer : app->m_LayerStack) {
+				layer->OnResize((float)width, (float)height);
 			}
-			ImGuiIO& io = ImGui::GetIO();
-			io.DisplaySize = ImVec2((int)width, (int)height);
-			glViewport(0, 0, width, height);
 		});
-		*/
 
         // set GLFW callbacks
 		glfwSetWindowCloseCallback(m_Window.Handle,[](GLFWwindow* window) -> void
@@ -148,6 +153,8 @@ namespace Lunar {
         glfwSetCursorPosCallback(m_Window.Handle, [](GLFWwindow* window, double xPos, double yPos) -> void
         {
 			 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
+//		     const ImVec2 AppPos = ImGui::GetMainViewport()->Pos;
+//		     LOG_TRACE("Mouse X{0} Y{1}    AppPos X{2} Y{3}", xPos, yPos, AppPos.x, AppPos.y);
 			 ImGuiIO& io = ImGui::GetIO();
 			 io.AddMousePosEvent(xPos, yPos);
 		 });
@@ -172,6 +179,8 @@ namespace Lunar {
     {
         return m_Window.Handle;
     }
+
+	// TODO: ImGUI가 사용하는 RenderBuffer와 내 쉐이더가 사용하는 RenderBuffer가 서로 다름. 이걸
 
     // https://github.com/StudioCherno/Walnut/blob/20f940b9d23946d4836b8549ff3e2c0750c5d985/Walnut/src/Walnut/Application.cpp#L554
 	// https://github.com/TheCherno/OpenGL/blob/master/OpenGL-Core/src/GLCore/Core/Application.cpp
@@ -213,8 +222,8 @@ namespace Lunar {
 				}
 				const ImGuiViewport* viewport = ImGui::GetMainViewport();
 				ImGui::SetNextWindowPos(viewport->WorkPos);
-//				ImGui::SetNextWindowSize(viewport->WorkSize);
-				ImGui::SetNextWindowSize(ImVec2(500, 500));
+				ImGui::SetNextWindowSize(viewport->WorkSize);
+
 //				LOG_INFO("{0} {1}", viewport->WorkSize.x, viewport->WorkSize.y);
 				ImGui::SetNextWindowViewport(viewport->ID);
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -264,7 +273,7 @@ namespace Lunar {
 
 			// NOTE: Rendering GUI
 			// (Your code clears your framebuffer, renders your other stuff etc.)
-			ImGui::Render();
+			ImGui::Render(); // finalize ImGui drawData.
 			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 			// Update and Render additional Platform Windows
 			if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)

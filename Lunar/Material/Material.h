@@ -27,7 +27,7 @@ namespace Lunar {
 		// set each member data to uniform shader variable
 		void UseMaterial(const Lunar::ShaderProgram& shader) const;
 
-	private:
+	public:
 		glm::vec3	m_SpecularColor;
 		glm::vec3	m_AmbientColor;
 		glm::vec3	m_DiffuseColor;
@@ -36,14 +36,14 @@ namespace Lunar {
 		float		m_Dissolve;
 		float		m_IlluminationModel;
 
-	public:
-		inline void SetSpecularColor(const glm::vec3& rgb) { m_SpecularColor = rgb; }
-		inline void SetAmbientColor(const glm::vec3& rgb) { m_AmbientColor = rgb; }
-		inline void SetDiffuseColor(const glm::vec3& rgb) { m_DiffuseColor = rgb; }
-		inline void SetSpecularExponent(float ns) { m_SpecularExponent = ns; }
-		inline void SetIndexOfRefraction(float ni) { m_IndexOfRefraction = ni; }
-		inline void SetDissolve(float d) { m_Dissolve = d; }
-		inline void SetIlluminationModel(float illum) { m_IlluminationModel = illum; }
+//	public:
+//		inline void SetSpecularColor(const glm::vec3& rgb) { m_SpecularColor = rgb; }
+//		inline void SetAmbientColor(const glm::vec3& rgb) { m_AmbientColor = rgb; }
+//		inline void SetDiffuseColor(const glm::vec3& rgb) { m_DiffuseColor = rgb; }
+//		inline void SetSpecularExponent(float ns) { m_SpecularExponent = ns; }
+//		inline void SetIndexOfRefraction(float ni) { m_IndexOfRefraction = ni; }
+//		inline void SetDissolve(float d) { m_Dissolve = d; }
+//		inline void SetIlluminationModel(float illum) { m_IlluminationModel = illum; }
 	};
 }
 
