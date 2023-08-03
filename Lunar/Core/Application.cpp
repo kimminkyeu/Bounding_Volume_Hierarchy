@@ -180,8 +180,6 @@ namespace Lunar {
         return m_Window.Handle;
     }
 
-	// TODO: ImGUI가 사용하는 RenderBuffer와 내 쉐이더가 사용하는 RenderBuffer가 서로 다름. 이걸
-
     // https://github.com/StudioCherno/Walnut/blob/20f940b9d23946d4836b8549ff3e2c0750c5d985/Walnut/src/Walnut/Application.cpp#L554
 	// https://github.com/TheCherno/OpenGL/blob/master/OpenGL-Core/src/GLCore/Core/Application.cpp
     void Application::Run() noexcept
@@ -243,17 +241,41 @@ namespace Lunar {
 				// We cannot preserve the docking relationship between an active window and an inactive docking, otherwise
 				// any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-				ImGui::Begin("DockSpace Demo", nullptr, window_flags);
+				ImGui::Begin("DockSpace", nullptr, window_flags);
 				ImGui::PopStyleVar();
 
 				ImGui::PopStyleVar(2);
 
-				// Submit the DockSpace
+				// Set Initial DockSpace
+				// https://gist.github.com/PossiblyAShrub/0aea9511b84c34e191eaa90dd7225969
 				ImGuiIO& io = ImGui::GetIO();
 				if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
 				{
 					ImGuiID dockspace_id = ImGui::GetID("DockSpace");
 					ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+					/*
+					static bool first_time = true;
+					if (first_time)
+					{
+						first_time = false;
+
+						ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
+						ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+						ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
+
+						// split the dockspace into 2 nodes -- DockBuilderSplitNode takes in the following args in the following order
+						//   window ID to split, direction, fraction (between 0 and 1), the final two setting let's us choose which id we want (which ever one we DON'T set as NULL, will be returned by the function)
+						//                                                              out_id_at_dir is the id of the node in the direction we specified earlier, out_id_at_opposite_dir is in the opposite direction
+						auto dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.2f, nullptr, &dockspace_id);
+						auto dock_id_down = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.25f, nullptr, &dockspace_id);
+
+						// we now dock our windows into the docking node we made above
+						ImGui::DockBuilderDockWindow("Down", dock_id_down);
+						ImGui::DockBuilderDockWindow("Left", dock_id_left);
+						ImGui::DockBuilderFinish(dockspace_id);
+					}
+					 */
 				}
 
 				if (m_MenubarCallback)

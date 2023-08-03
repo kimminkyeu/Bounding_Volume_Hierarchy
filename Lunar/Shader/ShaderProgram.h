@@ -21,19 +21,10 @@
 
 namespace Lunar {
 
-	// http://docs.mcneel.com/rhino/5/help/en-us/options/view_displaymode_options.htm
-	enum class eShaderMode : uint8_t
-	{
-		WireFrame, // only vertex frame
-		Shaded, // wireframe + ambient + diffuse shading (no Specular)
-		PhongRendered, // Phong shading
-		FlatRendered, // Flat shading
-		Rainbow, // use xyz position value as color
-	};
-
 	class ShaderProgram
 	{
 	private:
+		std::string m_DebugName; // for debug purpose
 		char	m_ShadersBitmap = 0; // 최소 요건 쉐이더 2개(F, V)가 세팅이 되어 있는지 체크.
 		// [ 0 0 0 0 0 0 F V ] 8bit --> F=fragment_shader, V=vertex_shader
 		GLuint	m_ProgramID = 0;
@@ -64,21 +55,22 @@ namespace Lunar {
 		GLint 	m_UniformShaderModeLocation = 0;
 
 	public:
-		ShaderProgram();
+		ShaderProgram(const std::string& name);
 		~ShaderProgram();
 		ShaderProgram& operator=(const ShaderProgram& other) = delete; // NOTE: forbid copy assign operator
 		int AttachShader(const std::string& shaderPath, GLenum shaderType); // compile and attach shader to shaderProgram
 		int LinkToGPU(); // link shaderProgram to GPU + load uniform variable location
 		void DeleteFromGPU(); // delete program.
-		ShaderProgram(const std::string& vertex_shader_path,
-					  const std::string& fragment_shader_path); // attach 후 GPU에 link하는 과정 포함한 생성자.
+		ShaderProgram(const std::string& name, const std::string& vertex_shader_path, const std::string& fragment_shader_path); // attach 후 GPU에 link하는 과정 포함한 생성자.
+
+		void Use() const; // bind shader program to GPU
+		void Clear() const; // unbind shader from GPU
 
 	public: // setter
 		void SetUniformModel(const GLfloat *value) const;
 		void SetUniformView(const GLfloat* value) const;
 		void SetUniformProjection(const GLfloat *value) const;
 		void SetUniformEyePos(const glm::vec3& eyePos) const;
-		void SetUniformShaderMode(const eShaderMode& mode) const;
 
 	public: // getter
 		inline GLuint GetProgramID() const { return m_ProgramID; }
@@ -88,10 +80,11 @@ namespace Lunar {
 		inline GLint GetUniformViewLocation() const { return m_UniformModelLocation; };
 		inline t_UniformDirectionLight GetUniformDirectionLight() const { return m_UniformDirectionLight; };
 		inline t_UniformMaterial GetUniformMaterial() const { return m_UniformMaterial; };
+		inline std::string GetName() const { return m_DebugName; };
 
 	private: // Helper function
 		static std::string _ReadFileToString(const std::string& path);
-		GLint _GetUniformLocation(const char* name);
+		GLint _GetUniformLocation(const char* name) const;
 	};
 }
 

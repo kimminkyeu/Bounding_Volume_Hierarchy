@@ -12,19 +12,22 @@
 #include "Lunar/Material/Material.h"
 #include "Lunar/FrameBuffer/FrameBuffer.h"
 
-// NOTE: Layer 는 렌더링 그룹의 단위다.
-//       --------------------------
+#include "LunarApp/src/ShaderController.h"
+
 class ExampleLayer final : public Lunar::Layer
 {
 private:
 	ImVec2 m_Size; // NOTE: ImGUI Content Size, not screen size.
-	std::unique_ptr<Lunar::ShaderProgram> m_ShaderProgram;
-	std::vector<std::unique_ptr<Lunar::Mesh>> m_MeshList;
+
+	ShaderController m_ShaderController; // group of shaders
+	std::vector<std::shared_ptr<Lunar::Mesh>> m_MeshList;
+
 	Lunar::EditorCamera m_EditorCamera;
 	Lunar::Model m_Model;
 	Lunar::Texture m_BrickTexture;
 	Lunar::Light m_MainLight;
 	Lunar::Material m_Material;
+
 	// NOTE: Viewport Buffer (Only Rendering)
 	Lunar::FrameBuffer m_FrameBuffer;
 
@@ -67,48 +70,54 @@ public:
 	// 3. Create Light
 		m_MainLight = Lunar::Light( glm::vec3(2.0f, -1.0f, -1.0f), 0.4f, 0.4f, 0.4f );
 
-	// 3. create shaders
-		m_ShaderProgram = std::make_unique<Lunar::ShaderProgram>(
-				"LunarApp/src/shaders/vertex_shader.glsl",
-				"LunarApp/src/shaders/fragment_shader.glsl");
-
-	// 3. Init Camera
+	// 4. Init Camera
 		auto aspectRatio = (float)width / (float)height;
 		m_EditorCamera = Lunar::EditorCamera(45.0f, aspectRatio, 0.1f, 100.0f);
+
+	// 5. Load Shaders
+		m_ShaderController.Add(
+				"Test",
+				"LunarApp/src/shaders/Test/vertex_shader.glsl",
+				"LunarApp/src/shaders/Test/fragment_shader.glsl"
+				);
+
+		m_ShaderController.Add(
+				"Phong",
+				"LunarApp/src/shaders/Phong/vertex_shader.glsl",
+				"LunarApp/src/shaders/Phong/fragment_shader.glsl"
+				);
+		// TODO: add more shaders...
 	}
 
 	// called every render loop
 	void OnUpdate(float ts) override
 	{
+		m_EditorCamera.OnUpdate(ts); // 2. update camera geometry
+
 		// 0. bind frame buffer (=render target image)
 		m_FrameBuffer.Bind();
-		// 1. Clear frame buffer data.
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // IMGUI를 쓰기 때문에 의미 없음.
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);// 0. Set shader program for single frame parallel rendering.
-		// 2. update camera geometry
-		m_EditorCamera.OnUpdate(ts);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // 1. Clear current frame buffer data.
+//		glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // 1. Clear current frame buffer data.
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		{
-			// bind shader
-			glUseProgram(m_ShaderProgram->GetProgramID());
+			m_ShaderController.Use();
+			const auto shaderProcPtr = m_ShaderController.GetCurrentShader();
 
-			m_ShaderProgram->SetUniformShaderMode(Lunar::eShaderMode::Shaded);
-			m_ShaderProgram->SetUniformEyePos(m_EditorCamera.GetPosition());
-			m_ShaderProgram->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
-			m_ShaderProgram->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+			shaderProcPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
+			shaderProcPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+			shaderProcPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 			glm::mat4 model(1.0f);// init unit matrix
-			m_ShaderProgram->SetUniformModel(glm::value_ptr(model));
+			shaderProcPtr->SetUniformModel(glm::value_ptr(model));
 			// 3. Bind texture to fragment shader
-			m_Material.UseMaterial(*m_ShaderProgram);
-//			m_BrickTexture.UseTexture();
+			m_Material.UseMaterial(*shaderProcPtr);
+			//			m_BrickTexture.UseTexture();
 			// 4. Use Light
-			m_MainLight.UseLight(*m_ShaderProgram);
+			m_MainLight.UseLight(*shaderProcPtr);
 			m_Model.RenderModel();
 
-			// unbind shader
-			glUseProgram(0);
+			shaderProcPtr->Clear(); // unbind shader
 		}
-		// unbind Frame Buffer (render target)
-		m_FrameBuffer.Unbind();
+		m_FrameBuffer.Unbind(); // unbind Frame Buffer (render target)
 	}
 
 	// NOTE: this is ImGui Render function
@@ -127,8 +136,18 @@ public:
 		}
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		{
+			ImGui::Begin("ViewPort");
 			// https://uysalaltas.github.io/2022/01/09/OpenGL_Imgui.html
-			ImGui::Begin("Viewport");
+			if (ImGui::BeginMenu(m_ShaderController.GetCurrentShader()->GetName().c_str()))
+			{
+				for (auto &itr : m_ShaderController.GetShaderProgramMap())
+				{
+					if (ImGui::MenuItem(itr.first.c_str())) {
+						m_ShaderController.Use(itr.first.c_str());
+					}
+				}
+				ImGui::EndMenu();
+			}
 			{
 				m_Size = ImGui::GetContentRegionAvail();
 				// NOTE: put m_FrameBuffer's image data to ImGui Image
@@ -171,6 +190,18 @@ Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
 	{
 		if (ImGui::BeginMenu("File"))
 		{
+			if (ImGui::MenuItem("New"))
+			{
+				app->Reboot();
+			}
+			if (ImGui::MenuItem("Open"))
+			{
+				app->Reboot();
+			}
+			if (ImGui::MenuItem("Export"))
+			{
+				app->Reboot();
+			}
 			if (ImGui::MenuItem("Exit"))
 			{
 				app->Shutdown(); // sets m_Running to false.

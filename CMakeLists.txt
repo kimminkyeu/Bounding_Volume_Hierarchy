@@ -23,6 +23,7 @@ set( SOURCE_FILES
         Lunar/ImGui/ImGuiBuild.cpp # ImGui Source
     # Project
         LunarApp/src/App.cpp
+        LunarApp/src/ShaderController.cpp
     # Lunar Core
         Lunar/Core/Application.cpp
         Lunar/Input/Input.cpp
@@ -34,7 +35,8 @@ set( SOURCE_FILES
         Lunar/Model/Model.cpp
         Lunar/Light/Light.cpp
         Lunar/Material/Material.cpp
-        Lunar/FrameBuffer/FrameBuffer.cpp Lunar/FrameBuffer/FrameBuffer.h)
+        Lunar/FrameBuffer/FrameBuffer.cpp
+        )
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name

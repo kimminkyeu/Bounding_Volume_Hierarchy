@@ -11,12 +11,12 @@ static const char ESSENTIAL_SHADERS_LOADED = (1 << 1) | (1 << 0);
 
 namespace Lunar {
 
-	ShaderProgram::ShaderProgram()
-		: m_ProgramID(0), m_UniformModelLocation(-1), m_UniformProjectionLocation(-1), m_UniformViewLocation(-1), m_ShadersBitmap(0)
+	ShaderProgram::ShaderProgram(const std::string& name)
+		: m_DebugName(name), m_ProgramID(0), m_UniformModelLocation(-1), m_UniformProjectionLocation(-1), m_UniformViewLocation(-1), m_ShadersBitmap(0)
 	{}
 
-	ShaderProgram::ShaderProgram(const std::string& vertex_shader_path, const std::string& fragment_shader_path)
-		: ShaderProgram::ShaderProgram()
+	ShaderProgram::ShaderProgram(const std::string& name, const std::string& vertex_shader_path, const std::string& fragment_shader_path)
+		: ShaderProgram::ShaderProgram(name)
 	{
 		// 1. Load shader
 		LOG_TRACE("ShaderProgram constructor called");
@@ -124,8 +124,7 @@ namespace Lunar {
 		m_UniformModelLocation = _GetUniformLocation("Model");
 		m_UniformViewLocation = _GetUniformLocation("View");
 		m_UniformProjectionLocation = _GetUniformLocation("Projection");
-		// ***************************** Phong Shading ******************************
-//		m_UniformAmbientColorLocation = _GetUniformLocation("directionalLight.color");
+		// ***************************** For Phong Shading ******************************
 		m_UniformDirectionLight.DirectionLocation = _GetUniformLocation("DirectionLight.Direction");
 		m_UniformDirectionLight.AmbientIntensityLocation = _GetUniformLocation("DirectionLight.AmbientIntensity");
 		m_UniformDirectionLight.DiffuseIntensityLocation = _GetUniformLocation("DirectionLight.DiffuseIntensity");
@@ -138,8 +137,6 @@ namespace Lunar {
 		m_UniformMaterial.IndexOfRefractionLocation = _GetUniformLocation("Material.IndexOfRefraction");
 		m_UniformMaterial.DissolveLocation = _GetUniformLocation("Material.Dissolve");
 		m_UniformMaterial.IlluminationModelLocation = _GetUniformLocation("Material.IlluminationModel");
-		// ***************************** TextureMode ******************************
-		m_UniformShaderModeLocation = _GetUniformLocation("ShaderMode");
 
 		return (0);
 	}
@@ -156,9 +153,6 @@ namespace Lunar {
 	void ShaderProgram::SetUniformEyePos(const glm::vec3& eyePos) const
 	{ glUniform3f(m_UniformEyePosLocation, eyePos.x, eyePos.y, eyePos.z); }
 
-	void ShaderProgram::SetUniformShaderMode(const eShaderMode& mode) const
-	{ glUniform1ui(m_UniformShaderModeLocation, (unsigned int)mode); }
-
 	void ShaderProgram::DeleteFromGPU()
 	{
 		// delete program from GPU memory
@@ -173,13 +167,12 @@ namespace Lunar {
 		m_ShadersBitmap = 0;
 	}
 
-	GLint ShaderProgram::_GetUniformLocation(const char* name)
+	GLint ShaderProgram::_GetUniformLocation(const char* uniformName) const
 	{
-		GLint location = glGetUniformLocation(m_ProgramID, name);
+		GLint location = glGetUniformLocation(m_ProgramID, uniformName);
 		if (location < 0)
 		{
-			LOG_ERROR("uniform {0} not found in shader", name);
-			assert(false);
+			LOG_WARN("  [{0} shader]: Uniform [{1}] not found.", m_DebugName, uniformName);
 		}
 		return location;
 	}
@@ -194,4 +187,10 @@ namespace Lunar {
 		buffer << t.rdbuf();
 		return buffer.str();
 	}
+
+	void ShaderProgram::Use() const
+	{ glUseProgram(m_ProgramID); }
+
+	void ShaderProgram::Clear() const
+	{ glUseProgram(0); }
 }
