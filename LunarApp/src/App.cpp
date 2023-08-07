@@ -56,8 +56,8 @@ public:
 
 	// TODO: model load를 실패할 경우, vao가 없다. 따라서 shader load에서 validation error 발생. 이 경우 예외처리를 어떻게 하는게 좋을지?
 	// 1. Create object
-		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+//		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
@@ -74,19 +74,32 @@ public:
 		auto aspectRatio = (float)width / (float)height;
 		m_EditorCamera = Lunar::EditorCamera(45.0f, aspectRatio, 0.1f, 100.0f);
 
-	// 5. Load Shaders
+	// 5. Load Shaders 		// TODO: move to shader loader class
+
 		m_ShaderController.Add(
 				"Test",
 				"LunarApp/src/shaders/Test/vertex_shader.glsl",
 				"LunarApp/src/shaders/Test/fragment_shader.glsl"
 				);
-
 		m_ShaderController.Add(
 				"Phong",
 				"LunarApp/src/shaders/Phong/vertex_shader.glsl",
 				"LunarApp/src/shaders/Phong/fragment_shader.glsl"
 				);
+		m_ShaderController.Add(
+				"Wireframe",
+				"LunarApp/src/shaders/Wireframe/vertex_shader.glsl",
+				"LunarApp/src/shaders/Wireframe/fragment_shader.glsl",
+				"LunarApp/src/shaders/Wireframe/geometry_shader.glsl"
+		);
+
 		// TODO: add more shaders...
+		//        - wireframe
+		//        - shaded (wireframe + phong)
+		//        - Cartoon
+		//        - Phong Render ( = Texture가 있을 때만 텍스쳐 입히기 )
+		//        - Flat Render
+		//        - Gouraud Render
 	}
 
 	// called every render loop

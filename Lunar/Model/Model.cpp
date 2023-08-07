@@ -122,7 +122,7 @@ namespace Lunar {
 					}
 				}
 			}
-			if (!m_TextureList[i])
+			if (!m_TextureList[i]) // no texture
 			{
 				m_TextureList[i] = new Texture("LunarApp/assets/brick.png");
 				m_TextureList[i]->LoadTexture();
