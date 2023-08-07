@@ -35,7 +35,11 @@ public:
 	ShaderController(const ShaderController&) = delete;
 public:
 	// compile + register shader program
-	void Add(const std::string& name, const std::string& vetexShaderPath, const std::string& fragmentShaderPath);
+	void Add(const std::string& name,
+			 const std::string& vetexShaderPath,
+			 const std::string& fragmentShaderPath,
+			 const std::string& geometryShaderPath = ""
+			 );
 	// get program
 	Lunar::ShaderProgram* GetByName(const std::string& name);
 	Lunar::ShaderProgram* GetCurrentShader();

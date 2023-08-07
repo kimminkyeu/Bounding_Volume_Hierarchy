@@ -38,9 +38,13 @@ void ShaderController::Use(const std::string& name)
 	}
 }
 
-void ShaderController::Add(const std::string& name, const std::string& vertexShaderPath, const std::string& fragmentShaderPath)
+void ShaderController::Add(const std::string& name,
+						   const std::string& vertexShaderPath,
+						   const std::string& fragmentShaderPath,
+						   const std::string& geometryShaderPath // optional
+						   )
 {
-	auto* shader_ptr = new Lunar::ShaderProgram(name, vertexShaderPath, fragmentShaderPath);
+	auto* shader_ptr = new Lunar::ShaderProgram(name, vertexShaderPath, fragmentShaderPath, geometryShaderPath);
 	m_ShaderProgramMap.insert(std::make_pair(name, shader_ptr));
 }
 

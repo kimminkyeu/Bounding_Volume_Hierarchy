@@ -15,7 +15,11 @@ namespace Lunar {
 		: m_DebugName(name), m_ProgramID(0), m_UniformModelLocation(-1), m_UniformProjectionLocation(-1), m_UniformViewLocation(-1), m_ShadersBitmap(0)
 	{}
 
-	ShaderProgram::ShaderProgram(const std::string& name, const std::string& vertex_shader_path, const std::string& fragment_shader_path)
+	ShaderProgram::ShaderProgram(const std::string& name,
+								 const std::string& vertex_shader_path,
+								 const std::string& fragment_shader_path,
+								 const std::string& geometry_shader_path // optional
+								 )
 		: ShaderProgram::ShaderProgram(name)
 	{
 		// 1. Load shader
@@ -26,6 +30,12 @@ namespace Lunar {
 		std::string fShaderPath = std::string(PROJECT_ROOT_DIR) + "/" + std::string(fragment_shader_path);
 		LOG_TRACE("fragment shader path: {0}", fShaderPath);
 		this->AttachShader(fShaderPath, GL_FRAGMENT_SHADER);
+		if (!geometry_shader_path.empty()) {
+			std::string gShaderPath = std::string(PROJECT_ROOT_DIR) + "/" + std::string(geometry_shader_path);
+			LOG_TRACE("geometry shader path: {0}", gShaderPath);
+			this->AttachShader(gShaderPath, GL_GEOMETRY_SHADER);
+		}
+
 		// 2. compile shader
 		this->LinkToGPU();
 	}

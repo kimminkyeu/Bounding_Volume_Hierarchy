@@ -61,7 +61,11 @@ namespace Lunar {
 		int AttachShader(const std::string& shaderPath, GLenum shaderType); // compile and attach shader to shaderProgram
 		int LinkToGPU(); // link shaderProgram to GPU + load uniform variable location
 		void DeleteFromGPU(); // delete program.
-		ShaderProgram(const std::string& name, const std::string& vertex_shader_path, const std::string& fragment_shader_path); // attach 후 GPU에 link하는 과정 포함한 생성자.
+		ShaderProgram(const std::string& name,
+					  const std::string& vertex_shader_path,
+					  const std::string& fragment_shader_path,
+					  const std::string& geometry_shader_path = ""
+					  ); // attach 후 GPU에 link하는 과정 포함한 생성자.
 
 		void Use() const; // bind shader program to GPU
 		void Clear() const; // unbind shader from GPU
