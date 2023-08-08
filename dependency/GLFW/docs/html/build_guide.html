@@ -90,7 +90,7 @@ Including the GLFW header file</h1>
 <p >It does this only when needed, so if window system headers are included, the GLFW header does not try to redefine those symbols. The reverse is not true, i.e. <code>windows.h</code> cannot cope if any Win32 symbols have already been defined.</p>
 <p >In other words:</p>
 <ul>
-<li>Use the GLFW header to include OpenGL or OpenGL ES headers portably</li>
+<li>BindCurrentShader the GLFW header to include OpenGL or OpenGL ES headers portably</li>
 <li>Do not include window system headers unless you will use those APIs directly</li>
 <li>If you do need such headers, include them before the GLFW header</li>
 </ul>

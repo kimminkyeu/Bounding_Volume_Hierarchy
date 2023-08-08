@@ -11,7 +11,7 @@ namespace Lunar {
 		  m_IndexOfRefraction(IOR), m_Dissolve(dissolve), m_IlluminationModel(illuminationModel)
 	{}
 
-	void Material::UseMaterial(const ShaderProgram& shader) const
+	void Material::UseMaterial(const Shader& shader) const
 	{
 		const auto locs = shader.GetUniformMaterial();
 		glUniform3f(locs.SpecularColorLocation, m_SpecularColor.r, m_SpecularColor.g, m_SpecularColor.b);

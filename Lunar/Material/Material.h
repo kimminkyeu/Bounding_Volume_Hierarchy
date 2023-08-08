@@ -7,8 +7,8 @@
 #ifndef SCOOP_MATERIAL_H
 #define SCOOP_MATERIAL_H
 
+#include "Lunar/Shader/Shader.h"
 #include <glm/glm.hpp>
-#include "Lunar/Shader/ShaderProgram.h"
 
 namespace Lunar {
 	class Material
@@ -25,7 +25,7 @@ namespace Lunar {
 
 	public:
 		// set each member data to uniform shader variable
-		void UseMaterial(const Lunar::ShaderProgram& shader) const;
+		void UseMaterial(const Lunar::Shader& shader) const;
 
 	public:
 		glm::vec3	m_SpecularColor;

@@ -3,6 +3,7 @@
 //
 
 #include "FrameBuffer.h"
+#include "Lunar/Core/Log.h"
 
 namespace Lunar {
 	FrameBuffer::FrameBuffer()
@@ -22,7 +23,7 @@ namespace Lunar {
 		glDeleteRenderbuffers(1, &m_RBO);
 	}
 
-	unsigned int FrameBuffer::GetFrameTexture()
+	unsigned int FrameBuffer::GetFrameTexture() const
 	{
 		return m_Texture;
 	}
@@ -30,7 +31,7 @@ namespace Lunar {
 	void FrameBuffer::RescaleFrameBuffer(float new_width, float new_height) const
 	{
 		glBindTexture(GL_TEXTURE_2D, m_Texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, new_width, new_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, new_width, new_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_Texture, 0);
@@ -60,7 +61,7 @@ namespace Lunar {
 		// Create texture
 		glGenTextures(1, &m_Texture);
 		glBindTexture(GL_TEXTURE_2D, m_Texture);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_Texture, 0);

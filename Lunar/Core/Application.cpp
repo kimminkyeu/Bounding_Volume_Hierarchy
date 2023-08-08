@@ -108,6 +108,7 @@ namespace Lunar {
 		}
 		// TODO: remove later!
 		glEnable(GL_DEPTH_TEST); // 약간 야매 방식. depth buffer 없이 실시간 검사로 일단 테스트 (임시 방편)
+		glEnable(GL_CULL_FACE); //  enable backface culling
 		glViewport(0, 0, m_Window.BufferWidth, m_Window.BufferHeight); // Setup Viewport size (OpenGL functionality)
 
 		// set GLFW callbacks

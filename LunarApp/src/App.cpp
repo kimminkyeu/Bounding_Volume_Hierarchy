@@ -1,18 +1,24 @@
 
 #include <glm/glm.hpp>
 
-#include "Lunar/Core/Application.h"
-#include "Lunar/Core/EntryPoint.h" // main code here
-#include "Lunar/Shader/ShaderProgram.h"
-#include "Lunar/Mesh/Mesh.h"
 #include "Lunar/Camera/EditorCamera.h"
-#include "Lunar/Texture/Texture.h"
-#include "Lunar/Model/Model.h"
+#include "Lunar/Core/Application.h"
+#include "Lunar/Core/EntryPoint.h"// main code here
+#include "Lunar/FrameBuffer/FrameBuffer.h"
 #include "Lunar/Light/Light.h"
 #include "Lunar/Material/Material.h"
-#include "Lunar/FrameBuffer/FrameBuffer.h"
+#include "Lunar/Mesh/Mesh.h"
+#include "Lunar/Model/Model.h"
+#include "Lunar/Shader/Shader.h"
+#include "Lunar/Texture/Texture.h"
 
 #include "LunarApp/src/ShaderController.h"
+#include "LunarApp/src/shaders/Shaded/ShadedShader.h"
+#include "LunarApp/src/shaders/Explosion/ExplosionShader.h"
+#include "LunarApp/src/shaders/Phong/PhongShader.h"
+#include "LunarApp/src/shaders/Test/TestShader.h"
+#include "LunarApp/src/shaders/Wireframe/WireframeShader.h"
+#include "LunarApp/src/shaders/Normal/NormalShader.h"
 
 class ExampleLayer final : public Lunar::Layer
 {
@@ -76,30 +82,20 @@ public:
 
 	// 5. Load Shaders 		// TODO: move to shader loader class
 
-		m_ShaderController.Add(
-				"Test",
-				"LunarApp/src/shaders/Test/vertex_shader.glsl",
-				"LunarApp/src/shaders/Test/fragment_shader.glsl"
-				);
-		m_ShaderController.Add(
-				"Phong",
-				"LunarApp/src/shaders/Phong/vertex_shader.glsl",
-				"LunarApp/src/shaders/Phong/fragment_shader.glsl"
-				);
-		m_ShaderController.Add(
-				"Wireframe",
-				"LunarApp/src/shaders/Wireframe/vertex_shader.glsl",
-				"LunarApp/src/shaders/Wireframe/fragment_shader.glsl",
-				"LunarApp/src/shaders/Wireframe/geometry_shader.glsl"
-		);
+		m_ShaderController.Add( new ShadedShader() ); // Blender edit mode style [WireFrame + Flat Shading]
+		m_ShaderController.Add( new ExplosionShader() );
+		m_ShaderController.Add( new PhongShader() );
+		m_ShaderController.Add( new WireframeShader() );
+		m_ShaderController.Add( new TestShader() );
+		m_ShaderController.Add( new NormalShader() );
 
 		// TODO: add more shaders...
 		//        - wireframe
 		//        - shaded (wireframe + phong)
 		//        - Cartoon
 		//        - Phong Render ( = Texture가 있을 때만 텍스쳐 입히기 )
-		//        - Flat Render
-		//        - Gouraud Render
+		//        - Flat Render --> 이건 굳이 따로 쉐이더를 나눌 필요 없이, 기본에서 설정 가능?
+		//        - Gouraud Render --> 이것도...?
 	}
 
 	// called every render loop
@@ -107,28 +103,36 @@ public:
 	{
 		m_EditorCamera.OnUpdate(ts); // 2. update camera geometry
 
-		// 0. bind frame buffer (=render target image)
+		// 0. bind frame buffer ( = render target image )
 		m_FrameBuffer.Bind();
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // 1. Clear current frame buffer data.
-//		glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // 1. Clear current frame buffer data.
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // 1. Unbind current frame buffer data.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		{
-			m_ShaderController.Use();
-			const auto shaderProcPtr = m_ShaderController.GetCurrentShader();
+			m_ShaderController.BindCurrentShader();
+			const auto shaderProcPtr = m_ShaderController.GetCurrentShaderPtr();
 
 			shaderProcPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 			shaderProcPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 			shaderProcPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 			glm::mat4 model(1.0f);// init unit matrix
 			shaderProcPtr->SetUniformModel(glm::value_ptr(model));
-			// 3. Bind texture to fragment shader
-			m_Material.UseMaterial(*shaderProcPtr);
-			//			m_BrickTexture.UseTexture();
-			// 4. Use Light
-			m_MainLight.UseLight(*shaderProcPtr);
-			m_Model.RenderModel();
 
-			shaderProcPtr->Clear(); // unbind shader
+			// 2. set material to shader
+			m_Material.UseMaterial(*shaderProcPtr);
+			// 3. set texture to shader
+			//			m_BrickTexture.UseTexture();
+			// 4. BindCurrentShader Light
+			m_MainLight.UseLight(*shaderProcPtr);
+
+			m_Model.RenderModel();
+			m_ShaderController.UnbindCurrentShader();
+
+			// NOTE: Render Twice on the same Frame Buffer. (To show Normal)
+			// https://stackoverflow.com/questions/37580597/best-way-to-use-multiple-shaders
+			// https://learnopengl.com/Advanced-OpenGL/Geometry-Shader
+//			m_ShaderController.SetCurrentShader("Normal");
+//			m_Model.RenderModel();
+//			m_ShaderController.UnbindCurrentShader();
 		}
 		m_FrameBuffer.Unbind(); // unbind Frame Buffer (render target)
 	}
@@ -136,27 +140,17 @@ public:
 	// NOTE: this is ImGui Render function
     void OnUIRender() override
 	{
+		const auto currentShaderName = m_ShaderController.GetCurrentShaderPtr()->GetName();
 		{
-			// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
-			ImGui::Begin("Material");
-			{
-				ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Material.m_AmbientColor));
-				ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Material.m_DiffuseColor));
-				ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Material.m_SpecularColor));
-				ImGui::DragFloat("Specular Exponent", &m_Material.m_SpecularExponent);
-			}
-			ImGui::End();
-		}
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		{
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::Begin("ViewPort");
 			// https://uysalaltas.github.io/2022/01/09/OpenGL_Imgui.html
-			if (ImGui::BeginMenu(m_ShaderController.GetCurrentShader()->GetName().c_str()))
+			if (ImGui::BeginMenu(currentShaderName.c_str()))
 			{
-				for (auto &itr : m_ShaderController.GetShaderProgramMap())
+				for (auto &itr : m_ShaderController.GetShaderMap())
 				{
 					if (ImGui::MenuItem(itr.first.c_str())) {
-						m_ShaderController.Use(itr.first.c_str());
+						m_ShaderController.SetCurrentShader(itr.first);
 					}
 				}
 				ImGui::EndMenu();
@@ -172,11 +166,34 @@ public:
 				);
 				// NOTE: re-calculate camera for viewport height change...
 				m_EditorCamera.OnResize(m_Size.x, m_Size.y);
-//				OnResize(m_Size.x, m_Size.y); // --> 이렇게 하면 비율이 터짐.
+				//				OnResize(m_Size.x, m_Size.y); // --> 이렇게 하면 비율이 터짐.
+			}
+			ImGui::End();
+			ImGui::PopStyleVar();
+		}
+		{
+			// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
+			ImGui::Begin("Control Menu");
+			if (currentShaderName == "Phong")
+			{
+				ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Material.m_AmbientColor));
+				ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Material.m_DiffuseColor));
+				ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Material.m_SpecularColor));
+				ImGui::DragFloat("Specular Exponent", &m_Material.m_SpecularExponent);
+			}
+			else if (currentShaderName == "Explosion")
+			{
+				auto* ptr = dynamic_cast<ExplosionShader *>(m_ShaderController.GetCurrentShaderPtr());
+				if (ptr != nullptr) {
+					ImGui::SliderFloat("Explosion Degree", &(ptr->m_Degree), 0.0f, 10.0f, "%.1f");
+				}
+			}
+			else
+			{
+				// ...
 			}
 			ImGui::End();
 		}
-		ImGui::PopStyleVar();
 	}
 
 	// called once popped from m_LayerStack

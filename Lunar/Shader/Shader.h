@@ -2,8 +2,8 @@
 // Created by Minkyeu Kim on 7/17/23.
 //
 
-#ifndef SCOOP_SHADERPROGRAM_H
-#define SCOOP_SHADERPROGRAM_H
+#ifndef SCOOP_SHADER_H
+#define SCOOP_SHADER_H
 
 #include <string>
 #include <iostream>
@@ -21,7 +21,7 @@
 
 namespace Lunar {
 
-	class ShaderProgram
+	class Shader
 	{
 	private:
 		std::string m_DebugName; // for debug purpose
@@ -55,20 +55,20 @@ namespace Lunar {
 		GLint 	m_UniformShaderModeLocation = 0;
 
 	public:
-		ShaderProgram(const std::string& name);
-		~ShaderProgram();
-		ShaderProgram& operator=(const ShaderProgram& other) = delete; // NOTE: forbid copy assign operator
+		explicit Shader(const std::string& name);
+		~Shader();
+		Shader& operator=(const Shader& other) = delete; // NOTE: forbid copy assign operator
 		int AttachShader(const std::string& shaderPath, GLenum shaderType); // compile and attach shader to shaderProgram
 		int LinkToGPU(); // link shaderProgram to GPU + load uniform variable location
 		void DeleteFromGPU(); // delete program.
-		ShaderProgram(const std::string& name,
+		Shader(const std::string& name,
 					  const std::string& vertex_shader_path,
 					  const std::string& fragment_shader_path,
 					  const std::string& geometry_shader_path = ""
 					  ); // attach 후 GPU에 link하는 과정 포함한 생성자.
 
-		void Use() const; // bind shader program to GPU
-		void Clear() const; // unbind shader from GPU
+		void Bind(); // bind shader program to GPU
+		void Unbind(); // unbind shader from GPU
 
 	public: // setter
 		void SetUniformModel(const GLfloat *value) const;
@@ -86,11 +86,14 @@ namespace Lunar {
 		inline t_UniformMaterial GetUniformMaterial() const { return m_UniformMaterial; };
 		inline std::string GetName() const { return m_DebugName; };
 
-	private: // Helper function
+		// 각 쉐이더 헤더에서 업데이트 함수 구현.
+		virtual void BindDataToGPU() {};
+
+	protected: // Helper function
 		static std::string _ReadFileToString(const std::string& path);
 		GLint _GetUniformLocation(const char* name) const;
 	};
 }
 
 
-#endif //SCOOP_SHADERPROGRAM_H
+#endif//SCOOP_SHADER_H

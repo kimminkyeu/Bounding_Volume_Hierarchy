@@ -2,7 +2,7 @@
 // Created by Minkyeu Kim on 7/17/23.
 //
 
-#include "ShaderProgram.h"
+#include "Shader.h"
 #include "Lunar/Core/Log.h"
 
 // vertex_shader = 0000^0001
@@ -11,16 +11,16 @@ static const char ESSENTIAL_SHADERS_LOADED = (1 << 1) | (1 << 0);
 
 namespace Lunar {
 
-	ShaderProgram::ShaderProgram(const std::string& name)
+	Shader::Shader(const std::string& name)
 		: m_DebugName(name), m_ProgramID(0), m_UniformModelLocation(-1), m_UniformProjectionLocation(-1), m_UniformViewLocation(-1), m_ShadersBitmap(0)
 	{}
 
-	ShaderProgram::ShaderProgram(const std::string& name,
+	Shader::Shader(const std::string& name,
 								 const std::string& vertex_shader_path,
 								 const std::string& fragment_shader_path,
 								 const std::string& geometry_shader_path // optional
 								 )
-		: ShaderProgram::ShaderProgram(name)
+		: Shader::Shader(name)
 	{
 		// 1. Load shader
 		LOG_TRACE("ShaderProgram constructor called");
@@ -40,13 +40,13 @@ namespace Lunar {
 		this->LinkToGPU();
 	}
 
-	ShaderProgram::~ShaderProgram()
+	Shader::~Shader()
 	{
-		LOG_TRACE("ShaderProgram destructor called");
+		LOG_TRACE("ShaderProgram [{0}] destructor called", m_DebugName);
 		this->DeleteFromGPU();
 	}
 
-	int ShaderProgram::AttachShader(const std::string& shaderPath, GLenum shaderType)
+	int Shader::AttachShader(const std::string& shaderPath, GLenum shaderType)
 	{
 		if (!m_ProgramID) // if no program exist, then create program first.
 		{
@@ -96,7 +96,7 @@ namespace Lunar {
 	}
 
 	// 나중에 glCreateProgram 이 코드 다르게 만들기.
-	int ShaderProgram::LinkToGPU()
+	int Shader::LinkToGPU()
 	{
 		GLint result = 0;
 		if (m_ShadersBitmap != ESSENTIAL_SHADERS_LOADED)
@@ -134,7 +134,9 @@ namespace Lunar {
 		m_UniformModelLocation = _GetUniformLocation("Model");
 		m_UniformViewLocation = _GetUniformLocation("View");
 		m_UniformProjectionLocation = _GetUniformLocation("Projection");
+
 		// ***************************** For Phong Shading ******************************
+		// TODO: 아래 uniform 변수 접근은 Phong 쉐이더 헤더로 뺄 것
 		m_UniformDirectionLight.DirectionLocation = _GetUniformLocation("DirectionLight.Direction");
 		m_UniformDirectionLight.AmbientIntensityLocation = _GetUniformLocation("DirectionLight.AmbientIntensity");
 		m_UniformDirectionLight.DiffuseIntensityLocation = _GetUniformLocation("DirectionLight.DiffuseIntensity");
@@ -151,19 +153,19 @@ namespace Lunar {
 		return (0);
 	}
 
-	void ShaderProgram::SetUniformModel(const GLfloat *value) const
+	void Shader::SetUniformModel(const GLfloat *value) const
 	{ glUniformMatrix4fv(m_UniformModelLocation, 1, GL_FALSE, value); }
 
-	void ShaderProgram::SetUniformProjection(const GLfloat *value) const
+	void Shader::SetUniformProjection(const GLfloat *value) const
 	{ glUniformMatrix4fv(m_UniformProjectionLocation, 1, GL_FALSE, value); }
 
-	void ShaderProgram::SetUniformView(const GLfloat *value) const
+	void Shader::SetUniformView(const GLfloat *value) const
 	{ glUniformMatrix4fv(m_UniformViewLocation, 1, GL_FALSE, value); }
 
-	void ShaderProgram::SetUniformEyePos(const glm::vec3& eyePos) const
+	void Shader::SetUniformEyePos(const glm::vec3& eyePos) const
 	{ glUniform3f(m_UniformEyePosLocation, eyePos.x, eyePos.y, eyePos.z); }
 
-	void ShaderProgram::DeleteFromGPU()
+	void Shader::DeleteFromGPU()
 	{
 		// delete program from GPU memory
 		if (m_ProgramID)
@@ -177,7 +179,7 @@ namespace Lunar {
 		m_ShadersBitmap = 0;
 	}
 
-	GLint ShaderProgram::_GetUniformLocation(const char* uniformName) const
+	GLint Shader::_GetUniformLocation(const char* uniformName) const
 	{
 		GLint location = glGetUniformLocation(m_ProgramID, uniformName);
 		if (location < 0)
@@ -187,7 +189,7 @@ namespace Lunar {
 		return location;
 	}
 
-	std::string ShaderProgram::_ReadFileToString(const std::string& path)
+	std::string Shader::_ReadFileToString(const std::string& path)
 	{
 		std::ifstream t(path);
 		if (t.fail()) {
@@ -198,9 +200,12 @@ namespace Lunar {
 		return buffer.str();
 	}
 
-	void ShaderProgram::Use() const
-	{ glUseProgram(m_ProgramID); }
+	void Shader::Bind()
+	{
+		glUseProgram(m_ProgramID);
+		this->BindDataToGPU();
+	}
 
-	void ShaderProgram::Clear() const
+	void Shader::Unbind()
 	{ glUseProgram(0); }
 }

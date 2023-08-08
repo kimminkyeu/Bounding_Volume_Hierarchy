@@ -27,7 +27,7 @@ set( SOURCE_FILES
     # Lunar Core
         Lunar/Core/Application.cpp
         Lunar/Input/Input.cpp
-        Lunar/Shader/ShaderProgram.cpp
+        Lunar/Shader/Shader.cpp
         Lunar/Mesh/Mesh.cpp
 #        Lunar/Camera/PlayerCamera.cpp # Player's view
         Lunar/Camera/EditorCamera.cpp # Editor View
@@ -36,7 +36,7 @@ set( SOURCE_FILES
         Lunar/Light/Light.cpp
         Lunar/Material/Material.cpp
         Lunar/FrameBuffer/FrameBuffer.cpp
-        )
+        LunarApp/src/shaders/Phong/NormalShader.h)
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name

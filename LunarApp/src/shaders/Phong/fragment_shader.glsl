@@ -60,5 +60,4 @@ void main()
 {
 //    FragmentColor = texture(TextureUnit0, TexCoord) * (CalculateAmbient() + CalculateDiffuse() + CalculateSpecular());
     FragmentColor = (CalculateAmbient() + CalculateDiffuse() + CalculateSpecular());
-//    FragmentColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
 }

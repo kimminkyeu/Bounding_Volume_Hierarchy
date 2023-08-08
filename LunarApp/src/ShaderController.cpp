@@ -10,31 +10,31 @@ ShaderController::ShaderController()
 
 ShaderController::~ShaderController()
 {
-	for (auto& itr : m_ShaderProgramMap)
+	for (auto& itr : m_ShaderMap)
 		delete itr.second;
-	m_ShaderProgramMap.clear();
+	m_ShaderMap.clear();
 	LOG_TRACE("ShaderController destructor called");
 }
 
-void ShaderController::Use()
+void ShaderController::BindCurrentShader()
 {
-	assert(!m_ShaderProgramMap.empty() && "No shader has been provided");
-	if (m_SelectedShader == nullptr)
+	assert(!m_ShaderMap.empty() && "No shader has been provided");
+	if (m_CurrentShader == nullptr)
 	{
-		auto itr = m_ShaderProgramMap.begin();
-		m_SelectedShader = itr->second;
+		auto itr = m_ShaderMap.begin();
+		m_CurrentShader = itr->second;
 	}
-	m_SelectedShader->Use();
+	m_CurrentShader->Bind();
 }
 
-void ShaderController::Use(const std::string& name)
+void ShaderController::SetCurrentShader(const std::string& name)
 {
-	auto f = m_ShaderProgramMap.find(name);
-	if (f != m_ShaderProgramMap.end()) {
-		f->second->Use();
-		m_SelectedShader = f->second;
+	auto f = m_ShaderMap.find(name);
+	if (f != m_ShaderMap.end()) {
+		f->second->Bind();
+		m_CurrentShader = f->second;
 	} else {
-		assert(false && "ShaderController::Use() -> shader category not found");
+		assert(false && "ShaderController::BindCurrentShader() -> shader category not found");
 	}
 }
 
@@ -44,24 +44,24 @@ void ShaderController::Add(const std::string& name,
 						   const std::string& geometryShaderPath // optional
 						   )
 {
-	auto* shader_ptr = new Lunar::ShaderProgram(name, vertexShaderPath, fragmentShaderPath, geometryShaderPath);
-	m_ShaderProgramMap.insert(std::make_pair(name, shader_ptr));
+	auto* shader_ptr = new Lunar::Shader(name, vertexShaderPath, fragmentShaderPath, geometryShaderPath);
+	m_ShaderMap.insert(std::make_pair(name, shader_ptr));
 }
 
-Lunar::ShaderProgram* ShaderController::GetByName(const std::string& name)
+Lunar::Shader* ShaderController::GetByName(const std::string& name)
 {
-	auto itr = m_ShaderProgramMap.find(name);
-	if (itr != m_ShaderProgramMap.end()) {
+	auto itr = m_ShaderMap.find(name);
+	if (itr != m_ShaderMap.end()) {
 		return itr->second;
 	} else {
 		return nullptr;
 	}
 }
-Lunar::ShaderProgram* ShaderController::GetCurrentShader()
+Lunar::Shader* ShaderController::GetCurrentShaderPtr()
 {
-	return m_SelectedShader;
+	return m_CurrentShader;
 }
-std::map<std::string, Lunar::ShaderProgram*> ShaderController::GetShaderProgramMap()
+std::map<std::string, Lunar::Shader*> ShaderController::GetShaderMap()
 {
-	return m_ShaderProgramMap;
+	return m_ShaderMap;
 }

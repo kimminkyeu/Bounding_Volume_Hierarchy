@@ -39,7 +39,7 @@ i.e. `windows.h` cannot cope if any Win32 symbols have already been defined.
 
 In other words:
 
- - Use the GLFW header to include OpenGL or OpenGL ES headers portably
+ - BindCurrentShader the GLFW header to include OpenGL or OpenGL ES headers portably
  - Do not include window system headers unless you will use those APIs directly
  - If you do need such headers, include them before the GLFW header
 
