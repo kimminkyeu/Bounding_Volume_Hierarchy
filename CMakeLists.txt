@@ -36,7 +36,7 @@ set( SOURCE_FILES
         Lunar/Light/Light.cpp
         Lunar/Material/Material.cpp
         Lunar/FrameBuffer/FrameBuffer.cpp
-        LunarApp/src/shaders/Phong/NormalShader.h)
+        )
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name

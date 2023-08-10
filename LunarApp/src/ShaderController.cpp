@@ -31,8 +31,8 @@ void ShaderController::SetCurrentShader(const std::string& name)
 {
 	auto f = m_ShaderMap.find(name);
 	if (f != m_ShaderMap.end()) {
-		f->second->Bind();
 		m_CurrentShader = f->second;
+		f->second->Bind();
 	} else {
 		assert(false && "ShaderController::BindCurrentShader() -> shader category not found");
 	}

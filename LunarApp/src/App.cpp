@@ -23,6 +23,7 @@
 class ExampleLayer final : public Lunar::Layer
 {
 private:
+	bool m_ShowNormal = false;
 	ImVec2 m_Size; // NOTE: ImGUI Content Size, not screen size.
 
 	ShaderController m_ShaderController; // group of shaders
@@ -110,7 +111,6 @@ public:
 		{
 			m_ShaderController.BindCurrentShader();
 			const auto shaderProcPtr = m_ShaderController.GetCurrentShaderPtr();
-
 			shaderProcPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 			shaderProcPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 			shaderProcPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
@@ -130,9 +130,19 @@ public:
 			// NOTE: Render Twice on the same Frame Buffer. (To show Normal)
 			// https://stackoverflow.com/questions/37580597/best-way-to-use-multiple-shaders
 			// https://learnopengl.com/Advanced-OpenGL/Geometry-Shader
-//			m_ShaderController.SetCurrentShader("Normal");
-//			m_Model.RenderModel();
-//			m_ShaderController.UnbindCurrentShader();
+			if (m_ShowNormal) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
+				auto* normalShaderPtr = m_ShaderController.GetByName("Normal");
+				if (normalShaderPtr) {
+					normalShaderPtr->Bind();
+					normalShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
+					normalShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+					normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+					glm::mat4 model(1.0f);// init unit matrix
+					normalShaderPtr->SetUniformModel(glm::value_ptr(model));
+					m_Model.RenderModel();
+					normalShaderPtr->Unbind();
+				}
+			}
 		}
 		m_FrameBuffer.Unbind(); // unbind Frame Buffer (render target)
 	}
@@ -166,7 +176,6 @@ public:
 				);
 				// NOTE: re-calculate camera for viewport height change...
 				m_EditorCamera.OnResize(m_Size.x, m_Size.y);
-				//				OnResize(m_Size.x, m_Size.y); // --> 이렇게 하면 비율이 터짐.
 			}
 			ImGui::End();
 			ImGui::PopStyleVar();
@@ -174,6 +183,7 @@ public:
 		{
 			// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
 			ImGui::Begin("Control Menu");
+			ImGui::Checkbox("Normal", &m_ShowNormal);
 			if (currentShaderName == "Phong")
 			{
 				ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Material.m_AmbientColor));

@@ -19,17 +19,19 @@ layout(triangle_strip, max_vertices = 3) out;
 /*  geometry shader input varying variable must be declared as an array. The input to the Geometry shader is a primitives.
     That means all the outputs of the vertex shader which form a primitive are composed.
     Thus the inputs of the geometry shader are arrays:
-
-    in vec3 some_data_passed_from_vertex_shader[];
+        in vec3 some_data_passed_from_vertex_shader[];
 */
-
+uniform mat4 View; // Camera View
+uniform mat4 Projection; // Camera Projection (perspective, orthogonal, etc...)
 uniform float ExplosionDegree;
 
+in vec3 Normal[]; // from vertex shader
+
 /* because gl_Postion is a Projected position, we can't use vertex shader's Normal variable */
-vec3 GetNormalAfterProjection()
+vec3 GetFaceNormal()
 {
-    vec3 a = vec3(gl_in[0].gl_Position) - vec3(gl_in[1].gl_Position);
-    vec3 b = vec3(gl_in[2].gl_Position) - vec3(gl_in[1].gl_Position);
+    vec3 a = vec3(gl_in[2].gl_Position) - vec3(gl_in[1].gl_Position);
+    vec3 b = vec3(gl_in[0].gl_Position) - vec3(gl_in[1].gl_Position);
     return normalize(cross(a, b));
 }
 
@@ -46,7 +48,7 @@ void main()
 {
     for (int i=0; i<gl_in.length(); ++i)
     {
-        gl_Position = Explode(gl_in[i].gl_Position, GetNormalAfterProjection());
+        gl_Position = Projection * View * (gl_in[i].gl_Position + (vec4(GetFaceNormal(), 0.0f) * ExplosionDegree));
         EmitVertex();
     }
     EndPrimitive();
