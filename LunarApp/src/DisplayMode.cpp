@@ -21,8 +21,9 @@ void DisplayMode::BindCurrentShader()
 	assert(!m_ShaderMap.empty() && "No shader has been provided");
 	if (m_CurrentShader == nullptr)
 	{
-		auto itr = m_ShaderMap.begin();
-		m_CurrentShader = itr->second;
+		m_CurrentShader = this->GetByName("Phong");
+//		auto itr = m_ShaderMap.begin();
+//		m_CurrentShader = itr->second;
 	}
 	m_CurrentShader->Bind();
 }
