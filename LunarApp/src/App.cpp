@@ -16,6 +16,7 @@
 #include "LunarApp/src/shaders/Explosion/ExplosionShader.h"
 #include "LunarApp/src/shaders/Phong/PhongShader.h"
 #include "LunarApp/src/shaders/Test/TestShader.h"
+#include "LunarApp/src/shaders/Cartoon/CartoonShader.h"
 #include "LunarApp/src/shaders/DataVisualizer.h"
 
 class ExampleLayer final : public Lunar::Layer
@@ -62,8 +63,8 @@ public:
 
 	// TODO: model load를 실패할 경우, vao가 없다. 따라서 shader load에서 validation error 발생. 이 경우 예외처리를 어떻게 하는게 좋을지?
 	// 1. Create object
-//		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
@@ -85,6 +86,7 @@ public:
 		m_DisplayMode.Add( new ExplosionShader() );
 		m_DisplayMode.Add( new PhongShader() );
 		m_DisplayMode.Add( new TestShader() );
+		m_DisplayMode.Add( new CartoonShader() );
 
 		// TODO: add more shaders...
 		//        - wireframe
@@ -224,7 +226,7 @@ public:
 //				ImGui::Begin("Texture Data");
 				ImGui::BeginGroup();
 				{
-					if (currentShaderName == "Phong")
+					if (currentShaderName == "Phong" || currentShaderName == "Cartoon")
 					{
 						ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Material.m_AmbientColor));
 						ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Material.m_DiffuseColor));
