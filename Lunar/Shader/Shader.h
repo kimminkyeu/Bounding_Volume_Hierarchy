@@ -87,11 +87,13 @@ namespace Lunar {
 		inline std::string GetName() const { return m_DebugName; };
 
 		// 각 쉐이더 헤더에서 업데이트 함수 구현.
-		virtual void BindDataToGPU() {};
 
-	protected: // Helper function
+	protected:
 		static std::string _ReadFileToString(const std::string& path);
 		GLint _GetUniformLocation(const char* name) const;
+
+		virtual void OnBind() {};
+		virtual void OnUnbind() {};
 	};
 }
 

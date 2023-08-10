@@ -21,7 +21,7 @@ namespace Lunar {
 		Mesh(GLfloat* verticies, unsigned int *indicies, unsigned int numOfVertices, unsigned int numOfIndicies);
 		~Mesh();
 		void CreateMesh(GLfloat* verticies, unsigned int *indicies, unsigned int numOfVertices, unsigned int numOfIndicies);
-		void RenderMesh();
+		void RenderMesh(GLenum mode = GL_TRIANGLES);
 		void ClearMesh(); // delete data from GPU
 	};
 }

@@ -2,13 +2,13 @@
 // Created by USER on 2023-08-04.
 //
 
-#include "ShaderController.h"
+#include "DisplayMode.h"
 #include "Lunar/Core/Log.h"
 
-ShaderController::ShaderController()
+DisplayMode::DisplayMode()
 {}
 
-ShaderController::~ShaderController()
+DisplayMode::~DisplayMode()
 {
 	for (auto& itr : m_ShaderMap)
 		delete itr.second;
@@ -16,7 +16,7 @@ ShaderController::~ShaderController()
 	LOG_TRACE("ShaderController destructor called");
 }
 
-void ShaderController::BindCurrentShader()
+void DisplayMode::BindCurrentShader()
 {
 	assert(!m_ShaderMap.empty() && "No shader has been provided");
 	if (m_CurrentShader == nullptr)
@@ -27,7 +27,7 @@ void ShaderController::BindCurrentShader()
 	m_CurrentShader->Bind();
 }
 
-void ShaderController::SetCurrentShader(const std::string& name)
+void DisplayMode::SetCurrentShader(const std::string& name)
 {
 	auto f = m_ShaderMap.find(name);
 	if (f != m_ShaderMap.end()) {
@@ -38,7 +38,7 @@ void ShaderController::SetCurrentShader(const std::string& name)
 	}
 }
 
-void ShaderController::Add(const std::string& name,
+void DisplayMode::Add(const std::string& name,
 						   const std::string& vertexShaderPath,
 						   const std::string& fragmentShaderPath,
 						   const std::string& geometryShaderPath // optional
@@ -48,7 +48,7 @@ void ShaderController::Add(const std::string& name,
 	m_ShaderMap.insert(std::make_pair(name, shader_ptr));
 }
 
-Lunar::Shader* ShaderController::GetByName(const std::string& name)
+Lunar::Shader* DisplayMode::GetByName(const std::string& name)
 {
 	auto itr = m_ShaderMap.find(name);
 	if (itr != m_ShaderMap.end()) {
@@ -57,11 +57,11 @@ Lunar::Shader* ShaderController::GetByName(const std::string& name)
 		return nullptr;
 	}
 }
-Lunar::Shader* ShaderController::GetCurrentShaderPtr()
+Lunar::Shader* DisplayMode::GetCurrentShaderPtr()
 {
 	return m_CurrentShader;
 }
-std::map<std::string, Lunar::Shader*> ShaderController::GetShaderMap()
+std::map<std::string, Lunar::Shader*> DisplayMode::GetShaderMap()
 {
 	return m_ShaderMap;
 }

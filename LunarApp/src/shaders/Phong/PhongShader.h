@@ -20,7 +20,8 @@ public:
 
 	};
 
-	void BindDataToGPU() override {};
+	void OnBind() override {};
+	void OnUnbind() override {};
 };
 
 

@@ -203,9 +203,12 @@ namespace Lunar {
 	void Shader::Bind()
 	{
 		glUseProgram(m_ProgramID);
-		this->BindDataToGPU();
+		this->OnBind(); // NOTE: 각 derived shader class에서 정의한 함수 호출
 	}
 
 	void Shader::Unbind()
-	{ glUseProgram(0); }
+	{
+		glUseProgram(0);
+		this->OnUnbind(); // NOTE: 각 derived shader class에서 정의한 함수 호출
+	}
 }

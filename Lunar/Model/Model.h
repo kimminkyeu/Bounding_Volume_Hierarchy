@@ -23,7 +23,7 @@ namespace Lunar {
 		Model();
 		~Model();
 		void LoadModel(const std::string& filePath);
-		void RenderModel();
+		void RenderModel(GLenum mode = GL_TRIANGLES);
 		void ClearModel();
 	private:
 		void LoadNode(aiNode* node, const aiScene* scene);

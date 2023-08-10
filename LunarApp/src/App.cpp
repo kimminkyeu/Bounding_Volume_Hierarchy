@@ -12,21 +12,20 @@
 #include "Lunar/Shader/Shader.h"
 #include "Lunar/Texture/Texture.h"
 
-#include "LunarApp/src/ShaderController.h"
-#include "LunarApp/src/shaders/Shaded/ShadedShader.h"
+#include "LunarApp/src/DisplayMode.h"
 #include "LunarApp/src/shaders/Explosion/ExplosionShader.h"
 #include "LunarApp/src/shaders/Phong/PhongShader.h"
 #include "LunarApp/src/shaders/Test/TestShader.h"
-#include "LunarApp/src/shaders/Wireframe/WireframeShader.h"
-#include "LunarApp/src/shaders/Normal/NormalShader.h"
+#include "LunarApp/src/shaders/DataVisualizer.h"
 
 class ExampleLayer final : public Lunar::Layer
 {
 private:
-	bool m_ShowNormal = false;
 	ImVec2 m_Size; // NOTE: ImGUI Content Size, not screen size.
 
-	ShaderController m_ShaderController; // group of shaders
+	DisplayMode m_DisplayMode; // main display mode
+	DataVisualizer m_DataVisualizer; // vertex, polygon, normal visualizer
+
 	std::vector<std::shared_ptr<Lunar::Mesh>> m_MeshList;
 
 	Lunar::EditorCamera m_EditorCamera;
@@ -83,12 +82,9 @@ public:
 
 	// 5. Load Shaders 		// TODO: move to shader loader class
 
-		m_ShaderController.Add( new ShadedShader() ); // Blender edit mode style [WireFrame + Flat Shading]
-		m_ShaderController.Add( new ExplosionShader() );
-		m_ShaderController.Add( new PhongShader() );
-		m_ShaderController.Add( new WireframeShader() );
-		m_ShaderController.Add( new TestShader() );
-		m_ShaderController.Add( new NormalShader() );
+		m_DisplayMode.Add( new ExplosionShader() );
+		m_DisplayMode.Add( new PhongShader() );
+		m_DisplayMode.Add( new TestShader() );
 
 		// TODO: add more shaders...
 		//        - wireframe
@@ -109,8 +105,8 @@ public:
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // 1. Unbind current frame buffer data.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		{
-			m_ShaderController.BindCurrentShader();
-			const auto shaderProcPtr = m_ShaderController.GetCurrentShaderPtr();
+			m_DisplayMode.BindCurrentShader();
+			const auto shaderProcPtr = m_DisplayMode.GetCurrentShaderPtr();
 			shaderProcPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 			shaderProcPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 			shaderProcPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
@@ -123,15 +119,16 @@ public:
 			//			m_BrickTexture.UseTexture();
 			// 4. BindCurrentShader Light
 			m_MainLight.UseLight(*shaderProcPtr);
+			m_Model.RenderModel(GL_TRIANGLES);
+			m_DisplayMode.UnbindCurrentShader();
 
-			m_Model.RenderModel();
-			m_ShaderController.UnbindCurrentShader();
 
 			// NOTE: Render Twice on the same Frame Buffer. (To show Normal)
 			// https://stackoverflow.com/questions/37580597/best-way-to-use-multiple-shaders
 			// https://learnopengl.com/Advanced-OpenGL/Geometry-Shader
-			if (m_ShowNormal) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
-				auto* normalShaderPtr = m_ShaderController.GetByName("Normal");
+			// TODO: 아땋게 하면 아래 구조를 깔끔하게 나눌 수 있을 까...???
+			if (m_DataVisualizer.m_ShowNormal) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
+				auto* normalShaderPtr = m_DataVisualizer.m_NormalShader;
 				if (normalShaderPtr) {
 					normalShaderPtr->Bind();
 					normalShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
@@ -139,8 +136,34 @@ public:
 					normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					glm::mat4 model(1.0f);// init unit matrix
 					normalShaderPtr->SetUniformModel(glm::value_ptr(model));
-					m_Model.RenderModel();
+					m_Model.RenderModel(GL_TRIANGLES);
 					normalShaderPtr->Unbind();
+				}
+			}
+			if (m_DataVisualizer.m_ShowPolygon) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
+				auto* wireframeShaderPtr = m_DataVisualizer.m_PolygonShader;
+				if (wireframeShaderPtr) {
+					wireframeShaderPtr->Bind();
+					wireframeShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
+					wireframeShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+					wireframeShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+					glm::mat4 model(1.0f);// init unit matrix
+					wireframeShaderPtr->SetUniformModel(glm::value_ptr(model));
+					m_Model.RenderModel(GL_TRIANGLES);
+					wireframeShaderPtr->Unbind();
+				}
+			}
+			if (m_DataVisualizer.m_ShowVertices) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
+				auto* pointShaderPtr = m_DataVisualizer.m_VerticesShader;
+				if (pointShaderPtr) {
+					pointShaderPtr->Bind();
+					pointShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
+					pointShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+					pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+					glm::mat4 model(1.0f);// init unit matrix
+					pointShaderPtr->SetUniformModel(glm::value_ptr(model));
+					m_Model.RenderModel(GL_POINTS);
+					pointShaderPtr->Unbind();
 				}
 			}
 		}
@@ -150,17 +173,17 @@ public:
 	// NOTE: this is ImGui Render function
     void OnUIRender() override
 	{
-		const auto currentShaderName = m_ShaderController.GetCurrentShaderPtr()->GetName();
+		const auto currentShaderName = m_DisplayMode.GetCurrentShaderPtr()->GetName();
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::Begin("ViewPort");
 			// https://uysalaltas.github.io/2022/01/09/OpenGL_Imgui.html
 			if (ImGui::BeginMenu(currentShaderName.c_str()))
 			{
-				for (auto &itr : m_ShaderController.GetShaderMap())
+				for (auto &itr : m_DisplayMode.GetShaderMap())
 				{
 					if (ImGui::MenuItem(itr.first.c_str())) {
-						m_ShaderController.SetCurrentShader(itr.first);
+						m_DisplayMode.SetCurrentShader(itr.first);
 					}
 				}
 				ImGui::EndMenu();
@@ -180,29 +203,47 @@ public:
 			ImGui::End();
 			ImGui::PopStyleVar();
 		}
+
 		{
-			// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
-			ImGui::Begin("Control Menu");
-			ImGui::Checkbox("Normal", &m_ShowNormal);
-			if (currentShaderName == "Phong")
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+			ImGui::Begin("Data Board");
 			{
-				ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Material.m_AmbientColor));
-				ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Material.m_DiffuseColor));
-				ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Material.m_SpecularColor));
-				ImGui::DragFloat("Specular Exponent", &m_Material.m_SpecularExponent);
-			}
-			else if (currentShaderName == "Explosion")
-			{
-				auto* ptr = dynamic_cast<ExplosionShader *>(m_ShaderController.GetCurrentShaderPtr());
-				if (ptr != nullptr) {
-					ImGui::SliderFloat("Explosion Degree", &(ptr->m_Degree), 0.0f, 10.0f, "%.1f");
+				// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
+//				ImGui::Begin("Mesh Data");
+				ImGui::BeginGroup();
+				{
+					ImGui::Checkbox("Polygon", &m_DataVisualizer.m_ShowPolygon);
+					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowPolygon ? "On" : "Off");
+					ImGui::Checkbox("Vertices", &m_DataVisualizer.m_ShowVertices);
+					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowVertices ? "On" : "Off");
+					ImGui::Checkbox("Normal", &m_DataVisualizer.m_ShowNormal);
+					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowNormal ? "On" : "Off");
 				}
-			}
-			else
-			{
-				// ...
+				ImGui::EndGroup();
+//				ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(1.0f, 1.0f, 1.0f, 1.0f));
+//				ImGui::Begin("Texture Data");
+				ImGui::BeginGroup();
+				{
+					if (currentShaderName == "Phong")
+					{
+						ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Material.m_AmbientColor));
+						ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Material.m_DiffuseColor));
+						ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Material.m_SpecularColor));
+						ImGui::DragFloat("Specular Exponent", &m_Material.m_SpecularExponent);
+					}
+					else if (currentShaderName == "Explosion")
+					{
+						auto* ptr = dynamic_cast<ExplosionShader *>(m_DisplayMode.GetCurrentShaderPtr());
+						if (ptr != nullptr) {
+							ImGui::SliderFloat("Explosion Degree", &(ptr->m_Degree), 0.0f, 10.0f, "%.1f");
+						}
+					}
+					//				ImGui::End();
+				}
+				ImGui::EndGroup();
 			}
 			ImGui::End();
+			ImGui::PopStyleVar();
 		}
 	}
 
@@ -223,7 +264,7 @@ public:
 
 Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
 {
-	Lunar::ApplicationSpecification spec {"Scoop", 1000, 1000 };
+	Lunar::ApplicationSpecification spec {"Scoop", 1200, 800 };
 	auto* app = new Lunar::Application(spec);
     app->PushLayer<ExampleLayer>();
 	app->SetMenubarCallback([app]()-> void

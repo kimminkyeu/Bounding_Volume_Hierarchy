@@ -25,11 +25,13 @@ public:
 		m_DegreeLocation = this->_GetUniformLocation("ExplosionDegree");
 	}
 
-	void BindDataToGPU() override
+private:
+	void OnBind() override
 	{
 		glUniform1f(m_DegreeLocation, m_Degree);
 	}
 
+	void OnUnbind() override {};
 };
 
 

@@ -75,12 +75,12 @@ namespace Lunar {
 //		glBindVertexArray(0); // BUG: 이거 하면 안됨.... mac에서 오류 남...
 	}
 
-	void Mesh::RenderMesh()
+	void Mesh::RenderMesh(GLenum mode)
 	{
 		glBindVertexArray(m_VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
 		// NOTE: 왜 VBO는 bind 안하지? 안해도 되는 건가?
-			glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
+			glDrawElements(mode, m_indexCount, GL_UNSIGNED_INT, 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 	}

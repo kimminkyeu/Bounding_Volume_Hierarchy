@@ -23,8 +23,9 @@ set( SOURCE_FILES
         Lunar/ImGui/ImGuiBuild.cpp # ImGui Source
     # Project
         LunarApp/src/App.cpp
-        LunarApp/src/ShaderController.cpp
-    # Lunar Core
+        LunarApp/src/DisplayMode.cpp
+        LunarApp/src/shaders/DataVisualizer.cpp
+        # Lunar Core
         Lunar/Core/Application.cpp
         Lunar/Input/Input.cpp
         Lunar/Shader/Shader.cpp

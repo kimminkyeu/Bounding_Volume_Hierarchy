@@ -19,7 +19,9 @@ public:
 				  {};
 
 
-	 void BindDataToGPU() override {};
+private:
+	 void OnBind() override {};
+	 void OnUnbind() override {};
 };
 
 #endif//SCOOP_WIREFRAMESHADER_H

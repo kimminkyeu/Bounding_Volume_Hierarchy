@@ -131,7 +131,7 @@ namespace Lunar {
 	}
 
 	// !!!! MOST IMPORTANT
-	void Model::RenderModel()
+	void Model::RenderModel(GLenum mode)
 	{
 		for (size_t i=0; i<m_MeshList.size(); i++)
 		{
@@ -141,7 +141,7 @@ namespace Lunar {
 			{
 				m_TextureList[materialIndex]->UseTexture();
 			}
-			m_MeshList[i]->RenderMesh();
+			m_MeshList[i]->RenderMesh(mode);
 		}
 	}
 

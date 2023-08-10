@@ -19,7 +19,9 @@ public:
 
 	~TestShader() {};
 
-	 void BindDataToGPU() override {};
+private:
+	 void OnBind() override {};
+	 void OnUnbind() override {};
 };
 
 #endif//SCOOP_TESTSHADER_H

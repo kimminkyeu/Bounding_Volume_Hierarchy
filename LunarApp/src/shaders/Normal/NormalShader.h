@@ -17,7 +17,9 @@ public:
 						"LunarApp/src/shaders/Normal/geometry_shader.glsl"
 		  ) {};
 
-	void BindDataToGPU() override {};
+private:
+	void OnBind() override {};
+	void OnUnbind() override {};
 };
 
 
