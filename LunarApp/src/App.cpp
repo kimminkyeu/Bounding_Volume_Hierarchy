@@ -12,7 +12,7 @@
 #include "Lunar/Shader/Shader.h"
 #include "Lunar/Texture/Texture.h"
 
-#include "LunarApp/src/DisplayMode.h"
+#include "LunarApp/src/shaders/DisplayMode.h"
 #include "LunarApp/src/shaders/Explosion/ExplosionShader.h"
 #include "LunarApp/src/shaders/Phong/PhongShader.h"
 #include "LunarApp/src/shaders/Test/TestShader.h"
@@ -63,8 +63,8 @@ public:
 
 	// TODO: model load를 실패할 경우, vao가 없다. 따라서 shader load에서 validation error 발생. 이 경우 예외처리를 어떻게 하는게 좋을지?
 	// 1. Create object
-		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+//		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
@@ -136,8 +136,7 @@ public:
 					normalShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 					normalShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
-					glm::mat4 model(1.0f);// init unit matrix
-					normalShaderPtr->SetUniformModel(glm::value_ptr(model));
+					shaderProcPtr->SetUniformModel(glm::value_ptr(model));
 					m_Model.RenderModel(GL_TRIANGLES);
 					normalShaderPtr->Unbind();
 				}
@@ -149,7 +148,6 @@ public:
 					wireframeShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 					wireframeShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					wireframeShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
-					glm::mat4 model(1.0f);// init unit matrix
 					wireframeShaderPtr->SetUniformModel(glm::value_ptr(model));
 					m_Model.RenderModel(GL_TRIANGLES);
 					wireframeShaderPtr->Unbind();
@@ -162,7 +160,6 @@ public:
 					pointShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 					pointShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
-					glm::mat4 model(1.0f);// init unit matrix
 					pointShaderPtr->SetUniformModel(glm::value_ptr(model));
 					m_Model.RenderModel(GL_POINTS);
 					pointShaderPtr->Unbind();
