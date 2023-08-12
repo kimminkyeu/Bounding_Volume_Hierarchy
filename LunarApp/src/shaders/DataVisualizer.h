@@ -23,6 +23,7 @@ public:
 
 public:
 	DataVisualizer();
+    void Init();
 	~DataVisualizer();
 };
 

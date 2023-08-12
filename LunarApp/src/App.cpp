@@ -87,6 +87,7 @@ public:
 		m_DisplayMode.Add( new PhongShader() );
 		m_DisplayMode.Add( new TestShader() );
 		m_DisplayMode.Add( new CartoonShader() );
+        m_DataVisualizer.Init(); // init wireframe, normal, vertex (Shader)
 
 		// TODO: add more shaders...
 		//        - wireframe
