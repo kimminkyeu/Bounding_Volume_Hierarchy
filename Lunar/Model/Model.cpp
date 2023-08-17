@@ -14,7 +14,7 @@ namespace Lunar {
 
 	Model::~Model()
 	{
-
+		this->ClearModel();
 	}
 
 	void Model::LoadModel(const std::string& filePath)
@@ -130,7 +130,7 @@ namespace Lunar {
 		}
 	}
 
-	// !!!! MOST IMPORTANT
+	// NOTE: !!!! MOST IMPORTANT
 	void Model::RenderModel(GLenum mode)
 	{
 		for (size_t i=0; i<m_MeshList.size(); i++)

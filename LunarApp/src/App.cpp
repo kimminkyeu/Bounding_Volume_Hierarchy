@@ -19,24 +19,115 @@
 #include "LunarApp/src/shaders/Cartoon/CartoonShader.h"
 #include "LunarApp/src/shaders/DataVisualizer.h"
 
+class TestObject {
+private:
+	std::vector<std::shared_ptr<Lunar::Mesh>> m_MeshList;
+public:
+	// Test object for AABB
+	TestObject()
+	{
+		std::vector<float> vp {
+				-0.5f, -0.5f, 0.0f,  // bottom left
+				-0.5f,  0.5f, 0.0f,   // top left
+				0.5f,  0.5f, 0.0f,  // top right
+				0.5f, -0.5f, 0.0f,  // bottom right
+		};
+		std::vector<unsigned int> indicies {
+				0, 2, 1,   // first triangle
+				0, 3, 2    // second triangle
+		};
+//		std::vector<float> vp {
+//				-1.0f, -1.0f, 0.0f,	// v0. x y z
+//				0.0f, -1.0f, 1.0f,
+//				1.0f, -1.0f, 0.0f, 	// v1. x y z
+//				0.0f, 1.0f, 0.0f 	// v2. x y z
+//		};
+//		std::vector<unsigned int> indicies {
+//				0, 3, 1,
+//				1, 3, 2,
+//				2, 3, 0,
+//				0, 1, 2
+//		};
+		std::vector<glm::vec3> normals;
+		std::vector<float> vertices;
+		for (int i = 0; i < indicies.size()/3; ++i)
+		{
+			// i = 0, 1
+			const auto p0 = glm::vec3{vp[indicies[i * 3] * 3], vp[indicies[i * 3] * 3 + 1], vp[indicies[i * 3] * 3 + 2]};
+			const auto p1 = glm::vec3{vp[indicies[i * 3 + 1] * 3], vp[indicies[i * 3 + 1] * 3 + 1], vp[indicies[i * 3 + 1] * 3 + 2]};
+			const auto p2 = glm::vec3{vp[indicies[i * 3 + 2] * 3], vp[indicies[i * 3 + 2] * 3 + 1], vp[indicies[i * 3 + 2] * 3 + 2]};
+			auto normal = GetNormal(p0, p1, p2);
+			LOG_INFO("{0} {1} {2}", normal.x, normal.y, normal.z);
+			normals.push_back(normal);
+		}
+
+		for (int i = 0; i < vp.size()/3; ++i) {
+			vertices.insert(vertices.end(), {vp[i * 3], vp[i * 3 + 1], vp[i * 3 + 2]}); // Vertex
+			vertices.insert(vertices.end(), {0.0f, 0.0f}); // UV
+			vertices.insert(vertices.end(), {0.0f, 0.0f, 0.0f}); // Normal
+		}
+		// SumUp normals
+		for (int i = 0; i < indicies.size()/3; ++i) {
+			auto i1 = indicies[i * 3];
+			auto i2 = indicies[i * 3 + 1];
+			auto i3 = indicies[i * 3 + 2];
+			vertices[i1 * 8 + 5] += normals[i].x;
+			vertices[i1 * 8 + 6] += normals[i].y;
+			vertices[i1 * 8 + 7] += normals[i].z;
+			vertices[i2 * 8 + 5] += normals[i].x;
+			vertices[i2 * 8 + 6] += normals[i].y;
+			vertices[i2 * 8 + 7] += normals[i].z;
+			vertices[i3 * 8 + 5] += normals[i].x;
+			vertices[i3 * 8 + 6] += normals[i].y;
+			vertices[i3 * 8 + 7] += normals[i].z;
+		}
+		// Get Average of each sum of normals
+		for (int i = 0; i < vertices.size()/8; ++i) {
+			auto vec = glm::vec3{vertices[i * 8 + 5], vertices[i * 8 + 6], vertices[i * 8 + 7] };
+			vec = glm::normalize(vec);
+			vertices[i * 8 + 5] = vec.x;
+			vertices[i * 8 + 6] = vec.y;
+			vertices[i * 8 + 7] = vec.z;
+		}
+		auto ptr = std::make_shared<Lunar::Mesh>();
+		ptr->CreateMesh(&(*vertices.begin()), &(*indicies.begin()), vertices.size(), indicies.size());
+		m_MeshList.push_back(ptr);
+	}
+
+	~TestObject()
+	{
+		for (auto &itr : m_MeshList)
+			itr->ClearMesh();
+	}
+
+	void Render()
+	{
+		for (auto &itr : m_MeshList)
+			itr->RenderMesh(GL_TRIANGLES);
+	}
+
+	glm::vec3 GetNormal(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2)
+	{
+		auto v1 = p2 - p1;
+		auto v2 = p0 - p1;
+		return glm::normalize(glm::cross(v1, v2));
+	}
+};
+
 class ExampleLayer final : public Lunar::Layer
 {
 private:
 	ImVec2 m_Size; // NOTE: ImGUI Content Size, not screen size.
-
+    Lunar::FrameBuffer m_FrameBuffer; // NOTE: Viewport Buffer (Only Rendering)
 	DisplayMode m_DisplayMode; // main display mode
+private:
 	DataVisualizer m_DataVisualizer; // vertex, polygon, normal visualizer
-
-	std::vector<std::shared_ptr<Lunar::Mesh>> m_MeshList;
-
 	Lunar::EditorCamera m_EditorCamera;
+	TestObject m_TestObject;
 	Lunar::Model m_Model;
-	Lunar::Texture m_BrickTexture;
+//	Lunar::Texture m_BrickTexture;
 	Lunar::Light m_MainLight;
 	Lunar::Material m_Material;
-
-	// NOTE: Viewport Buffer (Only Rendering)
-	Lunar::FrameBuffer m_FrameBuffer;
 
 public:
 	ExampleLayer()
@@ -61,15 +152,14 @@ public:
 		m_FrameBuffer.Init((float)width, (float)height);
 
 
-	// TODO: model load를 실패할 경우, vao가 없다. 따라서 shader load에서 validation error 발생. 이 경우 예외처리를 어떻게 하는게 좋을지?
 	// 1. Create object
-//		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
-		m_BrickTexture = Lunar::Texture("LunarApp/assets/brick.png");
-		m_BrickTexture.LoadTexture();
+//		m_BrickTexture = Lunar::Texture("LunarApp/assets/brick.png");
+//		m_BrickTexture.LoadTexture();
 
 	// 2. Create Material
 		// ...
@@ -80,28 +170,24 @@ public:
 	// 4. Init Camera
 		auto aspectRatio = (float)width / (float)height;
 		m_EditorCamera = Lunar::EditorCamera(45.0f, aspectRatio, 0.1f, 100.0f);
-
-	// 5. Load Shaders 		// TODO: move to shader loader class
+		const auto p = m_EditorCamera.GetPosition();
+		LOG_INFO("camera pos x{0} y{1} z{2}", p.x, p.y, p.z);
+		const auto l = m_EditorCamera.GetForwardDirection();
+		LOG_INFO("camera forward x{0} y{1} z{2}", l.x, l.y, l.z);
 
 		m_DisplayMode.Add( new ExplosionShader() );
 		m_DisplayMode.Add( new PhongShader() );
 		m_DisplayMode.Add( new TestShader() );
 		m_DisplayMode.Add( new CartoonShader() );
         m_DataVisualizer.Init(); // init wireframe, normal, vertex (Shader)
-
-		// TODO: add more shaders...
-		//        - wireframe
-		//        - shaded (wireframe + phong)
-		//        - Cartoon
-		//        - Phong Render ( = Texture가 있을 때만 텍스쳐 입히기 )
-		//        - Flat Render --> 이건 굳이 따로 쉐이더를 나눌 필요 없이, 기본에서 설정 가능?
-		//        - Gouraud Render --> 이것도...?
 	}
 
 	// called every render loop
 	void OnUpdate(float ts) override
 	{
 		m_EditorCamera.OnUpdate(ts); // 2. update camera geometry
+//		auto t = m_EditorCamera.GetPosition();
+//		LOG_INFO("X{0} Y{1} Z{2}", t.x, t.y, t.z);
 
 		// 0. bind frame buffer ( = render target image )
 		m_FrameBuffer.Bind();
@@ -122,9 +208,11 @@ public:
 			//			m_BrickTexture.UseTexture();
 			// 4. BindCurrentShader Light
 			m_MainLight.UseLight(*shaderProcPtr);
-			m_Model.RenderModel(GL_TRIANGLES);
-			m_DisplayMode.UnbindCurrentShader();
+//			m_TestObject.Render();
+			m_Model.RenderModel();
 
+
+			m_DisplayMode.UnbindCurrentShader();
 
 			// NOTE: Render Twice on the same Frame Buffer. (To show Normal)
 			// https://stackoverflow.com/questions/37580597/best-way-to-use-multiple-shaders
@@ -138,8 +226,10 @@ public:
 					normalShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					shaderProcPtr->SetUniformModel(glm::value_ptr(model));
-					m_Model.RenderModel(GL_TRIANGLES);
+//					m_TestObject.Render();
 					normalShaderPtr->Unbind();
+
+					m_Model.RenderModel();
 				}
 			}
 			if (m_DataVisualizer.m_ShowPolygon) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
@@ -150,7 +240,8 @@ public:
 					wireframeShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					wireframeShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					wireframeShaderPtr->SetUniformModel(glm::value_ptr(model));
-					m_Model.RenderModel(GL_TRIANGLES);
+//					m_TestObject.Render();
+					m_Model.RenderModel();
 					wireframeShaderPtr->Unbind();
 				}
 			}
@@ -162,7 +253,8 @@ public:
 					pointShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					pointShaderPtr->SetUniformModel(glm::value_ptr(model));
-					m_Model.RenderModel(GL_POINTS);
+//					m_TestObject.Render();
+					m_Model.RenderModel();
 					pointShaderPtr->Unbind();
 				}
 			}
@@ -251,8 +343,8 @@ public:
 	void OnDetach() override
 	{
 		LOG_TRACE("Layer [{0}] has been detached", _m_Name);
-		for (auto &mesh : m_MeshList)
-			mesh->ClearMesh(); // delete mesh buffer (VAO VBO IBO)
+//		for (auto &mesh : m_MeshList)
+//			mesh->ClearMesh(); // delete mesh buffer (VAO VBO IBO)
 	}
 
 	void OnResize(float width, float height) override
