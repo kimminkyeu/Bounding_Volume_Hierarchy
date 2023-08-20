@@ -19,6 +19,16 @@
 #include "LunarApp/src/shaders/Cartoon/CartoonShader.h"
 #include "LunarApp/src/shaders/DataVisualizer.h"
 
+
+// AABB 구현 방식
+// 1. AABB에 model matrix를 곱한다.
+// 2. RenderLoop에서 AABB를 그리는 쉐이더를 따로 생성한다. // AABB debug shader
+// 3. AABB는 Object의 VAO와 IBO 데이터를 가지고 형성해야 한다.
+// 4. 한 Mesh에 대해, VAO 데이터 배열을 돌면서 x y z축에 대한 최대/ 최소값를 찾아내야 한다.
+
+// assimp를 쓰면 VAO IBO 생성하고 데이터 넘기고 끝내기 때문에, 별도 배열을 가지고 있어야 한다.
+
+
 class TestObject {
 private:
 	std::vector<std::shared_ptr<Lunar::Mesh>> m_MeshList;
@@ -26,28 +36,29 @@ public:
 	// Test object for AABB
 	TestObject()
 	{
-		std::vector<float> vp {
-				-0.5f, -0.5f, 0.0f,  // bottom left
-				-0.5f,  0.5f, 0.0f,   // top left
-				0.5f,  0.5f, 0.0f,  // top right
-				0.5f, -0.5f, 0.0f,  // bottom right
-		};
-		std::vector<unsigned int> indicies {
-				0, 2, 1,   // first triangle
-				0, 3, 2    // second triangle
-		};
 //		std::vector<float> vp {
-//				-1.0f, -1.0f, 0.0f,	// v0. x y z
-//				0.0f, -1.0f, 1.0f,
-//				1.0f, -1.0f, 0.0f, 	// v1. x y z
-//				0.0f, 1.0f, 0.0f 	// v2. x y z
+//				-0.5f, -0.5f, 0.0f,  // bottom left
+//				-0.5f,  0.5f, 0.0f,   // top left
+//				0.5f,  0.5f, 0.0f,  // top right
+//				0.5f, -0.5f, 0.0f,  // bottom right
 //		};
 //		std::vector<unsigned int> indicies {
-//				0, 3, 1,
-//				1, 3, 2,
-//				2, 3, 0,
-//				0, 1, 2
+//			// 반시계 방향으로 결정. ( 내 GET NORMAL의 구현방식에 따라 결정 되었다 )
+//				0, 2, 1,   // first triangle
+//				0, 3, 2    // second triangle
 //		};
+		std::vector<float> vp {
+				-1.0f, -1.0f, -0.5f,	// v0. x y z
+				0.0f, -1.0f, 1.0f,
+				1.0f, -1.0f, -0.5f, 	// v1. x y z
+				0.0f, 1.0f, 0.0f 	// v2. x y z
+		};
+		std::vector<unsigned int> indicies {
+				0, 1, 3,
+				1, 2, 3,
+				2, 0, 3,
+				0, 2, 1,
+		};
 		std::vector<glm::vec3> normals;
 		std::vector<float> vertices;
 		for (int i = 0; i < indicies.size()/3; ++i)
@@ -301,7 +312,6 @@ public:
 			ImGui::Begin("Data Board");
 			{
 				// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
-//				ImGui::Begin("Mesh Data");
 				ImGui::BeginGroup();
 				{
 					ImGui::Checkbox("Polygon", &m_DataVisualizer.m_ShowWireframe);
@@ -312,8 +322,6 @@ public:
 					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowNormal ? "On" : "Off");
 				}
 				ImGui::EndGroup();
-//				ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(1.0f, 1.0f, 1.0f, 1.0f));
-//				ImGui::Begin("Texture Data");
 				ImGui::BeginGroup();
 				{
 					if (currentShaderName == "Phong" || currentShaderName == "Cartoon")
@@ -330,8 +338,6 @@ public:
 							ImGui::SliderFloat("Explosion Degree", &(ptr->m_Degree), 0.0f, 10.0f, "%.1f");
 						}
 					}
-
-
 					if (m_DataVisualizer.m_ShowWireframe)
 					{
 						auto* ptr = dynamic_cast<WireframeShader *>(m_DataVisualizer.m_WireframeShader);
@@ -376,15 +382,15 @@ Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
 		{
 			if (ImGui::MenuItem("New"))
 			{
-				app->Reboot();
+				// TODO: start empty scene
 			}
 			if (ImGui::MenuItem("Open"))
 			{
-				app->Reboot();
+				// TODO: open OBJ / RIB / NURBS (renderman) file
 			}
 			if (ImGui::MenuItem("Export"))
 			{
-				app->Reboot();
+				// TODO: export RIB / NURBS mesh to OBJ
 			}
 			if (ImGui::MenuItem("Exit"))
 			{

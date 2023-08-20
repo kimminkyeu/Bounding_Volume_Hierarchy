@@ -10,7 +10,7 @@
 class PointShader : public Lunar::Shader
 {
 public:
-	glm::vec4 m_PointColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 m_PointColor = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
 private:
 	GLint m_PointColorLocation = 0;
 public:
