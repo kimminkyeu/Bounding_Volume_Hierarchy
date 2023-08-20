@@ -10,17 +10,26 @@
 class WireframeShader : public Lunar::Shader
 {
 public:
+	glm::vec4 m_WireframeColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+private:
+	GLint m_WireframeColorLocation = 0;
+public:
 	WireframeShader()
 		: Lunar::Shader("Wireframe",
 						"LunarApp/src/shaders/Wireframe/vertex_shader.glsl",
 						"LunarApp/src/shaders/Wireframe/fragment_shader.glsl",
 						"LunarApp/src/shaders/Wireframe/geometry_shader.glsl"
 		  )
-				  {};
+				  {
+					  m_WireframeColorLocation = this->_GetUniformLocation("WireframeColor");
+				  };
 
 
 private:
-	 void OnBind() override {};
+	 void OnBind() override
+	 {
+		 glUniform4fv(m_WireframeColorLocation, 1, glm::value_ptr(m_WireframeColor));
+	 };
 	 void OnUnbind() override {};
 };
 

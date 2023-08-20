@@ -9,14 +9,14 @@ DataVisualizer::DataVisualizer()
 
 DataVisualizer::~DataVisualizer()
 {
-	delete m_PolygonShader;
-	delete m_VerticesShader;
+	delete m_WireframeShader;
+	delete m_PointShader;
 	delete m_NormalShader;
 }
 
 void DataVisualizer::Init()
 {
     m_NormalShader = new NormalShader();
-    m_VerticesShader = new PointShader();
-    m_PolygonShader = new WireframeShader();
+	m_PointShader = new PointShader();
+	m_WireframeShader = new WireframeShader();
 }

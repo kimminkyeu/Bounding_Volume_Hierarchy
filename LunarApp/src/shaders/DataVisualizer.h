@@ -18,8 +18,8 @@ public:
 	bool m_ShowVertices = false;
 
 	Lunar::Shader* m_NormalShader = nullptr;
-	Lunar::Shader* m_PolygonShader = nullptr;
-	Lunar::Shader* m_VerticesShader = nullptr;
+	Lunar::Shader* m_WireframeShader = nullptr;
+	Lunar::Shader* m_PointShader = nullptr;
 
 public:
 	DataVisualizer();

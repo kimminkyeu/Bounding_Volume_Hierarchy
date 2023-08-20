@@ -1,6 +1,7 @@
 #version 330 core // version is 3.3.0
 
 out vec4 FragmentColor; // output data
+uniform vec4 PointColor;
 
 void main()
 {
@@ -18,5 +19,5 @@ void main()
     if (dot(circCoord, circCoord) > 1.0) {
         discard;
     }
-    FragmentColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    FragmentColor = PointColor;
 }

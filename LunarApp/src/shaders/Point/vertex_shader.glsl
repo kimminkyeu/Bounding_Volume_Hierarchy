@@ -12,8 +12,8 @@ uniform mat4 Projection; // Camera Projection (perspective, orthogonal, etc...)
 // https://stackoverflow.com/questions/27098315/render-large-circular-points-in-modern-opengl
 void main(void)
 {
-    const float OFFSET = 0.01f;
+    const float OFFSET = 0.005f;
     vec3 Normal = normalize(mat3(transpose(inverse(Model))) * in_normal);
     gl_Position = Projection * View * Model * vec4(in_position + (Normal * OFFSET), 1.0f);
-    gl_PointSize = 5.0f;
+    gl_PointSize = 7.0f;
 }

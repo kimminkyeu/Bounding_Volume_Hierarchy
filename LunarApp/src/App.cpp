@@ -227,13 +227,12 @@ public:
 					normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					shaderProcPtr->SetUniformModel(glm::value_ptr(model));
 //					m_TestObject.Render();
+					m_Model.RenderModel(GL_TRIANGLES);
 					normalShaderPtr->Unbind();
-
-					m_Model.RenderModel();
 				}
 			}
 			if (m_DataVisualizer.m_ShowPolygon) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
-				auto* wireframeShaderPtr = m_DataVisualizer.m_PolygonShader;
+				auto* wireframeShaderPtr = m_DataVisualizer.m_WireframeShader;
 				if (wireframeShaderPtr) {
 					wireframeShaderPtr->Bind();
 					wireframeShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
@@ -241,12 +240,12 @@ public:
 					wireframeShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					wireframeShaderPtr->SetUniformModel(glm::value_ptr(model));
 //					m_TestObject.Render();
-					m_Model.RenderModel();
+					m_Model.RenderModel(GL_TRIANGLES);
 					wireframeShaderPtr->Unbind();
 				}
 			}
 			if (m_DataVisualizer.m_ShowVertices) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
-				auto* pointShaderPtr = m_DataVisualizer.m_VerticesShader;
+				auto* pointShaderPtr = m_DataVisualizer.m_PointShader;
 				if (pointShaderPtr) {
 					pointShaderPtr->Bind();
 					pointShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
@@ -254,7 +253,7 @@ public:
 					pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					pointShaderPtr->SetUniformModel(glm::value_ptr(model));
 //					m_TestObject.Render();
-					m_Model.RenderModel();
+					m_Model.RenderModel(GL_POINTS);
 					pointShaderPtr->Unbind();
 				}
 			}
@@ -330,7 +329,18 @@ public:
 							ImGui::SliderFloat("Explosion Degree", &(ptr->m_Degree), 0.0f, 10.0f, "%.1f");
 						}
 					}
-					//				ImGui::End();
+
+
+					if (m_DataVisualizer.m_ShowPolygon)
+					{
+						auto* ptr = dynamic_cast<WireframeShader *>(m_DataVisualizer.m_WireframeShader);
+						ImGui::ColorEdit3("Wireframe Color", glm::value_ptr(ptr->m_WireframeColor));
+					}
+					if (m_DataVisualizer.m_ShowVertices)
+					{
+						auto* ptr = dynamic_cast<PointShader *>(m_DataVisualizer.m_PointShader);
+						ImGui::ColorEdit3("Point Color", glm::value_ptr(ptr->m_PointColor));
+					}
 				}
 				ImGui::EndGroup();
 			}

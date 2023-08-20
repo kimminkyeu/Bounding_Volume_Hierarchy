@@ -13,7 +13,7 @@ out vec3 Normals; // normals for Fragment Shader
 uniform mat4 View; // Camera View
 uniform mat4 Projection; // Camera Projection (perspective, orthogonal, etc...)
 
-const float OFFSET = 0.01f;
+const float OFFSET = 0.005f;
 void main(void)
 {
     int i;
