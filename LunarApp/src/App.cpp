@@ -100,10 +100,10 @@ public:
 			itr->ClearMesh();
 	}
 
-	void Render()
+	void Render(GLenum mode)
 	{
 		for (auto &itr : m_MeshList)
-			itr->RenderMesh(GL_TRIANGLES);
+			itr->RenderMesh(mode);
 	}
 
 	glm::vec3 GetNormal(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2)
@@ -123,11 +123,12 @@ private:
 private:
 	DataVisualizer m_DataVisualizer; // vertex, polygon, normal visualizer
 	Lunar::EditorCamera m_EditorCamera;
-	TestObject m_TestObject;
 	Lunar::Model m_Model;
-//	Lunar::Texture m_BrickTexture;
 	Lunar::Light m_MainLight;
 	Lunar::Material m_Material;
+	// Lunar::Texture m_BrickTexture;
+
+	TestObject m_TestObject; // NOTE: Temporary data For AABB Test
 
 public:
 	ExampleLayer()
@@ -153,7 +154,7 @@ public:
 
 
 	// 1. Create object
-		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+//		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
 //		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
@@ -194,66 +195,66 @@ public:
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // 1. Unbind current frame buffer data.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		{
+			glm::mat4 model(1.0f); // init unit matrix
+			// ---------------- Main Object Render ------------------
 			m_DisplayMode.BindCurrentShader();
 			const auto shaderProcPtr = m_DisplayMode.GetCurrentShaderPtr();
 			shaderProcPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 			shaderProcPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 			shaderProcPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
-			glm::mat4 model(1.0f);// init unit matrix
 			shaderProcPtr->SetUniformModel(glm::value_ptr(model));
-
-			// 2. set material to shader
 			m_Material.UseMaterial(*shaderProcPtr);
-			// 3. set texture to shader
 			//			m_BrickTexture.UseTexture();
-			// 4. BindCurrentShader Light
 			m_MainLight.UseLight(*shaderProcPtr);
-//			m_TestObject.Render();
-			m_Model.RenderModel();
-
-
+			m_TestObject.Render(GL_TRIANGLES);
+			//			m_Model.RenderModel();
 			m_DisplayMode.UnbindCurrentShader();
 
-			// NOTE: Render Twice on the same Frame Buffer. (To show Normal)
-			// https://stackoverflow.com/questions/37580597/best-way-to-use-multiple-shaders
-			// https://learnopengl.com/Advanced-OpenGL/Geometry-Shader
-			// TODO: 아땋게 하면 아래 구조를 깔끔하게 나눌 수 있을 까...???
-			if (m_DataVisualizer.m_ShowNormal) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
+			// ----------------  Normal Render ------------------
+			if (m_DataVisualizer.m_ShowNormal)
+			{
 				auto* normalShaderPtr = m_DataVisualizer.m_NormalShader;
-				if (normalShaderPtr) {
+				if (normalShaderPtr)
+				{
 					normalShaderPtr->Bind();
 					normalShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 					normalShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					shaderProcPtr->SetUniformModel(glm::value_ptr(model));
-//					m_TestObject.Render();
-					m_Model.RenderModel(GL_TRIANGLES);
+					m_TestObject.Render(GL_TRIANGLES);
+//					m_Model.RenderModel(GL_TRIANGLES);
 					normalShaderPtr->Unbind();
 				}
 			}
-			if (m_DataVisualizer.m_ShowPolygon) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
+			// ---------------- Outline Render ------------------
+			if (m_DataVisualizer.m_ShowWireframe)
+			{
 				auto* wireframeShaderPtr = m_DataVisualizer.m_WireframeShader;
-				if (wireframeShaderPtr) {
+				if (wireframeShaderPtr)
+				{
 					wireframeShaderPtr->Bind();
 					wireframeShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 					wireframeShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					wireframeShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					wireframeShaderPtr->SetUniformModel(glm::value_ptr(model));
-//					m_TestObject.Render();
-					m_Model.RenderModel(GL_TRIANGLES);
+					m_TestObject.Render(GL_TRIANGLES);
+//					m_Model.RenderModel(GL_TRIANGLES);
 					wireframeShaderPtr->Unbind();
 				}
 			}
-			if (m_DataVisualizer.m_ShowVertices) { // setCurrentShader로 하면 display모드가 바뀜으로 하면 안됨.
+			// ---------------- Point Render ------------------
+			if (m_DataVisualizer.m_ShowPoint)
+			{
 				auto* pointShaderPtr = m_DataVisualizer.m_PointShader;
-				if (pointShaderPtr) {
+				if (pointShaderPtr)
+				{
 					pointShaderPtr->Bind();
 					pointShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 					pointShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					pointShaderPtr->SetUniformModel(glm::value_ptr(model));
-//					m_TestObject.Render();
-					m_Model.RenderModel(GL_POINTS);
+					m_TestObject.Render(GL_POINTS);
+//					m_Model.RenderModel(GL_POINTS);
 					pointShaderPtr->Unbind();
 				}
 			}
@@ -303,10 +304,10 @@ public:
 //				ImGui::Begin("Mesh Data");
 				ImGui::BeginGroup();
 				{
-					ImGui::Checkbox("Polygon", &m_DataVisualizer.m_ShowPolygon);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowPolygon ? "On" : "Off");
-					ImGui::Checkbox("Vertices", &m_DataVisualizer.m_ShowVertices);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowVertices ? "On" : "Off");
+					ImGui::Checkbox("Polygon", &m_DataVisualizer.m_ShowWireframe);
+					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowWireframe ? "On" : "Off");
+					ImGui::Checkbox("Vertices", &m_DataVisualizer.m_ShowPoint);
+					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowPoint ? "On" : "Off");
 					ImGui::Checkbox("Normal", &m_DataVisualizer.m_ShowNormal);
 					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowNormal ? "On" : "Off");
 				}
@@ -331,12 +332,12 @@ public:
 					}
 
 
-					if (m_DataVisualizer.m_ShowPolygon)
+					if (m_DataVisualizer.m_ShowWireframe)
 					{
 						auto* ptr = dynamic_cast<WireframeShader *>(m_DataVisualizer.m_WireframeShader);
 						ImGui::ColorEdit3("Wireframe Color", glm::value_ptr(ptr->m_WireframeColor));
 					}
-					if (m_DataVisualizer.m_ShowVertices)
+					if (m_DataVisualizer.m_ShowPoint)
 					{
 						auto* ptr = dynamic_cast<PointShader *>(m_DataVisualizer.m_PointShader);
 						ImGui::ColorEdit3("Point Color", glm::value_ptr(ptr->m_PointColor));

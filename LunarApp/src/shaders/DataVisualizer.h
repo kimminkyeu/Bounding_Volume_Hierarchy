@@ -14,8 +14,8 @@ class DataVisualizer
 {
 public:
 	bool m_ShowNormal = false;
-	bool m_ShowPolygon = false;
-	bool m_ShowVertices = false;
+	bool m_ShowWireframe = false;
+	bool m_ShowPoint = false;
 
 	Lunar::Shader* m_NormalShader = nullptr;
 	Lunar::Shader* m_WireframeShader = nullptr;
