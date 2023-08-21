@@ -18,6 +18,7 @@
 #include "LunarApp/src/shaders/Test/TestShader.h"
 #include "LunarApp/src/shaders/Cartoon/CartoonShader.h"
 #include "LunarApp/src/shaders/DataVisualizer.h"
+#include "LunarApp/src/AABB/AABB.h"
 
 
 // AABB 구현 방식
@@ -33,6 +34,19 @@ class TestObject {
 private:
 	std::vector<std::shared_ptr<Lunar::Mesh>> m_MeshList;
 public:
+	std::vector<float> m_Vertices = {
+			-1.0f, -1.0f, -0.5f,	// v0. x y z
+			0.0f, -1.0f, 1.0f,
+			1.0f, -1.0f, -0.5f, 	// v1. x y z
+			0.0f, 1.0f, 0.0f 	// v2. x y z
+	};
+	std::vector<unsigned int> m_Indices = {
+			0, 1, 3,
+			1, 2, 3,
+			2, 0, 3,
+			0, 2, 1,
+	};
+public:
 	// Test object for AABB
 	TestObject()
 	{
@@ -47,41 +61,30 @@ public:
 //				0, 2, 1,   // first triangle
 //				0, 3, 2    // second triangle
 //		};
-		std::vector<float> vp {
-				-1.0f, -1.0f, -0.5f,	// v0. x y z
-				0.0f, -1.0f, 1.0f,
-				1.0f, -1.0f, -0.5f, 	// v1. x y z
-				0.0f, 1.0f, 0.0f 	// v2. x y z
-		};
-		std::vector<unsigned int> indicies {
-				0, 1, 3,
-				1, 2, 3,
-				2, 0, 3,
-				0, 2, 1,
-		};
+
 		std::vector<glm::vec3> normals;
 		std::vector<float> vertices;
-		for (int i = 0; i < indicies.size()/3; ++i)
+		for (int i = 0; i < m_Indices.size()/3; ++i)
 		{
 			// i = 0, 1
-			const auto p0 = glm::vec3{vp[indicies[i * 3] * 3], vp[indicies[i * 3] * 3 + 1], vp[indicies[i * 3] * 3 + 2]};
-			const auto p1 = glm::vec3{vp[indicies[i * 3 + 1] * 3], vp[indicies[i * 3 + 1] * 3 + 1], vp[indicies[i * 3 + 1] * 3 + 2]};
-			const auto p2 = glm::vec3{vp[indicies[i * 3 + 2] * 3], vp[indicies[i * 3 + 2] * 3 + 1], vp[indicies[i * 3 + 2] * 3 + 2]};
+			const auto p0 = glm::vec3{m_Vertices[m_Indices[i * 3] * 3], m_Vertices[m_Indices[i * 3] * 3 + 1], m_Vertices[m_Indices[i * 3] * 3 + 2]};
+			const auto p1 = glm::vec3{m_Vertices[m_Indices[i * 3 + 1] * 3], m_Vertices[m_Indices[i * 3 + 1] * 3 + 1], m_Vertices[m_Indices[i * 3 + 1] * 3 + 2]};
+			const auto p2 = glm::vec3{m_Vertices[m_Indices[i * 3 + 2] * 3], m_Vertices[m_Indices[i * 3 + 2] * 3 + 1], m_Vertices[m_Indices[i * 3 + 2] * 3 + 2]};
 			auto normal = GetNormal(p0, p1, p2);
 			LOG_INFO("{0} {1} {2}", normal.x, normal.y, normal.z);
 			normals.push_back(normal);
 		}
 
-		for (int i = 0; i < vp.size()/3; ++i) {
-			vertices.insert(vertices.end(), {vp[i * 3], vp[i * 3 + 1], vp[i * 3 + 2]}); // Vertex
+		for (int i = 0; i < m_Vertices.size()/3; ++i) {
+			vertices.insert(vertices.end(), {m_Vertices[i * 3], m_Vertices[i * 3 + 1], m_Vertices[i * 3 + 2]}); // Vertex
 			vertices.insert(vertices.end(), {0.0f, 0.0f}); // UV
 			vertices.insert(vertices.end(), {0.0f, 0.0f, 0.0f}); // Normal
 		}
 		// SumUp normals
-		for (int i = 0; i < indicies.size()/3; ++i) {
-			auto i1 = indicies[i * 3];
-			auto i2 = indicies[i * 3 + 1];
-			auto i3 = indicies[i * 3 + 2];
+		for (int i = 0; i < m_Indices.size()/3; ++i) {
+			auto i1 = m_Indices[i * 3];
+			auto i2 = m_Indices[i * 3 + 1];
+			auto i3 = m_Indices[i * 3 + 2];
 			vertices[i1 * 8 + 5] += normals[i].x;
 			vertices[i1 * 8 + 6] += normals[i].y;
 			vertices[i1 * 8 + 7] += normals[i].z;
@@ -101,7 +104,7 @@ public:
 			vertices[i * 8 + 7] = vec.z;
 		}
 		auto ptr = std::make_shared<Lunar::Mesh>();
-		ptr->CreateMesh(&(*vertices.begin()), &(*indicies.begin()), vertices.size(), indicies.size());
+		ptr->CreateMesh(&(*vertices.begin()), &(*m_Indices.begin()), vertices.size(), m_Indices.size());
 		m_MeshList.push_back(ptr);
 	}
 
@@ -139,7 +142,10 @@ private:
 	Lunar::Material m_Material;
 	// Lunar::Texture m_BrickTexture;
 
+	// -----------------------------------------------------------
 	TestObject m_TestObject; // NOTE: Temporary data For AABB Test
+	AABBTree* m_AABB = nullptr;
+	// -----------------------------------------------------------
 
 public:
 	ExampleLayer()
@@ -192,6 +198,10 @@ public:
 		m_DisplayMode.Add( new TestShader() );
 		m_DisplayMode.Add( new CartoonShader() );
         m_DataVisualizer.Init(); // init wireframe, normal, vertex (Shader)
+
+		// ------ AABB TEST -------------------
+		m_AABB = new AABBTree(m_TestObject.m_Vertices, m_TestObject.m_Indices);
+		// ------------------------------------
 	}
 
 	// called every render loop
@@ -269,6 +279,22 @@ public:
 					pointShaderPtr->Unbind();
 				}
 			}
+			if (m_DataVisualizer.m_ShowAABB)
+			{
+				auto* aabbShaderPtr = m_DataVisualizer.m_AABBShader;
+				if (aabbShaderPtr)
+				{
+					aabbShaderPtr->Bind();
+					aabbShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
+					aabbShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+					aabbShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+					aabbShaderPtr->SetUniformModel(glm::value_ptr(model));
+					m_AABB->Render(GL_TRIANGLES);
+					aabbShaderPtr->Unbind();
+				}
+			}
+			// ---------------- Bounding Box Render for AABB Debug ------------------
+
 		}
 		m_FrameBuffer.Unbind(); // unbind Frame Buffer (render target)
 	}
@@ -320,6 +346,8 @@ public:
 					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowPoint ? "On" : "Off");
 					ImGui::Checkbox("Normal", &m_DataVisualizer.m_ShowNormal);
 					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowNormal ? "On" : "Off");
+					ImGui::Checkbox("AABB", &m_DataVisualizer.m_ShowNormal);
+					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowAABB ? "On" : "Off");
 				}
 				ImGui::EndGroup();
 				ImGui::BeginGroup();
@@ -347,6 +375,11 @@ public:
 					{
 						auto* ptr = dynamic_cast<PointShader *>(m_DataVisualizer.m_PointShader);
 						ImGui::ColorEdit3("Point Color", glm::value_ptr(ptr->m_PointColor));
+					}
+					if (m_DataVisualizer.m_ShowAABB)
+					{
+						auto* ptr = dynamic_cast<AABBShader *>(m_DataVisualizer.m_AABBShader);
+						ImGui::ColorEdit3("AABB Color", glm::value_ptr(ptr->m_AABBColor));
 					}
 				}
 				ImGui::EndGroup();
