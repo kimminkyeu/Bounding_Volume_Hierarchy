@@ -29,12 +29,12 @@ public:
 private:
 	 void OnBind() override
 	 {
-//		 glEnable(GL_LINE_SMOOTH);
+		 glEnable(GL_LINE_SMOOTH);
 		 glUniform4fv(m_WireframeColorLocation, 1, glm::value_ptr(m_WireframeColor));
 	 };
 	 void OnUnbind() override
 	 {
-//		 glDisable(GL_LINE_SMOOTH);
+		 glDisable(GL_LINE_SMOOTH);
 	 };
 };
 

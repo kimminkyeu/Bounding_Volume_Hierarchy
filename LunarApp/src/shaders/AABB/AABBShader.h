@@ -29,13 +29,13 @@ public:
 private:
 	 void OnBind() override
 	 {
-//		 glEnable(GL_LINE_SMOOTH);
+		 glEnable(GL_LINE_SMOOTH);
 //		 glLineWidth(m_LineWidth);
 		 glUniform4fv(m_AABBColorLocation, 1, glm::value_ptr(m_AABBColor));
 	 };
 	 void OnUnbind() override
 	 {
-//		 glDisable(GL_LINE_SMOOTH);
+		 glDisable(GL_LINE_SMOOTH);
 	 };
 };
 
