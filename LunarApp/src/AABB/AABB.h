@@ -86,7 +86,7 @@ struct AABBNode
 	unsigned int m_PrimitiveStartIndex = 0; // store the index of the first primitive, and the number of primitives.
 	unsigned int m_PrimitiveSize = 0; // Node가 가질 primitive 길이.
 
-	bool m_isLeaf;
+	bool m_isLeaf = true;
 };
 
 // ------------------------------------------------
@@ -107,12 +107,16 @@ private:
 	// Subdivide space
 	void __BuildBVH()
 	{
-		AABBNode* root = &(m_Nodes[m_RootIndex]);
+		m_Nodes.push_back(AABBNode());
+//		AABBNode* root = &(m_Nodes[m_RootIndex]);
 		// to start, assign all triangles to root node.
+		AABBNode* root = &(m_Nodes[m_RootIndex]);
 		root->m_PrimitiveStartIndex = 0;
 		root->m_PrimitiveSize = m_Primitives.size();
+
 		__UpdateNodeBounds(m_RootIndex);
 		__Subdivide_recur(m_RootIndex); // subdivide recursively
+		__GenerateDebugMesh_recur(m_RootIndex); // for debug render, generate mesh for each bbox;
 	}
 
 	void __UpdateNodeBounds(unsigned int nodeIdx)
@@ -135,9 +139,80 @@ private:
 		// TODO: Implement here...
 	}
 
+	// Tree를 순회하면서 각 box에 대한 mesh를 생성, m_meshList에 삽입.
+	// TODO: meshList가 배열이기에, 이걸 level에 따라 순회하려면 재귀를 BFS로 해줘야 한다.
+	// 	     일단은 DFS로 함. 나중에 수정할 예정.
+	void __GenerateDebugMesh_recur(unsigned int node_idx)
+	{
+		if (node_idx >= m_Nodes.size()) {
+			return;
+		}
+
+		auto bbox = m_Nodes[node_idx].m_Bounds;
+		const auto ub = m_Nodes[m_RootIndex].m_Bounds.m_UpperBound;
+		const auto lb = m_Nodes[m_RootIndex].m_Bounds.m_LowerBound;
+
+		// https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_05#Adding_the_3rd_dimension
+		float cube_vertices[] = {
+				// front
+				lb.x, lb.y,  ub.z,
+				ub.x, lb.y,  ub.z,
+				ub.x,  ub.y,  ub.z,
+				lb.x,  ub.y,  ub.z,
+				// back
+				lb.x, lb.y, lb.z,
+				ub.x, lb.y, lb.z,
+				ub.x,  ub.y, lb.z,
+				lb.x,  ub.y, lb.z
+		};
+
+		unsigned int cube_elements[] = {
+				// front
+				0, 1, 2,
+				2, 3, 0,
+				// right
+				1, 5, 6,
+				6, 2, 1,
+				// back
+				7, 6, 5,
+				5, 4, 7,
+				// left
+				4, 0, 3,
+				3, 7, 4,
+				// bottom
+				4, 5, 1,
+				1, 0, 4,
+				// top
+				3, 2, 6,
+				6, 7, 3
+		};
+
+
+		auto mesh_ptr = std::make_shared<Lunar::Mesh>();
+		mesh_ptr->CreateMesh(cube_vertices, cube_elements, 24, 36);
+		m_MeshList.push_back(mesh_ptr);
+
+		if (m_Nodes[node_idx].m_isLeaf) {
+			return ;
+		}
+		// traverse every tree to create mesh
+//		__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Left);
+//		__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Right);
+	}
+
 public:
+	void DebugRender()
+	{
+		for (auto &itr : m_MeshList) {
+			itr->RenderMesh(GL_TRIANGLES);
+		}
+	}
+
 	// https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
 	// build AABB tree with VAO & IBO array?
+
+
+	// NOTE: abb를 모델 매트릭스를 곱해서 덮어쓰는게 아니라, 충돌검사 직전 혹은 그리기 직전에 곱해서 그 임시 값으로 검사하는거다.
 	AABBTree(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
 	{
 		const size_t numOfTriangles = indices.size() / 3;
@@ -148,7 +223,6 @@ public:
 		m_Nodes.reserve(maxNumOfNodes);
 
 		// NOTE: 최적화 필요. 일단 triangle array로 변환해서 멤버로 갖고 있지만, 이 과정이 필요가 없다고 보임.
-		// convert VBO/IBO to [Array of primitives]
 		for (size_t i = 0; i < numOfTriangles; ++i)
 		{
 			const auto v0 = glm::vec3{vertices[indices[i * 3] * 3], vertices[indices[i * 3] * 3 + 1], vertices[indices[i * 3] * 3 + 2]};
@@ -157,38 +231,6 @@ public:
 			m_Primitives.emplace_back(v0, v1, v2);
 		}
 		__BuildBVH();
-
-		// generate meshList from BVH tree for Debug render
-		// TODO: change to traversing mode
-//		for (m_Nodes) // traverse tree
-		{
-			const auto ub = m_Nodes[m_RootIndex].m_Bounds.m_UpperBound;
-			const auto lb = m_Nodes[m_RootIndex].m_Bounds.m_LowerBound;
-			const auto d = ub - lb;
-			// 8 vertices for each box
-			const auto v0 = lb;
-			const auto v1 = glm::vec3(lb.x, lb.y, ub.z);
-			const auto v2 = glm::vec3(lb.x, ub.y, lb.z);
-			const auto v3 = glm::vec3(ub.x, lb.y, lb.z);
-			const auto v4 = glm::vec3(lb.x, ub.y, ub.z);
-			const auto v5 = glm::vec3(ub.x, ub.y, lb.x);
-			const auto v6 = glm::vec3(ub.x, lb.y, ub.x);
-			const auto v7 = ub;
-
-			float cubeCoords[72] = {
-					1,1,1,    -1,1,1,   -1,-1,1,   1,-1,1,      // face #1
-					1,1,1,     1,-1,1,   1,-1,-1,  1,1,-1,      // face #2
-					1,1,1,     1,1,-1,  -1,1,-1,  -1,1,1,       // face #3
-					-1,-1,-1, -1,1,-1,   1,1,-1,   1,-1,-1,     // face #4
-					-1,-1,-1, -1,-1,1,  -1,1,1,   -1,1,-1,      // face #5
-					-1,-1,-1,  1,-1,-1,  1,-1,1,   -1,-1,1
-			};  // face #6
-
-		}
-
-//		auto ptr = std::make_shared<Lunar::Mesh>();
-//		ptr->CreateMesh(&(*vertices.begin()), &(*m_Indices.begin()), vertices.size(), m_Indices.size());
-//		m_MeshList.push_back(ptr);
 	}
 
 	// NOTE: 일단 복사 생성자 금지. [AABBTree t1 = AABB(...)]
@@ -214,15 +256,6 @@ public:
 	// Transforms an AABB by a 4x4 transformation matrix,
 	// and returns a new AABB that contains the transformed AABB completely.
 	AABBTree Transform(const glm::mat4x4 matrix);
-
-
-	// DEBUG RENDER MODE
-	void Render(GLenum mode)
-	{
-		for (auto &itr : m_MeshList)
-			itr->RenderMesh(mode);
-	}
-
 
 };
 

@@ -289,7 +289,8 @@ public:
 					aabbShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					aabbShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					aabbShaderPtr->SetUniformModel(glm::value_ptr(model));
-					m_AABB->Render(GL_TRIANGLES);
+					if (m_AABB)
+						m_AABB->DebugRender();
 					aabbShaderPtr->Unbind();
 				}
 			}
@@ -346,7 +347,7 @@ public:
 					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowPoint ? "On" : "Off");
 					ImGui::Checkbox("Normal", &m_DataVisualizer.m_ShowNormal);
 					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowNormal ? "On" : "Off");
-					ImGui::Checkbox("AABB", &m_DataVisualizer.m_ShowNormal);
+					ImGui::Checkbox("AABB", &m_DataVisualizer.m_ShowAABB);
 					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowAABB ? "On" : "Off");
 				}
 				ImGui::EndGroup();
@@ -369,17 +370,23 @@ public:
 					if (m_DataVisualizer.m_ShowWireframe)
 					{
 						auto* ptr = dynamic_cast<WireframeShader *>(m_DataVisualizer.m_WireframeShader);
-						ImGui::ColorEdit3("Wireframe Color", glm::value_ptr(ptr->m_WireframeColor));
+						if (ptr != nullptr) {
+							ImGui::ColorEdit3("Wireframe Color", glm::value_ptr(ptr->m_WireframeColor));
+						}
 					}
 					if (m_DataVisualizer.m_ShowPoint)
 					{
 						auto* ptr = dynamic_cast<PointShader *>(m_DataVisualizer.m_PointShader);
-						ImGui::ColorEdit3("Point Color", glm::value_ptr(ptr->m_PointColor));
+						if (ptr != nullptr) {
+							ImGui::ColorEdit3("Point Color", glm::value_ptr(ptr->m_PointColor));
+						}
 					}
 					if (m_DataVisualizer.m_ShowAABB)
 					{
-						auto* ptr = dynamic_cast<AABBShader *>(m_DataVisualizer.m_AABBShader);
-						ImGui::ColorEdit3("AABB Color", glm::value_ptr(ptr->m_AABBColor));
+						auto* ptr = dynamic_cast<AABBShader*>(m_DataVisualizer.m_AABBShader);
+						if (ptr != nullptr) {
+							ImGui::ColorEdit3("AABB Color", glm::value_ptr(ptr->m_AABBColor));
+						}
 					}
 				}
 				ImGui::EndGroup();
