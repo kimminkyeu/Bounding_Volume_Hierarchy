@@ -10,8 +10,8 @@
 class AABBShader : public Lunar::Shader
 {
 public:
-	glm::vec4 m_AABBColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-	float m_LineWidth = 7.0f;
+	glm::vec4 m_AABBColor = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+//	float m_LineWidth = 1.0f;
 private:
 	GLint m_AABBColorLocation = 0;
 public:
@@ -29,12 +29,13 @@ public:
 private:
 	 void OnBind() override
 	 {
-		 glEnable(GL_LINE_SMOOTH);
+//		 glEnable(GL_LINE_SMOOTH);
+//		 glLineWidth(m_LineWidth);
 		 glUniform4fv(m_AABBColorLocation, 1, glm::value_ptr(m_AABBColor));
 	 };
 	 void OnUnbind() override
 	 {
-		 glDisable(GL_LINE_SMOOTH);
+//		 glDisable(GL_LINE_SMOOTH);
 	 };
 };
 

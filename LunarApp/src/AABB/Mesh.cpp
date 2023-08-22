@@ -4,7 +4,7 @@
 
 #include "Mesh.h"
 
-namespace Lunar {
+namespace AABB {
 
 	Mesh::Mesh()
 		: m_VAO(0), m_VBO(0), m_IBO(0), m_indexCount(0)
@@ -25,21 +25,6 @@ namespace Lunar {
 	void Mesh::CreateMesh(GLfloat* verticies, unsigned int* indicies, unsigned int numOfVertices, unsigned int numOfIndicies)
 	{
 		m_indexCount = numOfIndicies;
-		// **************************************************
-		// | Q1. 왜 bind 한 뒤 다시 unbind 하는지 도저히 이해가 안함. |
-		// **************************************************
-		// 음...
-		// 여러 mesh 객체가 있다고 가정할 경우, (ex. Mesh A, Mesh B)
-		// mesh A 고유의 VAO, VBO, IBO가 있을 것이고
-		// mesh B 고유의 VAO, VBO, IBO가 있을 것이다.
-		// 반면 그래픽스 파이프라인에서 사용하는 GL_***_BUFFER, VERTEX_ARRAY 는 GPU 상 단 한개이다.
-		// 따라서 다른 객체의 계산을 위해서 항상 GL_****_BUFFER는 VERTEX_ARRAY는 unbind 주어야 한다...?
-
-		// **************************************************************************************
-		// (!) 추가 의문점... 그렇다면... 여기서 변수 m_VAO는 실제 데이터 저장 변수가 아닌, 그 버퍼의 ID, Name 이다.
-		// 그렇다는 얘기는 우리가 malloc 하듯이, GPU의 메모리 영역에 해당 데이터를 할당한다는 이야기인가?
-		// **************************************************************************************
-
 		// VAO (Vertex Array)
 		glGenVertexArrays(1, &m_VAO);
 		glBindVertexArray(m_VAO);
@@ -56,14 +41,14 @@ namespace Lunar {
 
 		// Set vertex attribute : [ x y z U V ]
 		// x y z (stride = X ~ next X 까지의 거리)
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), 0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GL_FLOAT), 0);
 		glEnableVertexAttribArray(0);
 		// TexU TexV (stride = U ~ next U 까지의 거리)                            이건 xyz 지나고 첫 TexU 까지의 거리.
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void *)(sizeof(GL_FLOAT) * 3));
-		glEnableVertexAttribArray(1);
-		// Normal xyz														    vertex x 부터 5칸 뒤가 첫 normal x
-		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void *)(sizeof(GL_FLOAT) * 5));
-		glEnableVertexAttribArray(2);
+//		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void *)(sizeof(GL_FLOAT) * 3));
+//		glEnableVertexAttribArray(1);
+//		// Normal xyz														    vertex x 부터 5칸 뒤가 첫 normal x
+//		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void *)(sizeof(GL_FLOAT) * 5));
+//		glEnableVertexAttribArray(2);
 
 		// Unbind Buffer for later use
 		glBindBuffer(GL_ARRAY_BUFFER, 0);

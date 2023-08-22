@@ -2,12 +2,12 @@
 // Created by Minkyeu Kim on 7/17/23.
 //
 
-#ifndef SCOOP_MESH_H
-#define SCOOP_MESH_H
+#ifndef SCOOP_AABBMESH_H
+#define SCOOP_AABBMESH_H
 
 #include <GL/glew.h>
 
-namespace Lunar {
+namespace AABB {
 
 	class Mesh
 	{
@@ -26,4 +26,4 @@ namespace Lunar {
 	};
 }
 
-#endif //SCOOP_MESH_H
+#endif //SCOOP_AABBMESH_H

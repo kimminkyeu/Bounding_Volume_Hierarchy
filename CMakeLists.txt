@@ -37,7 +37,7 @@ set( SOURCE_FILES
         Lunar/Light/Light.cpp
         Lunar/Material/Material.cpp
         Lunar/FrameBuffer/FrameBuffer.cpp
-        )
+        LunarApp/src/AABB/Mesh.cpp)
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name

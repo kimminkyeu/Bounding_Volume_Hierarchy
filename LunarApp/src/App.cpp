@@ -50,33 +50,21 @@ public:
 	// Test object for AABB
 	TestObject()
 	{
-//		std::vector<float> vp {
-//				-0.5f, -0.5f, 0.0f,  // bottom left
-//				-0.5f,  0.5f, 0.0f,   // top left
-//				0.5f,  0.5f, 0.0f,  // top right
-//				0.5f, -0.5f, 0.0f,  // bottom right
-//		};
-//		std::vector<unsigned int> indicies {
-//			// 반시계 방향으로 결정. ( 내 GET NORMAL의 구현방식에 따라 결정 되었다 )
-//				0, 2, 1,   // first triangle
-//				0, 3, 2    // second triangle
-//		};
-
 		std::vector<glm::vec3> normals;
 		std::vector<float> vertices;
 		for (int i = 0; i < m_Indices.size()/3; ++i)
 		{
 			// i = 0, 1
-			const auto p0 = glm::vec3{m_Vertices[m_Indices[i * 3] * 3], m_Vertices[m_Indices[i * 3] * 3 + 1], m_Vertices[m_Indices[i * 3] * 3 + 2]};
-			const auto p1 = glm::vec3{m_Vertices[m_Indices[i * 3 + 1] * 3], m_Vertices[m_Indices[i * 3 + 1] * 3 + 1], m_Vertices[m_Indices[i * 3 + 1] * 3 + 2]};
-			const auto p2 = glm::vec3{m_Vertices[m_Indices[i * 3 + 2] * 3], m_Vertices[m_Indices[i * 3 + 2] * 3 + 1], m_Vertices[m_Indices[i * 3 + 2] * 3 + 2]};
+			const auto p0 = glm::vec3{m_Vertices[m_Indices[i * 3 + 0] * 3 + 0], m_Vertices[m_Indices[i * 3 + 0] * 3 + 1], m_Vertices[m_Indices[i * 3 + 0] * 3 + 2]};
+			const auto p1 = glm::vec3{m_Vertices[m_Indices[i * 3 + 1] * 3 + 0], m_Vertices[m_Indices[i * 3 + 1] * 3 + 1], m_Vertices[m_Indices[i * 3 + 1] * 3 + 2]};
+			const auto p2 = glm::vec3{m_Vertices[m_Indices[i * 3 + 2] * 3 + 0], m_Vertices[m_Indices[i * 3 + 2] * 3 + 1], m_Vertices[m_Indices[i * 3 + 2] * 3 + 2]};
 			auto normal = GetNormal(p0, p1, p2);
 			LOG_INFO("{0} {1} {2}", normal.x, normal.y, normal.z);
 			normals.push_back(normal);
 		}
 
 		for (int i = 0; i < m_Vertices.size()/3; ++i) {
-			vertices.insert(vertices.end(), {m_Vertices[i * 3], m_Vertices[i * 3 + 1], m_Vertices[i * 3 + 2]}); // Vertex
+			vertices.insert(vertices.end(), {m_Vertices[i * 3 + 0], m_Vertices[i * 3 + 1], m_Vertices[i * 3 + 2]}); // Vertex
 			vertices.insert(vertices.end(), {0.0f, 0.0f}); // UV
 			vertices.insert(vertices.end(), {0.0f, 0.0f, 0.0f}); // Normal
 		}
@@ -238,7 +226,6 @@ public:
 				if (normalShaderPtr)
 				{
 					normalShaderPtr->Bind();
-					normalShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 					normalShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					shaderProcPtr->SetUniformModel(glm::value_ptr(model));
@@ -254,7 +241,6 @@ public:
 				if (wireframeShaderPtr)
 				{
 					wireframeShaderPtr->Bind();
-					wireframeShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 					wireframeShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					wireframeShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					wireframeShaderPtr->SetUniformModel(glm::value_ptr(model));
@@ -270,7 +256,6 @@ public:
 				if (pointShaderPtr)
 				{
 					pointShaderPtr->Bind();
-					pointShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 					pointShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					pointShaderPtr->SetUniformModel(glm::value_ptr(model));
@@ -285,7 +270,6 @@ public:
 				if (aabbShaderPtr)
 				{
 					aabbShaderPtr->Bind();
-					aabbShaderPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
 					aabbShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 					aabbShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 					aabbShaderPtr->SetUniformModel(glm::value_ptr(model));

@@ -8,8 +8,11 @@
 
 #include <glm.hpp>
 #include <string>
+#include <math.h> // fminf
 #include <vector>
 #include <stdexcept>
+
+#include "LunarApp/src/AABB/Mesh.h"
 
 // TODO: 구현이 끝나면, Template으로 바꿀 수 있는 부분 체크하기. (glm::vec3, glm::vec2, custom vec2 ... etc)
 
@@ -19,6 +22,45 @@
 // https://box2d.org/files/ErinCatto_DynamicBVH_Full.pdf --> 이건 참조용.
 // https://mshgrid.com/2021/01/17/aabb-tree/ --> 이것도 참조용.
 // ********************************************************************
+
+
+// AABB는 normal과 texture가 필요 없기 때문에, 아래와 같이 별도로 상속하여 오버라이딩함.
+/*
+class AABBDebugMesh : public Lunar::Mesh
+{
+public:
+	AABBDebugMesh()
+			: AABBDebugMesh::Mesh()
+	{};
+
+//	~AABBDebugMesh();
+	void CreateMesh(GLfloat* verticies, unsigned int *indicies, unsigned int numOfVertices, unsigned int numOfIndicies) override
+	{
+		// VAO (Vertex Array)
+		glGenVertexArrays(1, &m_VAO);
+		glBindVertexArray(m_VAO);
+
+		// IBO (Index Buffer)
+		glGenBuffers(1, &m_IBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicies[0]) * numOfIndicies, indicies, GL_STATIC_DRAW);
+
+		// VBO (Vertex Buffer)
+		glGenBuffers(1, &m_VBO);
+		glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(verticies[0]) * numOfVertices, verticies, GL_STATIC_DRAW);
+
+		// Set vertex attribute : [ x y z U V ]
+		// x y z (stride = X ~ next X 까지의 거리)
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GL_FLOAT), 0);
+		glEnableVertexAttribArray(0);
+
+		// Unbind Buffer for later use
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	}
+};
+ */
 
 // https://box2d.org/files/ErinCatto_DynamicBVH_Full.pdf
 // Given two bounding boxes we can compute the union with min and max operations.
@@ -101,7 +143,7 @@ private: // member data
 	unsigned int m_RootIndex = 0; // root index of node pool
 	std::vector<triangle_type> m_Primitives; // primitive array
 private: // member data tmp
-	std::vector<std::shared_ptr<Lunar::Mesh>> m_MeshList;
+	std::vector<std::shared_ptr<AABB::Mesh>> m_MeshList;
 
 private:
 	// Subdivide space
@@ -116,6 +158,9 @@ private:
 
 		__UpdateNodeBounds(m_RootIndex);
 		__Subdivide_recur(m_RootIndex); // subdivide recursively
+		LOG_ERROR("lowBoundZ {0}", root->m_Bounds.m_LowerBound.z);
+		LOG_ERROR("UpBoundZ {0}", root->m_Bounds.m_UpperBound.z);
+//		m_Nodes[m_RootIndex].m_Bounds.m_UpperBound.z
 		__GenerateDebugMesh_recur(m_RootIndex); // for debug render, generate mesh for each bbox;
 	}
 
@@ -128,8 +173,9 @@ private:
 		for (size_t i=0; i<targetNode->m_PrimitiveSize; ++i) {
 			for (int v=0; v<3; ++v) {
 				// 모든 삼각형의 모든 vertex를 돌면서, vec3 bound와 vec3 v0 중 최소값을 bound에 갱신.
-				bbox->m_LowerBound = glm::min(bbox->m_LowerBound, (m_Primitives[start + i])[v]);
-				bbox->m_UpperBound = glm::max(bbox->m_UpperBound, (m_Primitives[start + i])[v]);
+				const auto tri = (m_Primitives[start + i])[v];
+				bbox->m_LowerBound = glm::vec3(std::min(bbox->m_LowerBound.x, tri.x), std::min(bbox->m_LowerBound.y, tri.y), std::min(bbox->m_LowerBound.z, tri.z));
+				bbox->m_UpperBound = glm::vec3(std::max(bbox->m_UpperBound.x, tri.x), std::max(bbox->m_UpperBound.y, tri.y), std::max(bbox->m_UpperBound.z, tri.z));
 			}
 		}
 	}
@@ -149,8 +195,11 @@ private:
 		}
 
 		auto bbox = m_Nodes[node_idx].m_Bounds;
-		const auto ub = m_Nodes[m_RootIndex].m_Bounds.m_UpperBound;
-		const auto lb = m_Nodes[m_RootIndex].m_Bounds.m_LowerBound;
+		const auto ub = bbox.m_UpperBound;
+		const auto lb = bbox.m_LowerBound;
+
+		LOG_ERROR("upperBound X{0} Y{1} Z{2}", ub.x, ub.y, ub.z);
+		LOG_ERROR("lowerBound X{0} Y{1} Z{2}", lb.x, lb.y, lb.z);
 
 		// https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_05#Adding_the_3rd_dimension
 		float cube_vertices[] = {
@@ -187,8 +236,8 @@ private:
 				6, 7, 3
 		};
 
-
-		auto mesh_ptr = std::make_shared<Lunar::Mesh>();
+//		auto mesh_ptr = std::make_shared<AABBDebugMesh>();
+		auto mesh_ptr = std::make_shared<AABB::Mesh>();
 		mesh_ptr->CreateMesh(cube_vertices, cube_elements, 24, 36);
 		m_MeshList.push_back(mesh_ptr);
 
@@ -216,7 +265,7 @@ public:
 	// NOTE: abb를 모델 매트릭스를 곱해서 덮어쓰는게 아니라, 충돌검사 직전 혹은 그리기 직전에 곱해서 그 임시 값으로 검사하는거다.
 	AABBTree(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
 	{
-		const size_t numOfTriangles = indices.size() / 3;
+		const size_t numOfTriangles = indices.size() / 3; // testObj's numOfTriangles == 4
 		m_Primitives.reserve(numOfTriangles);
 
 		// Full Binary Tree 의 max node 개수는 2n-1 개이다.
@@ -224,12 +273,16 @@ public:
 		m_Nodes.reserve(maxNumOfNodes);
 
 		// NOTE: 최적화 필요. 일단 triangle array로 변환해서 멤버로 갖고 있지만, 이 과정이 필요가 없다고 보임.
+//		LOG_ERROR("numOfTriangles: {0}", numOfTriangles);
 		for (size_t i = 0; i < numOfTriangles; ++i)
 		{
-			const auto v0 = glm::vec3{vertices[indices[i * 3] * 3], vertices[indices[i * 3] * 3 + 1], vertices[indices[i * 3] * 3 + 2]};
-			const auto v1 = glm::vec3{vertices[indices[i * 3 + 1] * 3], vertices[indices[i * 3 + 1] * 3 + 1], vertices[indices[i * 3 + 1] * 3 + 2]};
-			const auto v2 = glm::vec3{vertices[indices[i * 3 + 2] * 3], vertices[indices[i * 3 + 2] * 3 + 1], vertices[indices[i * 3 + 2] * 3 + 2]};
+			const auto v0 = glm::vec3{vertices[indices[i * 3 + 0] * 3 + 0], vertices[indices[i * 3 + 0] * 3 + 1], vertices[indices[i * 3 + 0] * 3 + 2]};
+			const auto v1 = glm::vec3{vertices[indices[i * 3 + 1] * 3 + 0], vertices[indices[i * 3 + 1] * 3 + 1], vertices[indices[i * 3 + 1] * 3 + 2]};
+			const auto v2 = glm::vec3{vertices[indices[i * 3 + 2] * 3 + 0], vertices[indices[i * 3 + 2] * 3 + 1], vertices[indices[i * 3 + 2] * 3 + 2]};
 			m_Primitives.emplace_back(v0, v1, v2);
+//			LOG_ERROR("prim Z   v0'z {0}    v1'z {0}    v2'z {0}", v0.z, v1.z, v2.z);
+//			LOG_ERROR("prim v1   X{0} Y{0} Z{0}", v1.x, v1.y, v1.z);
+//			LOG_ERROR("prim v2   X{0} Y{0} Z{0}", v2.x, v2.y, v2.z);
 		}
 		__BuildBVH();
 	}
