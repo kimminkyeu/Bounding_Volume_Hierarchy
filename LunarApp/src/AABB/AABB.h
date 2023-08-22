@@ -195,6 +195,7 @@ private:
 		if (m_Nodes[node_idx].m_isLeaf) {
 			return ;
 		}
+
 		// traverse every tree to create mesh
 //		__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Left);
 //		__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Right);
