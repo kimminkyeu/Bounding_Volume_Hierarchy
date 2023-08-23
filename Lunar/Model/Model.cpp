@@ -8,9 +8,7 @@ namespace Lunar {
 
 
 	Model::Model()
-	{
-
-	}
+	{}
 
 	Model::~Model()
 	{
@@ -49,8 +47,8 @@ namespace Lunar {
 
 	void Model::LoadMesh(aiMesh* mesh, const aiScene* scene)
 	{
-		std::vector<GLfloat> vertices;
-		std::vector<unsigned int> indices;
+//		std::vector<float> vertices;
+//		std::vector<unsigned int> indices;
 
 		for (size_t i=0; i<mesh->mNumVertices; i++)
 		{
