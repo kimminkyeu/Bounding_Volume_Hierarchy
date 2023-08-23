@@ -42,6 +42,7 @@ struct BoundingBox
 	glm::vec3 m_UpperBound = glm::vec3(std::numeric_limits<float>::min());
 
 	// compute the surface area of bounding box (표면적)
+	// later used in Surface Area Huristic
 	float SurfaceArea()
 	{
 		glm::vec3 d = m_UpperBound - m_LowerBound;
@@ -132,8 +133,13 @@ struct AABBNode
 	unsigned int m_PrimitiveStartIndex = 0; // store the index of the first primitive, and the number of primitives.
 	size_t m_PrimitiveSize = 0; // Node가 가질 primitive 길이.
 
-	inline bool isLeaf() const noexcept
+	inline bool IsLeaf() const noexcept
 	{ return (m_PrimitiveSize > 0); }
+
+	float ComputeCost()
+	{
+		float cost = 0.0f;
+	}
 };
 
 // ------------------------------------------------
@@ -307,12 +313,13 @@ private:
 		}
 
 		// if not leaf, then traverse every tree to create mesh
-		if (!m_Nodes[node_idx].isLeaf())
+		if (!m_Nodes[node_idx].IsLeaf())
 		{
 			__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Left, depth + 1);
 			__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Right, depth + 1);
 		}
 	}
+
 
 public:
 	void DebugRender(int bbox_level)
@@ -396,7 +403,7 @@ public:
 		if (!node.m_Bounds.Intersect(ray)) {
 			return;
 		}
-		if (node.isLeaf())
+		if (node.IsLeaf())
 		{
 			for (size_t i=0; i<node.m_PrimitiveSize; ++i) {
 				const auto triangleIndex = m_PrimitiveIndexBuffer[node.m_PrimitiveStartIndex + i];
