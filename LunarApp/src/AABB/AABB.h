@@ -22,45 +22,16 @@
 // https://box2d.org/files/ErinCatto_DynamicBVH_Full.pdf --> 이건 참조용.
 // https://mshgrid.com/2021/01/17/aabb-tree/ --> 이것도 참조용.
 // ********************************************************************
-
-
-// AABB는 normal과 texture가 필요 없기 때문에, 아래와 같이 별도로 상속하여 오버라이딩함.
-/*
-class AABBDebugMesh : public Lunar::Mesh
+struct Ray
 {
-public:
-	AABBDebugMesh()
-			: AABBDebugMesh::Mesh()
-	{};
-
-//	~AABBDebugMesh();
-	void CreateMesh(GLfloat* verticies, unsigned int *indicies, unsigned int numOfVertices, unsigned int numOfIndicies) override
-	{
-		// VAO (Vertex Array)
-		glGenVertexArrays(1, &m_VAO);
-		glBindVertexArray(m_VAO);
-
-		// IBO (Index Buffer)
-		glGenBuffers(1, &m_IBO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicies[0]) * numOfIndicies, indicies, GL_STATIC_DRAW);
-
-		// VBO (Vertex Buffer)
-		glGenBuffers(1, &m_VBO);
-		glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(verticies[0]) * numOfVertices, verticies, GL_STATIC_DRAW);
-
-		// Set vertex attribute : [ x y z U V ]
-		// x y z (stride = X ~ next X 까지의 거리)
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GL_FLOAT), 0);
-		glEnableVertexAttribArray(0);
-
-		// Unbind Buffer for later use
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	}
+	glm::vec3 origin;
+	glm::vec3 direction;
 };
- */
+
+struct Hit // hit point
+{
+	glm::vec3 postion;
+};
 
 // https://box2d.org/files/ErinCatto_DynamicBVH_Full.pdf
 // Given two bounding boxes we can compute the union with min and max operations.
@@ -71,10 +42,37 @@ struct BoundingBox
 	glm::vec3 m_UpperBound = glm::vec3(std::numeric_limits<float>::min());
 
 	// compute the surface area of bounding box (표면적)
+	// later used in Surface Area Huristic
 	float SurfaceArea()
 	{
 		glm::vec3 d = m_UpperBound - m_LowerBound;
 		return 2.0f * (d.x * d.y + d.y * d.z + d.z * d.x);
+	}
+
+	// https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
+	// https://youtu.be/TrqK-atFfWY?t=1349
+	bool Intersect(Ray& ray) // hitPoint = rayOrigin + rayDirection * t;  --> for every x, y, z plain, t must be the same.
+	{
+		// get t for x axis
+		float tx1 = (m_LowerBound.x - ray.origin.x) / ray.direction.x;
+		float tx2 = (m_UpperBound.x - ray.origin.x) / ray.direction.x;
+		// get t for y axis
+		float ty1 = (m_LowerBound.y - ray.origin.y) / ray.direction.y;
+		float ty2 = (m_UpperBound.y - ray.origin.y) / ray.direction.y;
+		// get t for z axis
+		float tz1 = (m_LowerBound.z - ray.origin.z) / ray.direction.z;
+		float tz2 = (m_UpperBound.z - ray.origin.z) / ray.direction.z;
+		// get min, max for every t
+		float txmin = glm::min(tx1, tx2); float txmax = glm::max(tx1, tx2);
+		float tymin = glm::min(ty1, ty2); float tymax = glm::max(ty1, ty2);
+		float tzmin = glm::min(tz1, tz2); float tzmax = glm::max(tz1, tz2);
+		// get tmin, tmax
+		float tmin = glm::max(txmin, tymin); tmin = glm::max(tmin, tzmin);
+		float tmax = glm::min(txmax, tymax); tmax = glm::min(tmax, tzmax);
+
+		/*
+		 * TODO: Implement intersection pass logic
+		*/
 	}
 };
 
@@ -135,8 +133,13 @@ struct AABBNode
 	unsigned int m_PrimitiveStartIndex = 0; // store the index of the first primitive, and the number of primitives.
 	size_t m_PrimitiveSize = 0; // Node가 가질 primitive 길이.
 
-	inline bool isLeaf() const noexcept
+	inline bool IsLeaf() const noexcept
 	{ return (m_PrimitiveSize > 0); }
+
+	float ComputeCost()
+	{
+		float cost = 0.0f;
+	}
 };
 
 // ------------------------------------------------
@@ -310,12 +313,13 @@ private:
 		}
 
 		// if not leaf, then traverse every tree to create mesh
-		if (!m_Nodes[node_idx].isLeaf())
+		if (!m_Nodes[node_idx].IsLeaf())
 		{
 			__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Left, depth + 1);
 			__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Right, depth + 1);
 		}
 	}
+
 
 public:
 	void DebugRender(int bbox_level)
@@ -390,6 +394,30 @@ public:
 	// Transforms an AABB by a 4x4 transformation matrix,
 	// and returns a new AABB that contains the transformed AABB completely.
 	AABBTree Transform(const glm::mat4x4 matrix);
+
+	// TODO: implement here.
+	// calculate ray-intersection.
+	void IntersectBVH(Ray& ray, const uint nodeIdx = 0)
+	{
+		AABBNode& node = m_Nodes[nodeIdx];
+		if (!node.m_Bounds.Intersect(ray)) {
+			return;
+		}
+		if (node.IsLeaf())
+		{
+			for (size_t i=0; i<node.m_PrimitiveSize; ++i) {
+				const auto triangleIndex = m_PrimitiveIndexBuffer[node.m_PrimitiveStartIndex + i];
+				// TODO: implement ray-triangle intersection
+//				IntersectTriangle(ray, m_Primitives[triangleIndex]);
+			}
+		}
+		else
+		{
+			IntersectBVH(ray, node.m_Left);
+			IntersectBVH(ray, node.m_Right);
+		}
+
+	}
 
 };
 
