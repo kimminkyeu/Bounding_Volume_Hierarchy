@@ -1,4 +1,4 @@
-![Uploading image.png…]()
+![image](https://github.com/kimminkyeu/MiniBlender/assets/60287070/40884d75-d404-4642-a035-4c82396890f6)
 
 ---
 ## 1. 참고 설계
