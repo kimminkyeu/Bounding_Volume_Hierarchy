@@ -7,10 +7,12 @@
 
 
 #include <glm.hpp>
-#include <string>
-//#include <math.h> // fminf
-#include <vector>
+#include <iomanip>
+#include <iostream>
+#include <queue>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 #include "LunarApp/src/AABB/Mesh.h"
 
@@ -108,13 +110,17 @@ struct Triangle // Triangle[0] = Triangle.v0
 	T& operator[] (int index)
 	{
 		if (index >= 3) throw std::out_of_range("index out of range");
-		return index == 0 ? v0 : (index == 1 ? v1 : v2);
+		if (index == 0) return v0;
+		if (index == 1) return v1;
+		if (index == 2) return v2;
 	}
 
 	const T& operator[] (int index) const
 	{
 		if (index >= 3) throw std::out_of_range("index out of range");
-		return index == 0 ? v0 : (index == 1 ? v1 : v2);
+		if (index == 0) return v0;
+		if (index == 1) return v1;
+		if (index == 2) return v2;
 	}
 };
 
@@ -171,7 +177,35 @@ private:
 		m_Nodes.emplace_back( 0, m_Primitives.size() ); // (0) insert node at root
 		__UpdateNodeBounds(m_RootIndex); // (1) Update Each Bode Bound
 		__Subdivide_recur(m_RootIndex); // (2) Subdivide space recursively
+//		__PrintTreeDebug();
 		__GenerateDebugMesh_recur(m_RootIndex, 0); // (3) for debug render, generate mesh(VAO, VBO.. etc) for each Bounding Box;
+	}
+
+	void __PrintTreeDebug()
+	{
+		// traverse bfs. // store index of node.
+		using node_index = int;
+		using tree_level = int;
+		std::queue<std::pair<node_index, tree_level>> queue;
+		queue.push({m_RootIndex, 0});
+		int prev_level = -1;
+		while (!queue.empty())
+		{
+			auto top = queue.front(); queue.pop();
+			auto node = m_Nodes[top.first];
+			queue.push({node.m_Left, top.second + 1});
+			queue.push({node.m_Right, top.second + 1});
+
+			if (prev_level != top.second)
+				std::cout << "\n" << "L" << top.second << "      ";
+			if (node.IsLeaf()) {
+				std::cout << std::left << std::setw(5) << "#" << " ";
+			} else {
+				std::cout << std::left << std::setw(5) << top.first << " ";
+			}
+			prev_level = top.second;
+		}
+		std::cout << "\n";
 	}
 
 	void __UpdateNodeBounds(unsigned int nodeIdx)
@@ -200,20 +234,19 @@ private:
 
 		// determine split axis and position (AABB)
 		const auto bbox = node.m_Bounds;
-		const auto d = bbox.m_UpperBound - bbox.m_LowerBound;
+		glm::vec3 d = bbox.m_UpperBound - bbox.m_LowerBound;
 		int axis = 0; // x
-		if (d.y > d.x) axis = 1; // y
-		if (d.z > d[axis]) axis = 2; // z
+//		if (d.y > d.x) axis = 1; // y
+//		if (d.z > d[axis]) axis = 2; // z
 		float splitPos = bbox.m_LowerBound[axis] + d[axis] * 0.5f;
 
 		// split axis in half
 //		auto k = m_PrimitiveIndexBuffer;
 		unsigned int startIdx = node.m_PrimitiveStartIndex;
-		unsigned int endIdx = startIdx + node.m_PrimitiveSize - 1; // = past end.
+		unsigned int endIdx = startIdx + node.m_PrimitiveSize - 1;
 		while (startIdx <= endIdx)
 		{
-			// 해당 삼각형의 axis의 중심과 splitPos를 비교
-			// 삼각형 중심으로 분할하기 때문에, 겹치는 영역이 발생.
+			// 해당 삼각형의 axis의 중심과 splitPos를 비교 // 삼각형 중심으로 분할하기 때문에, 겹치는 영역이 발생.
 			const auto triIdx = m_PrimitiveIndexBuffer[startIdx];
 			const auto centerOfTargetPrimitiveAxis = (m_Primitives[triIdx].v0.d[axis] + m_Primitives[triIdx].v1.d[axis] + m_Primitives[triIdx].v2.d[axis]) * 0.3333f;
 			if (centerOfTargetPrimitiveAxis < splitPos) {
@@ -227,6 +260,7 @@ private:
 		// abort split if one of the sides is empty
 		size_t leftCount = startIdx - node.m_PrimitiveStartIndex; // NOTE: ??
 		if (leftCount == 0 || leftCount == node.m_PrimitiveSize) return; // NOTE: ??
+		if (leftCount <= 2) return; // NOTE: ??
 
 		// Create child nodes.
 		// ------------------------------
@@ -242,18 +276,21 @@ private:
 		// insert left
 		unsigned int leftChildIdx = m_Nodes.size();  // if 1
 		node.m_Left = leftChildIdx;
+		m_Nodes.push_back({node.m_PrimitiveStartIndex, leftCount});
+		__UpdateNodeBounds(leftChildIdx);
 		m_Nodes.emplace_back(node.m_PrimitiveStartIndex, leftCount);
 
 		// insert right
+		auto t = node.m_PrimitiveSize;
 		unsigned int rightChildIdx = m_Nodes.size(); // then 2
 		node.m_Right = rightChildIdx;
+		m_Nodes.push_back({startIdx, node.m_PrimitiveSize - leftCount});
+		__UpdateNodeBounds(rightChildIdx);
 		m_Nodes.emplace_back(startIdx, node.m_PrimitiveSize - leftCount);
 
 		// set prim count to 0, because it's not a leaf node anymore.
 		node.m_PrimitiveSize = 0;
 
-		__UpdateNodeBounds(leftChildIdx);
-		__UpdateNodeBounds(rightChildIdx);
 
 		// recurse
 		__Subdivide_recur(leftChildIdx);
@@ -266,6 +303,8 @@ private:
 	void __GenerateDebugMesh_recur(unsigned int node_idx, bbox_level_type depth)
 	{
 		auto i = m_Nodes[node_idx];
+		if (i.m_PrimitiveSize == 0) return;
+
 		auto bbox = m_Nodes[node_idx].m_Bounds;
 		const auto ub = bbox.m_UpperBound;
 		const auto lb = bbox.m_LowerBound;

@@ -184,7 +184,7 @@ namespace Lunar {
 		GLint location = glGetUniformLocation(m_ProgramID, uniformName);
 		if (location < 0)
 		{
-			LOG_WARN("  [{0} shader]: Uniform [{1}] not found.", m_DebugName, uniformName);
+//			LOG_WARN("  [{0} shader]: Uniform [{1}] not found.", m_DebugName, uniformName);
 		}
 		return location;
 	}
