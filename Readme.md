@@ -1,6 +1,9 @@
 
+![image](https://github.com/kimminkyeu/MiniBlender/assets/60287070/40884d75-d404-4642-a035-4c82396890f6)
+
 ---
 ## 1. 참고 설계
+0. SAH(surface area huristic) 을 이용한 Bounding Volume Hirachy 구현
 0. Entity Component System (ECS) 방식으로 구조 작성할 것.
     - https://github.com/skypjack/entt#introduction
 2. The Cherno GameEngine Series (Demo)
