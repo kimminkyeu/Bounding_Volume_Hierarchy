@@ -51,9 +51,22 @@ struct BoundingBox
 		return 2.0f * (d.x * d.y + d.y * d.z + d.z * d.x);
 	}
 
+	// box를 주어진 vertex를 포함하도록 키움.
+	void Grow(const glm::vec3& v)
+	{
+		m_LowerBound = glm::vec3(std::min(m_LowerBound.x, v.x), std::min(m_LowerBound.y, v.y), std::min(m_LowerBound.z, v.z));
+		m_UpperBound = glm::vec3(std::max(m_UpperBound.x, v.x), std::max(m_UpperBound.y, v.y), std::max(m_UpperBound.z, v.z));
+	}
+
+	void Grow(float x, float y, float z)
+	{
+		m_LowerBound = glm::vec3(std::min(m_LowerBound.x, x), std::min(m_LowerBound.y, y), std::min(m_LowerBound.z, z));
+		m_UpperBound = glm::vec3(std::max(m_UpperBound.x, x), std::max(m_UpperBound.y, y), std::max(m_UpperBound.z, z));
+	}
+
 	// https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
 	// https://youtu.be/TrqK-atFfWY?t=1349
-	bool Intersect(Ray& ray) // hitPoint = rayOrigin + rayDirection * t;  --> for every x, y, z plain, t must be the same.
+	bool Intersect(const Ray& ray) // hitPoint = rayOrigin + rayDirection * t;  --> for every x, y, z plain, t must be the same.
 	{
 		// get t for x axis
 		float tx1 = (m_LowerBound.x - ray.origin.x) / ray.direction.x;
@@ -130,23 +143,18 @@ struct Triangle // Triangle[0] = Triangle.v0
 // Implementation of Axis-aligned bounding box
 struct AABBNode
 {
-	AABBNode(unsigned int primitiveStartIdx, size_t primitiveSize)
-		: m_PrimitiveStartIndex(primitiveStartIdx), m_PrimitiveSize(primitiveSize)
+	AABBNode(unsigned int triStartIdx, size_t triCount)
+		: m_TriangleStartIndex(triStartIdx), m_TriangeCount(triCount)
 	{};
 
 	BoundingBox m_Bounds; // bounding box of the node
 	unsigned int m_Left = -1;
 	unsigned int m_Right = -1;
-	unsigned int m_PrimitiveStartIndex = 0; // store the index of the first primitive, and the number of primitives.
-	size_t m_PrimitiveSize = 0; // Node가 가질 primitive 길이.
+	unsigned int m_TriangleStartIndex = 0; // store the index of the first primitive, and the number of primitives.
+	size_t m_TriangeCount = 0; // Node가 가질 primitive 길이.
 
 	inline bool IsLeaf() const noexcept
-	{ return (m_PrimitiveSize > 0); }
-
-	float ComputeCost()
-	{
-		float cost = 0.0f;
-	}
+	{ return (m_TriangeCount > 0); }
 };
 
 // ------------------------------------------------
@@ -156,13 +164,13 @@ class AABBTree
 public:
 	unsigned int m_MaxDepth = 0; // 0 = root
 private: // typedef and namespace scope
-	using triangle_type = Triangle<TriangleDataBaseFormat>;
+	using triangle_type = Triangle<glm::vec3>;
 	// ...
 private: // member data
 	std::vector<AABBNode> m_Nodes; // Node Pool
 	unsigned int m_RootIndex = 0; // root index of node pool
-	std::vector<triangle_type> m_Primitives; // primitive pool
-	std::vector<size_t> m_PrimitiveIndexBuffer; // just like IBO, we change triangle sequence with this.
+	std::vector<triangle_type> m_Triangles; // primitive pool
+	std::vector<size_t> m_TriangleIndexBuffer; // just like IBO, we change triangle sequence with this.
 
 private: // member data tmp
 	using bbox_level_type = unsigned int; // tree depth of bbox
@@ -175,7 +183,7 @@ private:
 	{
 		m_Nodes.clear();
 		// to start, assign all triangles to root node.
-		m_Nodes.emplace_back( 0, m_Primitives.size() ); // (0) insert node at root
+		m_Nodes.emplace_back( 0, m_Triangles.size() ); // (0) insert node at root
 		__UpdateNodeBounds(m_RootIndex); // (1) Update Each Bode Bound
 		__Subdivide_recur(m_RootIndex); // (2) Subdivide space recursively
 //		__PrintTreeDebug();
@@ -186,53 +194,105 @@ private:
 	{
 		AABBNode* targetNode = &(m_Nodes[nodeIdx]);
 		BoundingBox* bbox = &(targetNode->m_Bounds);
-		const unsigned int start = targetNode->m_PrimitiveStartIndex;
+		const unsigned int start = targetNode->m_TriangleStartIndex;
 		// update bounding box for node's every primitive
-		for (unsigned int i = 0; i < targetNode->m_PrimitiveSize; ++i) {
-			const auto triIdx = m_PrimitiveIndexBuffer[start + i];
+		for (unsigned int i = 0; i < targetNode->m_TriangeCount; ++i) {
+			const auto triIdx = m_TriangleIndexBuffer[start + i];
 			for (int v=0; v<3; ++v) {
 				// 모든 삼각형의 모든 vertex를 돌면서, vec3 bound와 vec3 v0 중 최소값을 bound에 갱신.
-				const auto tri = (m_Primitives[triIdx])[v];
-				bbox->m_LowerBound = glm::vec3(std::min(bbox->m_LowerBound.x, tri.x), std::min(bbox->m_LowerBound.y, tri.y), std::min(bbox->m_LowerBound.z, tri.z));
-				bbox->m_UpperBound = glm::vec3(std::max(bbox->m_UpperBound.x, tri.x), std::max(bbox->m_UpperBound.y, tri.y), std::max(bbox->m_UpperBound.z, tri.z));
+				const auto vertex = (m_Triangles[triIdx])[v];
+				bbox->m_LowerBound = glm::vec3(std::min(bbox->m_LowerBound.x, vertex.x), std::min(bbox->m_LowerBound.y, vertex.y), std::min(bbox->m_LowerBound.z, vertex.z));
+				bbox->m_UpperBound = glm::vec3(std::max(bbox->m_UpperBound.x, vertex.x), std::max(bbox->m_UpperBound.y, vertex.y), std::max(bbox->m_UpperBound.z, vertex.z));
 			}
 		}
+	}
+
+	// Surface Area Huristic
+	float ComputeCostbySAH(AABBNode& node, int axis, float splitPos)
+	{
+		// determine triangle counts and bounds.
+		BoundingBox leftBox, rightBox;
+		int leftCount = 0, rightCount = 0;
+		// 모든 노드 내 삼각형에 대해 주어진 pos 기준 왼쪽, 오른쪽인지 구분.
+		for (size_t i=0; i < node.m_TriangeCount; ++i)
+		{
+			auto triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
+			auto &triangle = m_Triangles[triIdx];
+			const auto centroid = (triangle.v0[axis] + triangle.v1[axis] + triangle.v2[axis]) * 0.3333f;
+			if (centroid < splitPos)
+			{
+				++leftCount;
+				leftBox.Grow(triangle.v0.x, triangle.v0.y, triangle.v0.z);
+				leftBox.Grow(triangle.v1.x, triangle.v1.y, triangle.v1.z);
+				leftBox.Grow(triangle.v2.x, triangle.v2.y, triangle.v2.z);
+			}
+			else
+			{
+				++rightCount;
+				rightBox.Grow(triangle.v0.x, triangle.v0.y, triangle.v0.z);
+				rightBox.Grow(triangle.v1.x, triangle.v1.y, triangle.v1.z);
+				rightBox.Grow(triangle.v2.x, triangle.v2.y, triangle.v2.z);
+			}
+			//   left AABB [num of triangle] * [surface area]
+			// + right AABB [num of triangle] * [surface area]
+			// -------------------------------------------------
+			// = SAH cost
+		}
+		float cost = leftCount * leftBox.SurfaceArea() + rightCount * rightBox.SurfaceArea();
+		return cost > 0 ? cost : std::numeric_limits<float>::max();
 	}
 
 	void __Subdivide_recur(unsigned int parentNodeIdx)
 	{
 		AABBNode& node = m_Nodes[parentNodeIdx];
 
-		// terminate recursion
-		if (node.m_PrimitiveSize <= 2) return ; // min is Mesh of 2 triangles
+		int bestAxis = -1;
+		float bestPos = 0;
+		float bestCost = std::numeric_limits<float>::max();
+		for (int axis=0; axis < 3; ++axis) {
+			for (size_t i=0; i < node.m_TriangeCount; i++) {
+				auto triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
+				auto& triangle = m_Triangles[triIdx];
+				// 노드 안의 모든 삼각형들을 돌면서, 각 삼각형의 무게중심을 기준으로 SAH 계산.
+				const auto candidatePos = (triangle.v0[axis] + triangle.v1[axis] + triangle.v2[axis]) * 0.3333f;
+				const float cost = ComputeCostbySAH(node, axis, candidatePos);
+				if (cost < bestCost) { // find min cost
+					bestPos = candidatePos;
+					bestAxis = axis;
+					bestCost = cost;
+				}
+			}
+		}
+		int axis = bestAxis;
+		float splitPos = bestPos;
 
-		// determine split axis and position (AABB)
-		const auto bbox = node.m_Bounds;
-		glm::vec3 d = bbox.m_UpperBound - bbox.m_LowerBound;
-		int axis = 0; // x
-		if (d.y > d.x) axis = 1; // y
-		if (d.z > d[axis]) axis = 2; // z
-		float splitPos = bbox.m_LowerBound[axis] + d[axis] * 0.5f;
+		// NOTE: recursion stops here -----------------------
+		// Split은 자식 둘의 SAH합이 부모의 SAH보다 작을 경우에만 진행.
+		const float parentArea = node.m_Bounds.SurfaceArea();
+		const float parentCost = node.m_TriangeCount * parentArea;
+		if (bestCost >= parentCost) return ;
 
-		// split axis in half
-		unsigned int startIdx = node.m_PrimitiveStartIndex;
-		unsigned int endIdx = startIdx + node.m_PrimitiveSize - 1;
+
+		// *********************************
+		// split via axis
+		unsigned int startIdx = node.m_TriangleStartIndex;
+		unsigned int endIdx = startIdx + node.m_TriangeCount - 1;
 		while (startIdx <= endIdx)
 		{
 			// 해당 삼각형의 axis의 중심과 splitPos를 비교 // 삼각형 중심으로 분할하기 때문에, 겹치는 영역이 발생.
-			const auto triIdx = m_PrimitiveIndexBuffer[startIdx];
-			const auto centerOfTargetPrimitiveAxis = (m_Primitives[triIdx].v0.d[axis] + m_Primitives[triIdx].v1.d[axis] + m_Primitives[triIdx].v2.d[axis]) * 0.3333f;
+			const auto triIdx = m_TriangleIndexBuffer[startIdx];
+			const auto centerOfTargetPrimitiveAxis = (m_Triangles[triIdx].v0[axis] + m_Triangles[triIdx].v1[axis] + m_Triangles[triIdx].v2[axis]) * 0.3333f;
 			if (centerOfTargetPrimitiveAxis < splitPos) {
 				startIdx++;
 			} else {
 				// 그냥 삼각형들을 오른족으로 하나씩 Swap. (정렬 x)
-				std::swap(m_PrimitiveIndexBuffer[startIdx], m_PrimitiveIndexBuffer[endIdx--]);
+				std::swap(m_TriangleIndexBuffer[startIdx], m_TriangleIndexBuffer[endIdx--]);
 			}
 		}
 
 		// abort split if one of the sides is empty
-		size_t leftCount = startIdx - node.m_PrimitiveStartIndex; // NOTE: ??
-		if (leftCount == 0 || leftCount == node.m_PrimitiveSize) return; // NOTE: ??
+		size_t leftCount = startIdx - node.m_TriangleStartIndex; // NOTE: ??
+		if (leftCount == 0 || leftCount == node.m_TriangeCount) return; // NOTE: ??
 
 		// Create child nodes.
 		// ------------------------------
@@ -248,26 +308,157 @@ private:
 		// insert left
 		unsigned int leftChildIdx = m_Nodes.size();  // if 1
 		node.m_Left = leftChildIdx;
-		m_Nodes.push_back({node.m_PrimitiveStartIndex, leftCount});
+		m_Nodes.push_back({node.m_TriangleStartIndex, leftCount});
 		__UpdateNodeBounds(leftChildIdx);
-		m_Nodes.emplace_back(node.m_PrimitiveStartIndex, leftCount);
+		m_Nodes.emplace_back(node.m_TriangleStartIndex, leftCount);
 
 		// insert right
-		auto t = node.m_PrimitiveSize;
+		auto t = node.m_TriangeCount;
 		unsigned int rightChildIdx = m_Nodes.size(); // then 2
 		node.m_Right = rightChildIdx;
-		m_Nodes.push_back({startIdx, node.m_PrimitiveSize - leftCount});
+		m_Nodes.push_back({startIdx, node.m_TriangeCount - leftCount});
 		__UpdateNodeBounds(rightChildIdx);
-		m_Nodes.emplace_back(startIdx, node.m_PrimitiveSize - leftCount);
+		m_Nodes.emplace_back(startIdx, node.m_TriangeCount - leftCount);
 
 		// set prim count to 0, because it's not a leaf node anymore.
-		node.m_PrimitiveSize = 0;
+		node.m_TriangeCount = 0;
 
 		// recurse
 		__Subdivide_recur(leftChildIdx);
 		__Subdivide_recur(rightChildIdx);
 	}
 
+
+public:
+	void DebugRender(int bbox_level)
+	{
+		for (auto &itr : m_AABBMeshList) {
+			if (itr.second == bbox_level) { // 특정 bbox level만 그리기 위함.
+				itr.first->RenderMesh(GL_TRIANGLES);
+			}
+		}
+	}
+
+	// https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
+	// build AABB tree with VAO & IBO array?
+
+	// TODO: model을 추가할 때 마다 AABB가 자동으로 갱신.추가되도록 할 것.
+	void AddPrimitive(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
+	{
+		// Pool of Triangles
+		const size_t prevNumOfTriangles = m_Triangles.size();
+		const size_t newNumOfTriangles = indices.size() / 3; // testObj's numOfTriangles == 4
+		m_Triangles.reserve(prevNumOfTriangles + newNumOfTriangles); // 기존 크기 + 새로운 크기
+
+		// Triangles index buffer (for Pool)
+		m_TriangleIndexBuffer.reserve(prevNumOfTriangles + newNumOfTriangles);
+
+		for (int i = 0; i < newNumOfTriangles; i++) // 모든 triangle들이 정렬되어 있는 상태서 시작.
+			m_TriangleIndexBuffer.push_back(i);
+
+		// Pool of AABBTree node
+		// Full Binary Tree 의 max node 개수는 2n-1 개이다.
+		const size_t maxNumOfNodes = newNumOfTriangles * 2 - 1;
+		m_Nodes.reserve(maxNumOfNodes);
+
+		// NOTE: 최적화 필요. 일단 triangle array로 변환해서 멤버로 갖고 있지만, 이 과정이 필요가 없다고 보임.
+		const int STRIDE = 8;
+		for (size_t i = 0; i < newNumOfTriangles; ++i)
+		{
+			triangle_type primitive;
+			for (int j = 0; j < 3; ++j)
+			{   // for each vertex
+				primitive[j] = { // Vertex Position     // Texture Coord // Normal Coord --> not used
+						vertices[indices[i * 3 + j] * STRIDE + 0], vertices[indices[i * 3 + j] * STRIDE + 1], vertices[indices[i * 3 + j] * STRIDE + 2],
+//						vertices[indices[i * 3 + j] * STRIDE + 3], vertices[indices[i * 3 + j] * STRIDE + 4],
+//						vertices[indices[i * 3 + j] * STRIDE + 5], vertices[indices[i * 3 + j] * STRIDE + 6], vertices[indices[i * 3 + j] * STRIDE + 7],
+				};
+			}
+			m_Triangles.emplace_back(primitive);
+		}
+		__BuildBVH_TopDown();
+	}
+
+
+	// NOTE: abb를 모델 매트릭스를 곱해서 덮어쓰는게 아니라, 충돌검사 직전 혹은 그리기 직전에 곱해서 그 임시 값으로 검사하는거다.
+	AABBTree(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
+	{
+		AddPrimitive(vertices, indices);
+	}
+
+	// NOTE: 일단 복사 생성자 금지. [AABBTree t1 = AABB(...)]
+	//		  추후에 이 부분 검토할 것.
+	AABBTree& operator= (const AABBTree& other) = delete;
+
+	~AABBTree();
+
+	// Returns whether the AABB contains another AABB completely.
+	// Because math is done to compute the minimum and maximum coordinates of the AABBs, overflow is possible for extreme values.
+	bool Contains(const AABBTree& other);
+
+	//Returns whether a point in 3D space is contained by the AABB, or not.
+	// Because math is done to compute the minimum and maximum coordinates of the AABB, overflow is possible for extreme values.
+	bool Contains(const glm::vec3& float3);
+
+	// Determines the squared distance from a point to the nearest point to it that is contained by an AABB.
+	glm::vec3 DistanceSquared(const glm::vec3& float3);
+
+	// Returns a string representation of the AABB.
+	std::string ToString();
+
+	// Transforms an AABB by a 4x4 transformation matrix,
+	// and returns a new AABB that contains the transformed AABB completely.
+	AABBTree Transform(const glm::mat4x4 matrix);
+
+	// NOTE: if not hit, then distance is -1
+	struct Hit
+	{
+		float distance = -1.0f;
+		glm::vec3 normal = glm::vec3(0.0f);
+		glm::vec3 point = glm::vec3(0.0f);
+	};
+
+	Hit IntersectTriangle(const Ray& ray, const triangle_type& triangle)
+	{
+		Hit hit; // default hit = no hit
+		const auto triangleNormal = glm::cross(triangle.v2 - triangle.v1, triangle.v0 - triangle.v1);
+
+		// backface culling
+		if (glm::dot(-ray.direction, triangleNormal) < 0.0f)
+			return hit;
+		// if ray is parallel to triangle
+		if (glm::abs(glm::dot(ray.direction, triangleNormal)) < 0.00001f)
+			return hit;
+		// TODO: do other thing here.
+	}
+
+	// calculate ray-intersection.
+	Hit IntersectBVH(const Ray& ray, const uint nodeIdx = 0)
+	{
+		AABBNode& node = m_Nodes[nodeIdx]; // 시작 노드 (Root)에서 부터 접근.
+		if (!node.m_Bounds.Intersect(ray))
+		{
+			return Hit { -1.0f };
+		}
+		if (node.IsLeaf())
+		{
+			for (size_t i=0; i<node.m_TriangeCount; ++i) {
+				const auto triangleIndex = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
+				// TODO: implement ray-triangle intersection
+				Hit h0 = IntersectTriangle(ray, m_Triangles[triangleIndex]);
+				return h0;
+			}
+		}
+		else // if intersected + not leaf
+		{
+			Hit h1 = IntersectBVH(ray, node.m_Left);
+			Hit h2 = IntersectBVH(ray, node.m_Right);
+			// TODO: 두 Hit 중에서 가까운 값을 최종 반환.
+		}
+	}
+
+	// HELPER FUNCTIONS
+private:
 	// Tree를 순회하면서 각 box에 대한 mesh를 생성, m_meshList에 삽입.
 	// TODO: meshList가 배열이기에, 이걸 level에 따라 순회하려면 재귀를 BFS로 해줘야 한다.
 	// 	     일단은 DFS로 함. 나중에 수정할 예정.
@@ -280,16 +471,16 @@ private:
 		const auto lb = bbox.m_LowerBound;
 
 		float cube_vertices[] = { // https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_05#Adding_the_3rd_dimension
-				// front
-				lb.x, lb.y,  ub.z,
-				ub.x, lb.y,  ub.z,
-				ub.x,  ub.y,  ub.z,
-				lb.x,  ub.y,  ub.z,
-				// back
-				lb.x, lb.y, lb.z,
-				ub.x, lb.y, lb.z,
-				ub.x,  ub.y, lb.z,
-				lb.x,  ub.y, lb.z
+								 // front
+								 lb.x, lb.y,  ub.z,
+								 ub.x, lb.y,  ub.z,
+								 ub.x,  ub.y,  ub.z,
+								 lb.x,  ub.y,  ub.z,
+								 // back
+								 lb.x, lb.y, lb.z,
+								 ub.x, lb.y, lb.z,
+								 ub.x,  ub.y, lb.z,
+								 lb.x,  ub.y, lb.z
 		};
 
 		unsigned int cube_elements[] = {
@@ -329,114 +520,6 @@ private:
 		}
 	}
 
-
-public:
-	void DebugRender(int bbox_level)
-	{
-		for (auto &itr : m_AABBMeshList) {
-			if (itr.second == bbox_level) { // 특정 bbox level만 그리기 위함.
-				itr.first->RenderMesh(GL_TRIANGLES);
-			}
-		}
-	}
-
-	// https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
-	// build AABB tree with VAO & IBO array?
-
-	// TODO: model을 추가할 때 마다 AABB가 자동으로 갱신.추가되도록 할 것.
-	void AddPrimitive(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
-	{
-		// Pool of Triangles
-		const size_t prevNumOfTriangles = m_Primitives.size();
-		const size_t newNumOfTriangles = indices.size() / 3; // testObj's numOfTriangles == 4
-		m_Primitives.reserve(prevNumOfTriangles + newNumOfTriangles); // 기존 크기 + 새로운 크기
-
-		// Triangles index buffer (for Pool)
-		m_PrimitiveIndexBuffer.reserve(prevNumOfTriangles + newNumOfTriangles);
-
-		for (int i = 0; i < newNumOfTriangles; i++) // 모든 triangle들이 정렬되어 있는 상태서 시작.
-			m_PrimitiveIndexBuffer.push_back(i);
-
-		// Pool of AABBTree node
-		// Full Binary Tree 의 max node 개수는 2n-1 개이다.
-		const size_t maxNumOfNodes = newNumOfTriangles * 2 - 1;
-		m_Nodes.reserve(maxNumOfNodes);
-
-		// NOTE: 최적화 필요. 일단 triangle array로 변환해서 멤버로 갖고 있지만, 이 과정이 필요가 없다고 보임.
-		const int STRIDE = 8;
-		for (size_t i = 0; i < newNumOfTriangles; ++i)
-		{
-			triangle_type primitive;
-			for (int j = 0; j < 3; ++j)
-			{   // for each vertex
-				primitive[j] = { // Vertex Position // Texture Coord // Normal Coord
-						vertices[indices[i * 3 + j] * STRIDE + 0], vertices[indices[i * 3 + j] * STRIDE + 1], vertices[indices[i * 3 + j] * STRIDE + 2],
-						vertices[indices[i * 3 + j] * STRIDE + 3], vertices[indices[i * 3 + j] * STRIDE + 4],
-						vertices[indices[i * 3 + j] * STRIDE + 5], vertices[indices[i * 3 + j] * STRIDE + 6], vertices[indices[i * 3 + j] * STRIDE + 7],
-				};
-			}
-			m_Primitives.emplace_back(primitive);
-		}
-		__BuildBVH_TopDown();
-	}
-
-
-	// NOTE: abb를 모델 매트릭스를 곱해서 덮어쓰는게 아니라, 충돌검사 직전 혹은 그리기 직전에 곱해서 그 임시 값으로 검사하는거다.
-	AABBTree(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
-	{
-		AddPrimitive(vertices, indices);
-	}
-
-	// NOTE: 일단 복사 생성자 금지. [AABBTree t1 = AABB(...)]
-	//		  추후에 이 부분 검토할 것.
-	AABBTree& operator= (const AABBTree& other) = delete;
-
-	~AABBTree();
-
-	// Returns whether the AABB contains another AABB completely.
-	// Because math is done to compute the minimum and maximum coordinates of the AABBs, overflow is possible for extreme values.
-	bool Contains(const AABBTree& other);
-
-	//Returns whether a point in 3D space is contained by the AABB, or not.
-	// Because math is done to compute the minimum and maximum coordinates of the AABB, overflow is possible for extreme values.
-	bool Contains(const glm::vec3& float3);
-
-	// Determines the squared distance from a point to the nearest point to it that is contained by an AABB.
-	glm::vec3 DistanceSquared(const glm::vec3& float3);
-
-	// Returns a string representation of the AABB.
-	std::string ToString();
-
-	// Transforms an AABB by a 4x4 transformation matrix,
-	// and returns a new AABB that contains the transformed AABB completely.
-	AABBTree Transform(const glm::mat4x4 matrix);
-
-	// TODO: implement here.
-	// calculate ray-intersection.
-	void IntersectBVH(Ray& ray, const uint nodeIdx = 0)
-	{
-		AABBNode& node = m_Nodes[nodeIdx];
-		if (!node.m_Bounds.Intersect(ray)) {
-			return;
-		}
-		if (node.IsLeaf())
-		{
-			for (size_t i=0; i<node.m_PrimitiveSize; ++i) {
-				const auto triangleIndex = m_PrimitiveIndexBuffer[node.m_PrimitiveStartIndex + i];
-				// TODO: implement ray-triangle intersection
-//				IntersectTriangle(ray, m_Primitives[triangleIndex]);
-			}
-		}
-		else
-		{
-			IntersectBVH(ray, node.m_Left);
-			IntersectBVH(ray, node.m_Right);
-		}
-
-	}
-
-	// HELPER FUNCTIONS
-private:
 	void __PrintTreeDebug()
 	{
 		// traverse bfs. // store index of node.
