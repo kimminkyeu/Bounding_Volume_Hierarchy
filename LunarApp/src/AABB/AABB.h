@@ -162,7 +162,6 @@ private: // member data
 	unsigned int m_RootIndex = 0; // root index of node pool
 	std::vector<triangle_type> m_Primitives; // primitive pool
 	std::vector<size_t> m_PrimitiveIndexBuffer; // just like IBO, we change triangle sequence with this.
-	// NOTE: 중요! m_Primitive를 직접 바꾸는게 아니라, 그 index를 바꾸는 거다.
 
 private: // member data tmp
 	using bbox_level_type = unsigned int; // tree depth of bbox
@@ -236,12 +235,11 @@ private:
 		const auto bbox = node.m_Bounds;
 		glm::vec3 d = bbox.m_UpperBound - bbox.m_LowerBound;
 		int axis = 0; // x
-//		if (d.y > d.x) axis = 1; // y
-//		if (d.z > d[axis]) axis = 2; // z
+		if (d.y > d.x) axis = 1; // y
+		if (d.z > d[axis]) axis = 2; // z
 		float splitPos = bbox.m_LowerBound[axis] + d[axis] * 0.5f;
 
 		// split axis in half
-//		auto k = m_PrimitiveIndexBuffer;
 		unsigned int startIdx = node.m_PrimitiveStartIndex;
 		unsigned int endIdx = startIdx + node.m_PrimitiveSize - 1;
 		while (startIdx <= endIdx)
@@ -291,7 +289,6 @@ private:
 		// set prim count to 0, because it's not a leaf node anymore.
 		node.m_PrimitiveSize = 0;
 
-
 		// recurse
 		__Subdivide_recur(leftChildIdx);
 		__Subdivide_recur(rightChildIdx);
@@ -303,7 +300,6 @@ private:
 	void __GenerateDebugMesh_recur(unsigned int node_idx, bbox_level_type depth)
 	{
 		auto i = m_Nodes[node_idx];
-		if (i.m_PrimitiveSize == 0) return;
 
 		auto bbox = m_Nodes[node_idx].m_Bounds;
 		const auto ub = bbox.m_UpperBound;
