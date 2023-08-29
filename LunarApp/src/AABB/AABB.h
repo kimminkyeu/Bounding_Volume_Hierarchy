@@ -75,6 +75,7 @@ struct BoundingBox
 		/*
 		 * TODO: Implement intersection pass logic
 		*/
+		return true;
 	}
 };
 
@@ -165,46 +166,20 @@ private: // member data
 
 private: // member data tmp
 	using bbox_level_type = unsigned int; // tree depth of bbox
-	using data_type = std::pair<std::shared_ptr<AABB::Mesh>, bbox_level_type>;
-	std::vector<data_type> m_AABBMeshList;
+	using aabb_mesh_data_type = std::pair<std::shared_ptr<AABB::Mesh>, bbox_level_type>;
+	std::vector<aabb_mesh_data_type> m_AABBMeshList;
 
 private:
 	// Subdivide space
-	void __BuildBVH()
+	void __BuildBVH_TopDown()
 	{
+		m_Nodes.clear();
 		// to start, assign all triangles to root node.
 		m_Nodes.emplace_back( 0, m_Primitives.size() ); // (0) insert node at root
 		__UpdateNodeBounds(m_RootIndex); // (1) Update Each Bode Bound
 		__Subdivide_recur(m_RootIndex); // (2) Subdivide space recursively
 //		__PrintTreeDebug();
 		__GenerateDebugMesh_recur(m_RootIndex, 0); // (3) for debug render, generate mesh(VAO, VBO.. etc) for each Bounding Box;
-	}
-
-	void __PrintTreeDebug()
-	{
-		// traverse bfs. // store index of node.
-		using node_index = int;
-		using tree_level = int;
-		std::queue<std::pair<node_index, tree_level>> queue;
-		queue.push({m_RootIndex, 0});
-		int prev_level = -1;
-		while (!queue.empty())
-		{
-			auto top = queue.front(); queue.pop();
-			auto node = m_Nodes[top.first];
-			queue.push({node.m_Left, top.second + 1});
-			queue.push({node.m_Right, top.second + 1});
-
-			if (prev_level != top.second)
-				std::cout << "\n" << "L" << top.second << "      ";
-			if (node.IsLeaf()) {
-				std::cout << std::left << std::setw(5) << "#" << " ";
-			} else {
-				std::cout << std::left << std::setw(5) << top.first << " ";
-			}
-			prev_level = top.second;
-		}
-		std::cout << "\n";
 	}
 
 	void __UpdateNodeBounds(unsigned int nodeIdx)
@@ -254,11 +229,10 @@ private:
 				std::swap(m_PrimitiveIndexBuffer[startIdx], m_PrimitiveIndexBuffer[endIdx--]);
 			}
 		}
-		// NOTE: half로 자르면 빈 bbox가 생길수 있나? 없지 않나...?
+
 		// abort split if one of the sides is empty
 		size_t leftCount = startIdx - node.m_PrimitiveStartIndex; // NOTE: ??
 		if (leftCount == 0 || leftCount == node.m_PrimitiveSize) return; // NOTE: ??
-		if (leftCount <= 2) return; // NOTE: ??
 
 		// Create child nodes.
 		// ------------------------------
@@ -369,28 +343,28 @@ public:
 	// https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
 	// build AABB tree with VAO & IBO array?
 
-
-	// NOTE: abb를 모델 매트릭스를 곱해서 덮어쓰는게 아니라, 충돌검사 직전 혹은 그리기 직전에 곱해서 그 임시 값으로 검사하는거다.
-	AABBTree(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
+	// TODO: model을 추가할 때 마다 AABB가 자동으로 갱신.추가되도록 할 것.
+	void AddPrimitive(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
 	{
 		// Pool of Triangles
-		const size_t numOfTriangles = indices.size() / 3; // testObj's numOfTriangles == 4
-		m_Primitives.reserve(numOfTriangles);
+		const size_t prevNumOfTriangles = m_Primitives.size();
+		const size_t newNumOfTriangles = indices.size() / 3; // testObj's numOfTriangles == 4
+		m_Primitives.reserve(prevNumOfTriangles + newNumOfTriangles); // 기존 크기 + 새로운 크기
 
 		// Triangles index buffer (for Pool)
-		m_PrimitiveIndexBuffer.reserve(numOfTriangles);
+		m_PrimitiveIndexBuffer.reserve(prevNumOfTriangles + newNumOfTriangles);
 
-		for (int i = 0; i < numOfTriangles; i++) // 모든 triangle들이 정렬되어 있는 상태서 시작.
+		for (int i = 0; i < newNumOfTriangles; i++) // 모든 triangle들이 정렬되어 있는 상태서 시작.
 			m_PrimitiveIndexBuffer.push_back(i);
 
 		// Pool of AABBTree node
 		// Full Binary Tree 의 max node 개수는 2n-1 개이다.
-		const size_t maxNumOfNodes = numOfTriangles * 2 - 1;
+		const size_t maxNumOfNodes = newNumOfTriangles * 2 - 1;
 		m_Nodes.reserve(maxNumOfNodes);
 
 		// NOTE: 최적화 필요. 일단 triangle array로 변환해서 멤버로 갖고 있지만, 이 과정이 필요가 없다고 보임.
 		const int STRIDE = 8;
-		for (size_t i = 0; i < numOfTriangles; ++i)
+		for (size_t i = 0; i < newNumOfTriangles; ++i)
 		{
 			triangle_type primitive;
 			for (int j = 0; j < 3; ++j)
@@ -403,7 +377,14 @@ public:
 			}
 			m_Primitives.emplace_back(primitive);
 		}
-		__BuildBVH();
+		__BuildBVH_TopDown();
+	}
+
+
+	// NOTE: abb를 모델 매트릭스를 곱해서 덮어쓰는게 아니라, 충돌검사 직전 혹은 그리기 직전에 곱해서 그 임시 값으로 검사하는거다.
+	AABBTree(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
+	{
+		AddPrimitive(vertices, indices);
 	}
 
 	// NOTE: 일단 복사 생성자 금지. [AABBTree t1 = AABB(...)]
@@ -454,6 +435,34 @@ public:
 
 	}
 
+	// HELPER FUNCTIONS
+private:
+	void __PrintTreeDebug()
+	{
+		// traverse bfs. // store index of node.
+		using node_index = int;
+		using tree_level = int;
+		std::queue<std::pair<node_index, tree_level>> queue;
+		queue.push({m_RootIndex, 0});
+		int prev_level = -1;
+		while (!queue.empty())
+		{
+			auto top = queue.front(); queue.pop();
+			auto node = m_Nodes[top.first];
+			queue.push({node.m_Left, top.second + 1});
+			queue.push({node.m_Right, top.second + 1});
+
+			if (prev_level != top.second)
+				std::cout << "\n" << "L" << top.second << "      ";
+			if (node.IsLeaf()) {
+				std::cout << std::left << std::setw(5) << "#" << " ";
+			} else {
+				std::cout << std::left << std::setw(5) << top.first << " ";
+			}
+			prev_level = top.second;
+		}
+		std::cout << "\n";
+	}
 };
 
 #endif //SCOOP_AABB_H
