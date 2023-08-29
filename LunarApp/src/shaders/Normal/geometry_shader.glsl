@@ -3,8 +3,8 @@
 layout(triangles) in; // input data is 3 vertices
 layout(line_strip, max_vertices = 8) out; // 4 lines = 8 verticies
 
-uniform mat4 Projection; // Camera Projection (perspective, orthogonal, etc...)
-uniform mat4 View; // Camera Projection (perspective, orthogonal, etc...)
+uniform mat4 Projection;
+uniform mat4 View;
 
 in VS_OUT {
     vec3 Normal;

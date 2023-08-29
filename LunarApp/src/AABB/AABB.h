@@ -87,27 +87,38 @@ struct BoundingBox
 
 		/*
 		 * TODO: Implement intersection pass logic
+		 * https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
 		*/
+		// if tmax < 0, ray (line) is intersecting AABB, but whole AABB is behing us
+		if (tmax < 0.0f) {
+			return false;
+		}
+
+		// if tmin > tmax, ray doesn't intersect AABB
+		if (tmin > tmax) {
+			return false;
+		}
+
 		return true;
 	}
 };
 
 
 // NOTE: Input Data is an array of triangles.
-union TriangleDataBaseFormat// VBO structure -> x, y, z, tx, ty, nx, ny, nz
-{
-	struct {
-		float x;
-		float y;
-		float z;
-		float tx;
-		float ty;
-		float nx;
-		float ny;
-		float nz;
-	};
-	float d[8];
-};
+//union TriangleDataBaseFormat// VBO structure -> x, y, z, tx, ty, nx, ny, nz
+//{
+//	struct {
+//		float x;
+//		float y;
+//		float z;
+//		float tx;
+//		float ty;
+//		float nx;
+//		float ny;
+//		float nz;
+//	};
+//	float d[8];
+//};
 
 template <typename T>
 struct Triangle // Triangle[0] = Triangle.v0
@@ -285,7 +296,7 @@ private:
 			if (centerOfTargetPrimitiveAxis < splitPos) {
 				startIdx++;
 			} else {
-				// 그냥 삼각형들을 오른족으로 하나씩 Swap. (정렬 x)
+				// same as quick-sort pivot move
 				std::swap(m_TriangleIndexBuffer[startIdx], m_TriangleIndexBuffer[endIdx--]);
 			}
 		}
@@ -308,17 +319,14 @@ private:
 		// insert left
 		unsigned int leftChildIdx = m_Nodes.size();  // if 1
 		node.m_Left = leftChildIdx;
-		m_Nodes.push_back({node.m_TriangleStartIndex, leftCount});
-		__UpdateNodeBounds(leftChildIdx);
 		m_Nodes.emplace_back(node.m_TriangleStartIndex, leftCount);
+		__UpdateNodeBounds(leftChildIdx);
 
 		// insert right
-		auto t = node.m_TriangeCount;
 		unsigned int rightChildIdx = m_Nodes.size(); // then 2
 		node.m_Right = rightChildIdx;
-		m_Nodes.push_back({startIdx, node.m_TriangeCount - leftCount});
-		__UpdateNodeBounds(rightChildIdx);
 		m_Nodes.emplace_back(startIdx, node.m_TriangeCount - leftCount);
+		__UpdateNodeBounds(rightChildIdx);
 
 		// set prim count to 0, because it's not a leaf node anymore.
 		node.m_TriangeCount = 0;
@@ -422,14 +430,31 @@ public:
 	{
 		Hit hit; // default hit = no hit
 		const auto triangleNormal = glm::cross(triangle.v2 - triangle.v1, triangle.v0 - triangle.v1);
-
-		// backface culling
+		// (1) backface culling
 		if (glm::dot(-ray.direction, triangleNormal) < 0.0f)
 			return hit;
-		// if ray is parallel to triangle
+		// (2) if ray is parallel to triangle
 		if (glm::abs(glm::dot(ray.direction, triangleNormal)) < 0.00001f)
 			return hit;
-		// TODO: do other thing here.
+		// (3) calcaute t (무한 평면)
+		float t = (glm::dot(triangle.v1, triangleNormal) - glm::dot(ray.origin, triangleNormal)) / glm::dot(ray.direction, triangleNormal);
+		// (4) t가 음수. 즉 뒷방향
+		if (t < 0.0f) return hit; // no hit
+		// (5) 작은 삼각형 normal 계산 // 츙돌 점 p가 삼각형 안에 있는가?
+		const glm::vec3 point = ray.origin + (t * ray.direction);
+		const glm::vec3 n0 = (glm::cross(point - triangle.v2, triangle.v1 - triangle.v2));
+		if (glm::dot(n0, triangleNormal) < 0.0f) return hit; // no hit
+		const glm::vec3 n1 = (glm::cross(point - triangle.v0, triangle.v2 - triangle.v0));
+		if (glm::dot(n1, triangleNormal) < 0.0f) return hit; // no hit
+		const glm::vec3 n2 = (glm::cross(triangle.v1 - triangle.v0, point - triangle.v0));
+		if (glm::dot(n2, triangleNormal) < 0.0f) return hit; // no hit
+		// (6) TODO: texture 정보에 따라 추가 구현.
+
+		// return valid hit result.
+		hit.distance = t;
+		hit.point = point;
+		hit.normal = triangleNormal;
+		return hit;
 	}
 
 	// calculate ray-intersection.
@@ -438,22 +463,33 @@ public:
 		AABBNode& node = m_Nodes[nodeIdx]; // 시작 노드 (Root)에서 부터 접근.
 		if (!node.m_Bounds.Intersect(ray))
 		{
-			return Hit { -1.0f };
+			return Hit(); // no hit
 		}
 		if (node.IsLeaf())
 		{
 			for (size_t i=0; i<node.m_TriangeCount; ++i) {
 				const auto triangleIndex = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
-				// TODO: implement ray-triangle intersection
-				Hit h0 = IntersectTriangle(ray, m_Triangles[triangleIndex]);
-				return h0;
+				// NOTE: Triangle 충돌 함수 검증 필요.
+				Hit hit = IntersectTriangle(ray, m_Triangles[triangleIndex]);
+				if (hit.distance > 0.0f) { // if hit success
+					return hit;
+				}
 			}
+			assert(false && "[IntersectBVH] Bounding Box is wrong...");
 		}
 		else // if intersected + not leaf
 		{
 			Hit h1 = IntersectBVH(ray, node.m_Left);
 			Hit h2 = IntersectBVH(ray, node.m_Right);
-			// TODO: 두 Hit 중에서 가까운 값을 최종 반환.
+
+			// NOTE: 이 부분 역시 검증 필요.
+			// 둘다 충돌일 경우, 두 Hit 중에서 양수이면서 가까운 값을 최종 반환. (2개 bounding box 모두 충돌 가능하기 때문)
+			if (h1.distance > 0.0f && h2.distance > 0.0f)
+				return (h1.distance < h2.distance ? h1 : h2);
+			else if (h1.distance > 0.0f)
+				return h1;
+			else
+				return h2;
 		}
 	}
 

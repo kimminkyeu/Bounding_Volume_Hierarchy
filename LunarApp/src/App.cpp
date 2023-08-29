@@ -22,6 +22,11 @@
 #include "LunarApp/src/TestObject/TestObject.h"
 
 
+// test for ray tracing + mouse click
+#include "Lunar/Input/Input.h"
+#include "Lunar/Input/KeyCodes.h" // including Mouse Code.
+#include "Lunar/Input/MouseCodes.h"
+
 // AABB 구현 방식
 // 1. AABB에 model matrix를 곱한다.
 // 2. RenderLoop에서 AABB를 그리는 쉐이더를 따로 생성한다. // AABB debug shader
@@ -36,6 +41,9 @@ private:
 	ImVec2 m_Size; // NOTE: ImGUI Content Size, not screen size.
     Lunar::FrameBuffer m_FrameBuffer; // NOTE: Viewport Buffer (Only Rendering)
 	DisplayMode m_DisplayMode; // main display mode
+
+	bool m_RayTracingMode = false;
+
 private:
 	DataVisualizer m_DataVisualizer; // vertex, polygon, normal visualizer
 	Lunar::EditorCamera m_EditorCamera;
@@ -113,6 +121,26 @@ public:
 	void OnUpdate(float ts) override
 	{
 		m_EditorCamera.OnUpdate(ts); // 2. update camera geometry
+
+		// NOTE: mouse click ray-tracing test --> 나중에 리팩토링 할 것.
+		// TODO: implement mouse click --> Raytracing
+		if (!Lunar::Input::IsKeyPressed(Lunar::Key::LeftAlt)
+			&& Lunar::Input::IsMouseButtonPressedOnce(Lunar::Mouse::ButtonLeft))
+		{
+			const glm::vec2& mouse { Lunar::Input::GetMousePosition() };
+			LOG_TRACE("----------------------------------");
+			LOG_TRACE("HIT CHECKING...");
+			LOG_TRACE("Camera distance {0}", m_EditorCamera.GetDistance());
+			LOG_TRACE("Screen X{0} Y{1}", mouse.x, mouse.y);
+
+			// shoot ray, get object information.
+			// NOTE: 화면의 x y 위치 기준, 이를 WorldSpace로 변환해야 함.
+//				Ray ray { m_EditorCamera.GetPosition(), m_EditorCamera.GetForwardDirection() };
+//				auto hit = m_AABB->IntersectBVH(ray);
+//				if (hit.distance > 0.0f) {
+//					LOG_INFO("HIT SUCCESS!!");
+//				}
+		}
 
 		// 0. bind frame buffer ( = render target image )
 		m_FrameBuffer.Bind();
@@ -195,6 +223,24 @@ public:
 					aabbShaderPtr->Unbind();
 				}
 			}
+			if (m_DataVisualizer.m_ShowGrid) // Ground Grid
+			{
+				auto* gridShaderPtr = dynamic_cast<GridShader *>(m_DataVisualizer.m_GridShader);
+				if (gridShaderPtr)
+				{
+					// NOTE: Grid는 VAO/VBO가 필요 없다...
+					// NOTE: Draw a full screen covering triangle for bufferless rendering...
+					// https://trass3r.github.io/coding/2019/09/11/bufferless-rendering.html
+					// https://asliceofrendering.com/scene%20helper/2020/01/05/InfiniteGrid/
+					gridShaderPtr->Bind();
+					gridShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+					gridShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+					gridShaderPtr->DrawDummyVAO();
+					// When rendering without any buffers,
+					// the vertex shader will simply be invoked the number of specified times without input data
+					gridShaderPtr->Unbind();
+				}
+			}
 			// ---------------- Bounding Box Render for AABB Debug ------------------
 		}
 		m_FrameBuffer.Unbind(); // unbind Frame Buffer (render target)
@@ -207,92 +253,107 @@ public:
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::Begin("ViewPort");
-			// https://uysalaltas.github.io/2022/01/09/OpenGL_Imgui.html
-			if (ImGui::BeginMenu(currentShaderName.c_str()))
-			{
-				for (auto &itr : m_DisplayMode.GetShaderMap())
-				{
-					if (ImGui::MenuItem(itr.first.c_str())) {
-						m_DisplayMode.SetCurrentShader(itr.first);
-					}
-				}
-				ImGui::EndMenu();
-			}
-			{
-				m_Size = ImGui::GetContentRegionAvail();
-				// NOTE: put m_FrameBuffer's image data to ImGui Image
-				ImGui::Image(
-						reinterpret_cast<void *>(m_FrameBuffer.GetFrameTexture()),
-						m_Size,
-						ImVec2(0, 1), // NOTE: ??
-						ImVec2(1, 0) // NOTE: ??
-				);
-				// NOTE: re-calculate camera for viewport height change...
-				m_EditorCamera.OnResize(m_Size.x, m_Size.y);
-			}
-			ImGui::End();
-			ImGui::PopStyleVar();
-		}
+			ImGui::Checkbox("Ray-Tracing", &m_RayTracingMode);
 
-		{
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::Begin("Data Board");
+			if (m_RayTracingMode)
 			{
-				// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
-				ImGui::BeginGroup();
+				// TODO: implement ray-tracing mode.
+			}
+			else // shader, GPU mode.
+			{
+				// https://uysalaltas.github.io/2022/01/09/OpenGL_Imgui.html
+				if (ImGui::BeginMenu(currentShaderName.c_str()))
 				{
-					ImGui::Checkbox("Mesh", &m_ShowMesh);
-					ImGui::SameLine(); ImGui::Text("%s", m_ShowMesh ? "On" : "Off");
-					ImGui::Checkbox("Edge", &m_DataVisualizer.m_ShowWireframe);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowWireframe ? "On" : "Off");
-					ImGui::Checkbox("Vetex", &m_DataVisualizer.m_ShowPoint);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowPoint ? "On" : "Off");
-					ImGui::Checkbox("Normal", &m_DataVisualizer.m_ShowNormal);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowNormal ? "On" : "Off");
-					ImGui::Checkbox("AABB", &m_DataVisualizer.m_ShowAABB);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowAABB ? "On" : "Off");
+					for (auto &itr : m_DisplayMode.GetShaderMap())
+					{
+						if (ImGui::MenuItem(itr.first.c_str())) {
+							m_DisplayMode.SetCurrentShader(itr.first);
+						}
+					}
+					ImGui::EndMenu();
 				}
-				ImGui::EndGroup();
-				ImGui::BeginGroup();
 				{
-					if (currentShaderName == "Phong" || currentShaderName == "Cartoon")
+					ImGui::Begin("Data Board");
 					{
-						ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Material.m_AmbientColor));
-						ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Material.m_DiffuseColor));
-						ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Material.m_SpecularColor));
-						ImGui::DragFloat("Specular Exponent", &m_Material.m_SpecularExponent);
-					}
-					else if (currentShaderName == "Explosion")
-					{
-						auto* ptr = dynamic_cast<ExplosionShader *>(m_DisplayMode.GetCurrentShaderPtr());
-						if (ptr != nullptr) {
-							ImGui::SliderFloat("Explosion Degree", &(ptr->m_Degree), 0.0f, 10.0f, "%.1f");
+						// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
+						ImGui::BeginGroup();
+						{
+							ImGui::Checkbox("Grid", &m_DataVisualizer.m_ShowGrid);
+							ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowGrid ? "On" : "Off");
+							ImGui::Checkbox("Mesh", &m_ShowMesh);
+							ImGui::SameLine(); ImGui::Text("%s", m_ShowMesh ? "On" : "Off");
+							ImGui::Checkbox("Edge", &m_DataVisualizer.m_ShowWireframe);
+							ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowWireframe ? "On" : "Off");
+							ImGui::Checkbox("Vetex", &m_DataVisualizer.m_ShowPoint);
+							ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowPoint ? "On" : "Off");
+							ImGui::Checkbox("Normal", &m_DataVisualizer.m_ShowNormal);
+							ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowNormal ? "On" : "Off");
+							ImGui::Checkbox("AABB", &m_DataVisualizer.m_ShowAABB);
+							ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowAABB ? "On" : "Off");
 						}
-					}
-					if (m_DataVisualizer.m_ShowWireframe)
-					{
-						auto* ptr = dynamic_cast<WireframeShader *>(m_DataVisualizer.m_WireframeShader);
-						if (ptr != nullptr) {
-							ImGui::ColorEdit3("Wireframe Color", glm::value_ptr(ptr->m_WireframeColor));
+						ImGui::EndGroup();
+						ImGui::BeginGroup();
+						{
+							if (currentShaderName == "Phong" || currentShaderName == "Cartoon")
+							{
+								ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Material.m_AmbientColor));
+								ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Material.m_DiffuseColor));
+								ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Material.m_SpecularColor));
+								ImGui::DragFloat("Specular Exponent", &m_Material.m_SpecularExponent);
+							}
+							else if (currentShaderName == "Explosion")
+							{
+								auto* ptr = dynamic_cast<ExplosionShader *>(m_DisplayMode.GetCurrentShaderPtr());
+								if (ptr != nullptr) {
+									ImGui::SliderFloat("Explosion Degree", &(ptr->m_Degree), 0.0f, 10.0f, "%.1f");
+								}
+							}
+							if (m_DataVisualizer.m_ShowWireframe)
+							{
+								auto* ptr = dynamic_cast<WireframeShader *>(m_DataVisualizer.m_WireframeShader);
+								if (ptr != nullptr) {
+									ImGui::ColorEdit3("Wireframe Color", glm::value_ptr(ptr->m_WireframeColor));
+								}
+							}
+							if (m_DataVisualizer.m_ShowPoint)
+							{
+								auto* ptr = dynamic_cast<PointShader *>(m_DataVisualizer.m_PointShader);
+								if (ptr != nullptr) {
+									ImGui::ColorEdit3("Point Color", glm::value_ptr(ptr->m_PointColor));
+								}
+							}
+							if (m_DataVisualizer.m_ShowAABB)
+							{
+								auto* ptr = dynamic_cast<AABBShader*>(m_DataVisualizer.m_AABBShader);
+								if (ptr != nullptr) {
+									ImGui::ColorEdit3("AABB Color", glm::value_ptr(ptr->m_AABBColor));
+									ImGui::SliderInt("AABB Depth", &m_BBoxDebugDrawLevel, 0, static_cast<int>(m_AABB->m_MaxDepth));
+								}
+							}
+							if (m_DataVisualizer.m_ShowGrid)
+							{
+								auto* ptr = dynamic_cast<GridShader*>(m_DataVisualizer.m_GridShader);
+								if (ptr != nullptr) {
+									ImGui::ColorEdit3("Grid Color", glm::value_ptr(ptr->m_GridColor));
+								}
+							}
 						}
+						ImGui::EndGroup();
 					}
-					if (m_DataVisualizer.m_ShowPoint)
-					{
-						auto* ptr = dynamic_cast<PointShader *>(m_DataVisualizer.m_PointShader);
-						if (ptr != nullptr) {
-							ImGui::ColorEdit3("Point Color", glm::value_ptr(ptr->m_PointColor));
-						}
-					}
-					if (m_DataVisualizer.m_ShowAABB)
-					{
-						auto* ptr = dynamic_cast<AABBShader*>(m_DataVisualizer.m_AABBShader);
-						if (ptr != nullptr) {
-							ImGui::ColorEdit3("AABB Color", glm::value_ptr(ptr->m_AABBColor));
-							ImGui::SliderInt("AABB Depth", &m_BBoxDebugDrawLevel, 0, static_cast<int>(m_AABB->m_MaxDepth));
-						}
-					}
+					ImGui::End();
 				}
-				ImGui::EndGroup();
+				{
+					m_Size = ImGui::GetContentRegionAvail();
+					// NOTE: put m_FrameBuffer's image data to ImGui Image
+					ImGui::Image(
+							reinterpret_cast<void *>(m_FrameBuffer.GetFrameTexture()),
+							m_Size,
+							ImVec2(0, 1), // NOTE: ??
+							ImVec2(1, 0) // NOTE: ??
+					);
+					// NOTE: re-calculate camera for viewport height change...
+					m_EditorCamera.OnResize(m_Size.x, m_Size.y);
+				}
 			}
 			ImGui::End();
 			ImGui::PopStyleVar();

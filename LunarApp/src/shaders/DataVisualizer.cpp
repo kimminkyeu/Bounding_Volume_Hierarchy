@@ -13,6 +13,7 @@ DataVisualizer::~DataVisualizer()
 	delete m_PointShader;
 	delete m_NormalShader;
 	delete m_AABBShader;
+	delete m_GridShader;
 }
 
 void DataVisualizer::Init()
@@ -21,4 +22,5 @@ void DataVisualizer::Init()
 	m_PointShader = new PointShader();
 	m_WireframeShader = new WireframeShader();
 	m_AABBShader = new AABBShader();
+	m_GridShader = new GridShader();
 }

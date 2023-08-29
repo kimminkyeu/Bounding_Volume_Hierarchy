@@ -22,6 +22,7 @@ public:
 	DisplayMode& operator=(const DisplayMode&) = delete;
 	DisplayMode(const DisplayMode&) = delete;
 public:
+
 	// compile + register shader program
 	void Add(const std::string& name,
 			 const std::string& vetexShaderPath,

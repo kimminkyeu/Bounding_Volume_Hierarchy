@@ -22,6 +22,26 @@ namespace Lunar {
         return state == GLFW_PRESS;
     }
 
+	bool Input::IsMouseButtonPressedOnce(MouseCode code)
+	{
+		static bool down = false;
+		GLFWwindow* windowHandle = Application::Get().GetWindowHandle();
+		int state = glfwGetMouseButton(windowHandle, (int)code);
+		if (!down && state == GLFW_PRESS) { // if only button up
+			down = true;
+			return true;
+		}
+		if (down && state == GLFW_RELEASE) down = false;
+		return false;
+	}
+
+	bool Input::IsMouseButtonReleased(MouseCode code)
+	{
+		GLFWwindow* windowHandle = Application::Get().GetWindowHandle();
+		int state = glfwGetMouseButton(windowHandle, (int)code);
+		return state == GLFW_RELEASE;
+	}
+
     glm::vec2 Input::GetMousePosition()
     {
         GLFWwindow* windowHandle = Application::Get().GetWindowHandle();
