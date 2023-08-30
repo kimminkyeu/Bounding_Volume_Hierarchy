@@ -58,6 +58,7 @@ namespace Lunar {
 		glm::vec3 GetRightDirection() const;
 		glm::vec3 GetForwardDirection() const;
 		glm::quat GetOrientation() const;
+		inline glm::vec2 GetViewportSize() const { return glm::vec2(m_ViewportWidth, m_ViewportHeight); }
 
 
 	private:

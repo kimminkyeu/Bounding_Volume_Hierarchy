@@ -15,17 +15,27 @@ class TestObject {
 private:
 	std::vector<std::shared_ptr<Lunar::Mesh>> m_MeshList;
 public:
+//	std::vector<float> m_Vertices = {
+//			-1.0f, -1.0f, -0.5f,	// v0. x y z
+//			0.0f, -1.0f, 1.0f,
+//			1.0f, -1.0f, -0.5f, 	// v1. x y z
+//			0.0f, 1.0f, 0.0f 	// v2. x y z
+//	};
+//	std::vector<unsigned int> m_Indices = {
+//			0, 1, 3,
+//			1, 2, 3,
+//			2, 0, 3,
+//			0, 2, 1,
+//	};
 	std::vector<float> m_Vertices = {
-			-1.0f, -1.0f, -0.5f,	// v0. x y z
-			0.0f, -1.0f, 1.0f,
-			1.0f, -1.0f, -0.5f, 	// v1. x y z
-			0.0f, 1.0f, 0.0f 	// v2. x y z
+			-1.0f, -1.0f, 0.0f,	// v0. x y z
+			1.0f, 1.0f, 0.0f,
+			-1.0f, 1.0f, 0.0f, 	// v1. x y z
+			1.0f, -1.0f, 0.0f 	// v2. x y z
 	};
 	std::vector<unsigned int> m_Indices = {
-			0, 1, 3,
-			1, 2, 3,
-			2, 0, 3,
-			0, 2, 1,
+			0, 1, 2,
+			0, 3, 1,
 	};
 public:
 	// Test object for AABB

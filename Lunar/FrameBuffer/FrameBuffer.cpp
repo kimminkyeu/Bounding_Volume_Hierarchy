@@ -10,7 +10,7 @@ namespace Lunar {
 		: m_RBO(0), m_Texture(0), m_FBO(0)
 	{}
 
-	FrameBuffer::FrameBuffer(float width, float height)
+	FrameBuffer::FrameBuffer(uint32_t width, uint32_t height)
 		: m_RBO(0), m_Texture(0), m_FBO(0)
 	{
 		this->Init(width, height);
@@ -28,8 +28,10 @@ namespace Lunar {
 		return m_Texture;
 	}
 
-	void FrameBuffer::RescaleFrameBuffer(float new_width, float new_height) const
+	void FrameBuffer::Resize(uint32_t new_width, uint32_t new_height)
 	{
+		m_Width = new_width;
+		m_Height = new_height;
 		glBindTexture(GL_TEXTURE_2D, m_Texture);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, new_width, new_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -50,9 +52,23 @@ namespace Lunar {
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
-	void FrameBuffer::Init(float width, float height)
+
+	void FrameBuffer::LoadPixelsToTexture(const void* pixel_array)
+	{
+		// Upload pixels into texture
+		this->Bind();
+		glBindTexture(GL_TEXTURE_2D, m_Texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_Width, m_Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel_array);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		this->Unbind();
+	}
+
+	void FrameBuffer::Init(uint32_t width, uint32_t height)
 	{
 		assert((m_FBO == 0 && m_RBO == 0 && m_Texture == 0) && "FrameBuffer::Init - buffer already created");
+
+		m_Width = width;
+		m_Height = height;
 
 		// Create frame buffer
 		glGenFramebuffers(1, &m_FBO);

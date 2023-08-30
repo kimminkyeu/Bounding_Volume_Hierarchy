@@ -3,6 +3,7 @@
 
 #include "Lunar/Camera/EditorCamera.h"
 #include "Lunar/Core/Application.h"
+#include "Lunar/Core/Timer.h"
 #include "Lunar/Core/EntryPoint.h"// main code here
 #include "Lunar/FrameBuffer/FrameBuffer.h"
 #include "Lunar/Light/Light.h"
@@ -27,20 +28,145 @@
 #include "Lunar/Input/KeyCodes.h" // including Mouse Code.
 #include "Lunar/Input/MouseCodes.h"
 
-// AABB 구현 방식
-// 1. AABB에 model matrix를 곱한다.
-// 2. RenderLoop에서 AABB를 그리는 쉐이더를 따로 생성한다. // AABB debug shader
-// 3. AABB는 Object의 VAO와 IBO 데이터를 가지고 형성해야 한다.
-// 4. 한 Mesh에 대해, VAO 데이터 배열을 돌면서 x y z축에 대한 최대/ 최소값를 찾아내야 한다.
+// https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+// https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h
+// Image 배열에 render --> 이후 framebuffer로 복사 --> framebuffer를 imGUI로 업데이트
 
-// assimp를 쓰면 VAO IBO 생성하고 데이터 넘기고 끝내기 때문에, 별도 배열을 가지고 있어야 한다.
+// https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h
+// https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.cpp
+#include <random>
+
+namespace Utils {
+	static uint32_t ConvertToRGBA(const glm::vec4& color)
+	{
+		uint8_t r = (uint8_t)(color.r * 255.0f);
+		uint8_t g = (uint8_t)(color.g * 255.0f);
+		uint8_t b = (uint8_t)(color.b * 255.0f);
+		uint8_t a = (uint8_t)(color.a * 255.0f);
+
+		uint32_t result = (a << 24) | (b << 16) | (g << 8) | r;
+		return result;
+	}
+}
+
+// https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.cpp
+class RayTracer
+{
+public:
+	float m_LastRenderTime = 0.0f;
+
+private:
+	uint32_t* m_ImageData = nullptr;                            // ray-tracing render buffer
+	std::shared_ptr<Lunar::FrameBuffer> m_FinalImageFrameBuffer;// framebuffer
+	std::shared_ptr<AABBTree> m_ActiveAABBScene;
+	const Lunar::EditorCamera* m_ActiveEditorCamera = nullptr;
+
+public:
+	RayTracer() = default;
+
+	RayTracer(const std::shared_ptr<AABBTree>& aabbScene, const Lunar::EditorCamera& camera)
+		: m_ActiveAABBScene(aabbScene), m_ActiveEditorCamera(&camera)
+	{}
+
+	void InitAABBScene(const std::shared_ptr<AABBTree>& aabbScene)
+	{
+		m_ActiveAABBScene = aabbScene;
+	}
+
+	RayTracer& operator=(const RayTracer& other) = delete;
+
+	void OnResize(uint32_t width, uint32_t height)
+	{
+		if (m_FinalImageFrameBuffer)
+		{
+			// No resize necessary
+			if (m_FinalImageFrameBuffer->GetWidth() == width && m_FinalImageFrameBuffer->GetHeight() == height)
+				return;
+			m_FinalImageFrameBuffer->Resize(width, height);
+		}
+		else
+		{
+			m_FinalImageFrameBuffer = std::make_shared<Lunar::FrameBuffer>(width, height);
+		}
+
+		delete[] m_ImageData;
+		m_ImageData = new uint32_t[width * height];
+	}
+
+	// TODO: use Multi-Threading later
+	void Render(const Lunar::EditorCamera& camera)
+	{
+		Lunar::Timer timer;
+//		m_ActiveAABBScene = aabbScene;
+		m_ActiveEditorCamera = &camera;
+
+		for (uint32_t y = 0; y < m_FinalImageFrameBuffer->GetHeight(); y++)
+		{
+			for (uint32_t x = 0; x < m_FinalImageFrameBuffer->GetWidth(); x++)
+			{
+				glm::vec4 color = CalculateColorPerPixel(x, y);
+				m_ImageData[x + y * m_FinalImageFrameBuffer->GetWidth()] = Utils::ConvertToRGBA(color);
+			}
+		}
+		m_FinalImageFrameBuffer->LoadPixelsToTexture(m_ImageData);
+		m_LastRenderTime = timer.ElapsedMillis();
+	}
+
+	std::shared_ptr<Lunar::FrameBuffer> GetFinalImageFrameBuffer() const
+	{ return m_FinalImageFrameBuffer; }
+
+
+private:
+	glm::vec4 CalculateColorPerPixel(uint32_t x, uint32_t y)
+	{
+//		auto r = ((double) rand() / (RAND_MAX));
+
+//		return glm::vec4{r, r, r, 1.0f};
+
+		Ray ray = ConvertPixelPositionToWorldSpaceRay(x, y);
+		Hit hit = TraceRay(ray);
+		if (hit.distance < 0.0f) {
+			return glm::vec4(0.0f);
+		}
+		return glm::vec4(1.0f);
+	}
+
+public:
+	Ray ConvertPixelPositionToWorldSpaceRay(uint32_t pixelX, uint32_t pixelY)
+	{
+		// NOTE: Converting screen coordinate to world space Ray
+		// -----------------------------------------------------------
+//		ray.Origin = m_ActiveCamera->GetPosition();
+//		 https://antongerdelan.net/opengl/raycasting.html
+//		 1. xy screen coord to NDC
+		float NDC_X = ((2.0f * pixelX) / m_FinalImageFrameBuffer->GetWidth()) - 1.0f;
+		float NDC_Y = 1.0f - (2.0f * pixelY) / m_FinalImageFrameBuffer->GetHeight();
+		glm::vec4 ray_NDC = glm::vec4(NDC_X, NDC_Y, -1.0f, 1.0f); // z(-1) = far
+
+		// 2. NDC ray * Projection inverse * View inverse = World coord ray
+		// +) homogeneous coordinate의 마지막 w 가 1.0이면 point이고, 0.0이면 벡터이다.
+		glm::vec4 ray_EYE = glm::inverse(m_ActiveEditorCamera->GetProjection()) * ray_NDC;
+		ray_EYE = glm::vec4(ray_EYE.xy(), -1.0f, 0.0f); // forward direction vector
+		glm::vec3 ray_WORLD_DIR = glm::inverse(m_ActiveEditorCamera->GetViewMatrix()) * ray_EYE;
+		ray_WORLD_DIR = glm::normalize(ray_WORLD_DIR);
+		return Ray {m_ActiveEditorCamera->GetPosition(), ray_WORLD_DIR };
+	}
+
+	Hit TraceRay(const Ray& ray)
+	{
+		Hit hitResult = m_ActiveAABBScene->IntersectBVH(ray);
+		return hitResult;
+	}
+};
+
 
 class ExampleLayer final : public Lunar::Layer
 {
 private:
-	ImVec2 m_Size; // NOTE: ImGUI Content Size, not screen size.
-    Lunar::FrameBuffer m_FrameBuffer; // NOTE: Viewport Buffer (Only Rendering)
+	ImVec2 m_ViewportSize; // NOTE: ImGUI Viewport Content Size, not screen size.
+    Lunar::FrameBuffer m_RasterizationFrameBuffer; // NOTE: Rasterization Viewport Buffer (Only Rendering)
 	DisplayMode m_DisplayMode; // main display mode
+	RayTracer m_RayTracer;
 
 	bool m_RayTracingMode = false;
 
@@ -56,7 +182,7 @@ private:
 	bool m_ShowMesh = true;
 	int m_BBoxDebugDrawLevel = 0;
 	TestObject m_TestObject; // NOTE: Temporary data For AABB Test
-	AABBTree* m_AABB = nullptr;
+	std::shared_ptr<AABBTree> m_AABB = nullptr;
 	// -----------------------------------------------------------
 
 public:
@@ -79,12 +205,12 @@ public:
 		auto width = app.GetWindowData().BufferWidth;
 		auto height = app.GetWindowData().BufferHeight;
 
-		m_FrameBuffer.Init((float)width, (float)height);
-
+		m_RayTracer.OnResize(width, height); // init RayTracer.
+		m_RasterizationFrameBuffer.Init(width, height); // Init Rasterization buffer
 
 	// 1. Create object
-//		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
@@ -112,10 +238,14 @@ public:
         m_DataVisualizer.Init(); // init wireframe, normal, vertex (Shader)
 
 		// ------ AABB TEST -------------------
-//		m_AABB = new AABBTree(m_TestObject.m_Vertices, m_TestObject.m_Indices);
-		m_AABB = new AABBTree(m_Model.vertices, m_Model.indices);
+//		m_AABB = std::make_shared<AABBTree>(m_TestObject.m_Vertices, m_TestObject.m_Indices);
+		m_AABB = std::make_shared<AABBTree>(m_Model.vertices, m_Model.indices);
+		m_RayTracer.InitAABBScene(m_AABB);
 		// ------------------------------------
 	}
+
+	// x, y 픽셀이 입력되면, 이 픽셀을 이용해 World Space에 대한 Ray를 계산하여 반환.
+
 
 	// called every render loop
 	void OnUpdate(float ts) override
@@ -127,123 +257,156 @@ public:
 		if (!Lunar::Input::IsKeyPressed(Lunar::Key::LeftAlt)
 			&& Lunar::Input::IsMouseButtonPressedOnce(Lunar::Mouse::ButtonLeft))
 		{
-			const glm::vec2& mouse { Lunar::Input::GetMousePosition() };
-			LOG_TRACE("----------------------------------");
-			LOG_TRACE("HIT CHECKING...");
-			LOG_TRACE("Camera distance {0}", m_EditorCamera.GetDistance());
-			LOG_TRACE("Screen X{0} Y{1}", mouse.x, mouse.y);
+			// NOTE: mouse pos 는 glfw 윈도우 전체 기준임. 따라서 이 부분 수정 필요함.
+			glm::vec2 mouse { Lunar::Input::GetMousePosition() };
+			const auto glfwScreenHeight = Lunar::Application::Get().GetWindowData().BufferHeight;
+			mouse.y -= ((float)glfwScreenHeight - m_ViewportSize.y); // 차이 보완.
+			const auto pos = m_EditorCamera.GetPosition();
 
-			// shoot ray, get object information.
-			// NOTE: 화면의 x y 위치 기준, 이를 WorldSpace로 변환해야 함.
-//				Ray ray { m_EditorCamera.GetPosition(), m_EditorCamera.GetForwardDirection() };
-//				auto hit = m_AABB->IntersectBVH(ray);
-//				if (hit.distance > 0.0f) {
-//					LOG_INFO("HIT SUCCESS!!");
-//				}
+			// calcalate ray intersection
+
+//			// NOTE: Converting screen coordinate to world space Ray
+//			// -----------------------------------------------------------
+//			// https://antongerdelan.net/opengl/raycasting.html
+			// 1. xy screen coord to NDC
+			float NDC_X = ((2.0f * mouse.x) / m_ViewportSize.x) - 1.0f;
+			float NDC_Y = 1.0f - (2.0f * mouse.y) / m_ViewportSize.y;
+			glm::vec4 ray_NDC = glm::vec4(NDC_X, NDC_Y, -1.0f, 0.0f); // z(-1) = far
+
+			// 2. NDC ray * Projection inverse * View inverse = World coord ray
+			// +) homogeneous coordinate의 마지막 w 가 1.0이면 point이고, 0.0이면 벡터이다.
+			glm::vec4 ray_EYE = glm::inverse(m_EditorCamera.GetProjection()) * ray_NDC;
+			ray_EYE = glm::vec4(ray_EYE.xy(), -1.0f, 0.0f); // forward direction vector
+			glm::vec3 ray_WORLD_DIR = glm::inverse(m_EditorCamera.GetViewMatrix()) * ray_EYE;
+			ray_WORLD_DIR = glm::normalize(ray_WORLD_DIR);
+			Ray ray {m_EditorCamera.GetPosition(), ray_WORLD_DIR };
+
+//			Ray ray = m_RayTracer.ConvertPixelPositionToWorldSpaceRay(mouse.x, mouse.y);
+			auto hit = m_RayTracer.TraceRay(ray);
+
+			if (hit.distance > 0.0f) {
+				LOG_INFO("HIT SUCCESS!!");
+				/*
+				LOG_INFO("*********************************************************");
+				LOG_INFO("Distance 		   {0}", hit.distance);
+				LOG_INFO("Point 		  X{0} Y{1} Z{2}", hit.point.x, hit.point.y, hit.point.z);
+				LOG_INFO("Surface normal  X{0} Y{1} Z{2}", hit.normal.x, hit.normal.y, hit.normal.z);
+				LOG_INFO("Triangle v0     X{0} Y{1} Z{2}", hit.triangleInfo.v0.x, hit.triangleInfo.v0.y, hit.triangleInfo.v0.z);
+				LOG_INFO("Triangle v1     X{0} Y{1} Z{2}", hit.triangleInfo.v1.x, hit.triangleInfo.v1.y, hit.triangleInfo.v1.z);
+				LOG_INFO("Triangle v2     X{0} Y{1} Z{2}\n", hit.triangleInfo.v2.x, hit.triangleInfo.v2.y, hit.triangleInfo.v2.z);
+				*/
+			}
 		}
 
-		// 0. bind frame buffer ( = render target image )
-		m_FrameBuffer.Bind();
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // 1. Unbind current frame buffer data.
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		if (m_RayTracingMode)
 		{
-			glm::mat4 model(1.0f); // init unit matrix
-			// ---------------- Main Object Render ------------------
-			if (m_ShowMesh)
-			{
-				m_DisplayMode.BindCurrentShader();
-				const auto shaderProcPtr = m_DisplayMode.GetCurrentShaderPtr();
-				shaderProcPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
-				shaderProcPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
-				shaderProcPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
-				shaderProcPtr->SetUniformModel(glm::value_ptr(model));
-				m_Material.UseMaterial(*shaderProcPtr);
-				//			m_BrickTexture.UseTexture();
-				m_MainLight.UseLight(*shaderProcPtr);
-				//			m_TestObject.Render(GL_TRIANGLES);
-				m_Model.RenderModel(GL_TRIANGLES);
-				m_DisplayMode.UnbindCurrentShader();
-			}
-			// ----------------  Normal Render ------------------
-			if (m_DataVisualizer.m_ShowNormal)
-			{
-				auto* normalShaderPtr = m_DataVisualizer.m_NormalShader;
-				if (normalShaderPtr)
-				{
-					normalShaderPtr->Bind();
-					normalShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
-					normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
-					normalShaderPtr->SetUniformModel(glm::value_ptr(model));
-//					m_TestObject.Render(GL_TRIANGLES);
-					m_Model.RenderModel(GL_TRIANGLES);
-					normalShaderPtr->Unbind();
-				}
-			}
-			// ---------------- Outline Render ------------------
-			if (m_DataVisualizer.m_ShowWireframe)
-			{
-				auto* wireframeShaderPtr = m_DataVisualizer.m_WireframeShader;
-				if (wireframeShaderPtr)
-				{
-					wireframeShaderPtr->Bind();
-					wireframeShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
-					wireframeShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
-					wireframeShaderPtr->SetUniformModel(glm::value_ptr(model));
-//					m_TestObject.Render(GL_TRIANGLES);
-					m_Model.RenderModel(GL_TRIANGLES);
-					wireframeShaderPtr->Unbind();
-				}
-			}
-			// ---------------- Point Render ------------------
-			if (m_DataVisualizer.m_ShowPoint)
-			{
-				auto* pointShaderPtr = m_DataVisualizer.m_PointShader;
-				if (pointShaderPtr)
-				{
-					pointShaderPtr->Bind();
-					pointShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
-					pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
-					pointShaderPtr->SetUniformModel(glm::value_ptr(model));
-//					m_TestObject.Render(GL_POINTS);
-					m_Model.RenderModel(GL_POINTS);
-					pointShaderPtr->Unbind();
-				}
-			}
-			if (m_DataVisualizer.m_ShowAABB)
-			{
-				auto* aabbShaderPtr = m_DataVisualizer.m_AABBShader;
-				if (aabbShaderPtr)
-				{
-					aabbShaderPtr->Bind();
-					aabbShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
-					aabbShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
-					aabbShaderPtr->SetUniformModel(glm::value_ptr(model));
-					if (m_AABB)
-						m_AABB->DebugRender(m_BBoxDebugDrawLevel);
-					aabbShaderPtr->Unbind();
-				}
-			}
-			if (m_DataVisualizer.m_ShowGrid) // Ground Grid
-			{
-				auto* gridShaderPtr = dynamic_cast<GridShader *>(m_DataVisualizer.m_GridShader);
-				if (gridShaderPtr)
-				{
-					// NOTE: Grid는 VAO/VBO가 필요 없다...
-					// NOTE: Draw a full screen covering triangle for bufferless rendering...
-					// https://trass3r.github.io/coding/2019/09/11/bufferless-rendering.html
-					// https://asliceofrendering.com/scene%20helper/2020/01/05/InfiniteGrid/
-					gridShaderPtr->Bind();
-					gridShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
-					gridShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
-					gridShaderPtr->DrawDummyVAO();
-					// When rendering without any buffers,
-					// the vertex shader will simply be invoked the number of specified times without input data
-					gridShaderPtr->Unbind();
-				}
-			}
-			// ---------------- Bounding Box Render for AABB Debug ------------------
+			m_RayTracer.Render(m_EditorCamera);
 		}
-		m_FrameBuffer.Unbind(); // unbind Frame Buffer (render target)
+		else // Rasterization mode (GPU)
+		{
+			// 0. bind frame buffer ( = render target image )
+			m_RasterizationFrameBuffer.Bind();
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // 1. Unbind current frame buffer data.
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			{
+				glm::mat4 model(1.0f); // init unit matrix
+				// ---------------- Main Object Render ------------------
+				if (m_ShowMesh)
+				{
+					m_DisplayMode.BindCurrentShader();
+					const auto shaderProcPtr = m_DisplayMode.GetCurrentShaderPtr();
+					shaderProcPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
+					shaderProcPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+					shaderProcPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+					shaderProcPtr->SetUniformModel(glm::value_ptr(model));
+					m_Material.UseMaterial(*shaderProcPtr);
+					//			m_BrickTexture.UseTexture();
+					m_MainLight.UseLight(*shaderProcPtr);
+//					m_TestObject.Render(GL_TRIANGLES);
+									m_Model.RenderModel(GL_TRIANGLES);
+					m_DisplayMode.UnbindCurrentShader();
+				}
+				// ----------------  Normal Render ------------------
+				if (m_DataVisualizer.m_ShowNormal)
+				{
+					auto* normalShaderPtr = m_DataVisualizer.m_NormalShader;
+					if (normalShaderPtr)
+					{
+						normalShaderPtr->Bind();
+						normalShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+						normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+						normalShaderPtr->SetUniformModel(glm::value_ptr(model));
+//						m_TestObject.Render(GL_TRIANGLES);
+											m_Model.RenderModel(GL_TRIANGLES);
+						normalShaderPtr->Unbind();
+					}
+				}
+				// ---------------- Outline Render ------------------
+				if (m_DataVisualizer.m_ShowWireframe)
+				{
+					auto* wireframeShaderPtr = m_DataVisualizer.m_WireframeShader;
+					if (wireframeShaderPtr)
+					{
+						wireframeShaderPtr->Bind();
+						wireframeShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+						wireframeShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+						wireframeShaderPtr->SetUniformModel(glm::value_ptr(model));
+//						m_TestObject.Render(GL_TRIANGLES);
+											m_Model.RenderModel(GL_TRIANGLES);
+						wireframeShaderPtr->Unbind();
+					}
+				}
+				// ---------------- Point Render ------------------
+				if (m_DataVisualizer.m_ShowPoint)
+				{
+					auto* pointShaderPtr = m_DataVisualizer.m_PointShader;
+					if (pointShaderPtr)
+					{
+						pointShaderPtr->Bind();
+						pointShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+						pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+						pointShaderPtr->SetUniformModel(glm::value_ptr(model));
+//						m_TestObject.Render(GL_POINTS);
+											m_Model.RenderModel(GL_POINTS);
+						pointShaderPtr->Unbind();
+					}
+				}
+				if (m_DataVisualizer.m_ShowAABB)
+				{
+					auto* aabbShaderPtr = m_DataVisualizer.m_AABBShader;
+					if (aabbShaderPtr)
+					{
+						aabbShaderPtr->Bind();
+						aabbShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+						aabbShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+						aabbShaderPtr->SetUniformModel(glm::value_ptr(model));
+						if (m_AABB)
+							m_AABB->DebugRender(m_BBoxDebugDrawLevel);
+						aabbShaderPtr->Unbind();
+					}
+				}
+				if (m_DataVisualizer.m_ShowGrid) // Ground Grid
+				{
+					auto* gridShaderPtr = dynamic_cast<GridShader *>(m_DataVisualizer.m_GridShader);
+					if (gridShaderPtr)
+					{
+						// NOTE: Grid는 VAO/VBO가 필요 없다...
+						// NOTE: Draw a full screen covering triangle for bufferless rendering...
+						// https://trass3r.github.io/coding/2019/09/11/bufferless-rendering.html
+						// https://asliceofrendering.com/scene%20helper/2020/01/05/InfiniteGrid/
+						gridShaderPtr->Bind();
+						gridShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
+						gridShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
+						gridShaderPtr->DrawDummyVAO();
+						// When rendering without any buffers,
+						// the vertex shader will simply be invoked the number of specified times without input data
+						gridShaderPtr->Unbind();
+					}
+				}
+				// ---------------- Bounding Box Render for AABB Debug ------------------
+			}
+			m_RasterizationFrameBuffer.Unbind(); // unbind Frame Buffer (render target)
+		}
 	}
 
 	// NOTE: this is ImGui Render function
@@ -252,14 +415,26 @@ public:
 		const auto currentShaderName = m_DisplayMode.GetCurrentShaderPtr()->GetName();
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::Begin("ViewPort");
-			ImGui::Checkbox("Ray-Tracing", &m_RayTracingMode);
+			ImGui::Begin("Display Mode");
 
-			if (m_RayTracingMode)
+			ImGui::Checkbox("Ray-Tracing", &m_RayTracingMode);
+			if (m_RayTracingMode) // **************************************************************************
 			{
-				// TODO: implement ray-tracing mode.
+				ImGui::Text("Last render: %.3fms", m_RayTracer.m_LastRenderTime);
+				ImGui::Begin("Viewport");
+				m_ViewportSize = ImGui::GetContentRegionAvail();
+				ImGui::Image(
+						reinterpret_cast<void *>(m_RayTracer.GetFinalImageFrameBuffer()->GetFrameTexture()),
+						m_ViewportSize,
+						ImVec2(0, 1),
+						ImVec2(1, 0)
+				);
+				// NOTE: 윈도우 사이즈는 동일하지만 ImGUI Viewport 사이즈가 바뀌었을 경우
+				m_EditorCamera.OnResize(m_ViewportSize.x, m_ViewportSize.y);
+//				m_RayTracer.OnResize(m_ViewportSize.x, m_ViewportSize.y);
+				ImGui::End();
 			}
-			else // shader, GPU mode.
+			else // shader, GPU mode. ***************************************************************************
 			{
 				// https://uysalaltas.github.io/2022/01/09/OpenGL_Imgui.html
 				if (ImGui::BeginMenu(currentShaderName.c_str()))
@@ -343,16 +518,20 @@ public:
 					ImGui::End();
 				}
 				{
-					m_Size = ImGui::GetContentRegionAvail();
+					ImGui::Begin("Viewport");
+					m_ViewportSize = ImGui::GetContentRegionAvail();
 					// NOTE: put m_FrameBuffer's image data to ImGui Image
+					// https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 					ImGui::Image(
-							reinterpret_cast<void *>(m_FrameBuffer.GetFrameTexture()),
-							m_Size,
-							ImVec2(0, 1), // NOTE: ??
-							ImVec2(1, 0) // NOTE: ??
+							reinterpret_cast<void *>(m_RasterizationFrameBuffer.GetFrameTexture()),
+							m_ViewportSize,
+							ImVec2(0, 1),
+							ImVec2(1, 0)
 					);
-					// NOTE: re-calculate camera for viewport height change...
-					m_EditorCamera.OnResize(m_Size.x, m_Size.y);
+					// NOTE: 윈도우 사이즈는 동일하지만 ImGUI Viewport 사이즈가 바뀌었을 경우
+					m_EditorCamera.OnResize(m_ViewportSize.x, m_ViewportSize.y);
+//					m_RasterizationFrameBuffer.Resize(m_ViewportSize.x, m_ViewportSize.y);
+					ImGui::End();
 				}
 			}
 			ImGui::End();
@@ -370,8 +549,9 @@ public:
 
 	void OnResize(float width, float height) override
 	{
-		m_FrameBuffer.RescaleFrameBuffer(width, height);
 		m_EditorCamera.OnResize(width, height); // re-calculate camera
+		m_RayTracer.OnResize(width, height);
+		m_RasterizationFrameBuffer.Resize(width, height);
 	}
 };
 

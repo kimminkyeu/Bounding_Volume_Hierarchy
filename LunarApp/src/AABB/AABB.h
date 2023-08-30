@@ -24,15 +24,12 @@
 // https://box2d.org/files/ErinCatto_DynamicBVH_Full.pdf --> 이건 참조용.
 // https://mshgrid.com/2021/01/17/aabb-tree/ --> 이것도 참조용.
 // ********************************************************************
+
+
 struct Ray
 {
 	glm::vec3 origin;
 	glm::vec3 direction;
-};
-
-struct Hit // hit point
-{
-	glm::vec3 postion;
 };
 
 // https://box2d.org/files/ErinCatto_DynamicBVH_Full.pdf
@@ -123,9 +120,9 @@ struct BoundingBox
 template <typename T>
 struct Triangle // Triangle[0] = Triangle.v0
 {
-	T v0;
-	T v1;
-	T v2;
+	T v0 = T();
+	T v1 = T();
+	T v2 = T();
 
 	Triangle() = default;
 	Triangle(T _v0, T _v1, T _v2) noexcept
@@ -149,6 +146,15 @@ struct Triangle // Triangle[0] = Triangle.v0
 	}
 };
 
+struct Hit
+{
+	using triangle_type = Triangle<glm::vec3>;
+
+	float distance = -1.0f; // hit distance
+	glm::vec3 normal = glm::vec3(0.0f); // hit point normal
+	glm::vec3 point = glm::vec3(0.0f); // hit point
+	triangle_type triangleInfo; // 충돌한 삼각형 3개의 각 vertex data.
+};
 
 // ------------------------------------------------
 // Implementation of Axis-aligned bounding box
@@ -398,7 +404,10 @@ public:
 	//		  추후에 이 부분 검토할 것.
 	AABBTree& operator= (const AABBTree& other) = delete;
 
-	~AABBTree();
+	~AABBTree()
+	{
+
+	}
 
 	// Returns whether the AABB contains another AABB completely.
 	// Because math is done to compute the minimum and maximum coordinates of the AABBs, overflow is possible for extreme values.
@@ -419,12 +428,7 @@ public:
 	AABBTree Transform(const glm::mat4x4 matrix);
 
 	// NOTE: if not hit, then distance is -1
-	struct Hit
-	{
-		float distance = -1.0f;
-		glm::vec3 normal = glm::vec3(0.0f);
-		glm::vec3 point = glm::vec3(0.0f);
-	};
+
 
 	Hit IntersectTriangle(const Ray& ray, const triangle_type& triangle)
 	{
@@ -448,12 +452,13 @@ public:
 		if (glm::dot(n1, triangleNormal) < 0.0f) return hit; // no hit
 		const glm::vec3 n2 = (glm::cross(triangle.v1 - triangle.v0, point - triangle.v0));
 		if (glm::dot(n2, triangleNormal) < 0.0f) return hit; // no hit
+
 		// (6) TODO: texture 정보에 따라 추가 구현.
 
 		// return valid hit result.
 		hit.distance = t;
 		hit.point = point;
-		hit.normal = triangleNormal;
+		hit.normal = glm::normalize(triangleNormal);
 		return hit;
 	}
 
@@ -467,15 +472,17 @@ public:
 		}
 		if (node.IsLeaf())
 		{
+			Hit hit;
 			for (size_t i=0; i<node.m_TriangeCount; ++i) {
 				const auto triangleIndex = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
 				// NOTE: Triangle 충돌 함수 검증 필요.
-				Hit hit = IntersectTriangle(ray, m_Triangles[triangleIndex]);
+				hit = IntersectTriangle(ray, m_Triangles[triangleIndex]);
 				if (hit.distance > 0.0f) { // if hit success
-					return hit;
+					hit.triangleInfo = m_Triangles[triangleIndex]; // 하나의 삼각형이라도 충돌을 감지했을 경우
+					break ;
 				}
 			}
-			assert(false && "[IntersectBVH] Bounding Box is wrong...");
+			return hit;
 		}
 		else // if intersected + not leaf
 		{
