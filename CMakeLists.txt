@@ -45,12 +45,12 @@ add_executable( ${NAME} ${SOURCE_FILES} )
 
 # run build_dependency.sh script before compilation (ex. GLEW, GLFW)
 # ----------------------------------------------------------------------------
-#ADD_CUSTOM_COMMAND(
-#        TARGET ${NAME}
-#        COMMAND ${CMAKE_SOURCE_DIR}/dependency/build_dependency.sh
-#        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} # where CMakeLists.txt is located
-#        COMMENT "${BoldGreen}Building project dependency binaries [GLEW, GLFW]...${ColourReset}"
-#)
+ADD_CUSTOM_COMMAND(
+        TARGET ${NAME}
+        COMMAND ${CMAKE_SOURCE_DIR}/dependency/build_dependency.sh
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} # where CMakeLists.txt is located
+        COMMENT "${BoldGreen}Building project dependency binaries [GLEW, GLFW]...${ColourReset}"
+)
 
 # Set cmake to add define variable to specific target.
 # ----------------------------------------------------------------------------

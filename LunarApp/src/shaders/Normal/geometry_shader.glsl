@@ -11,7 +11,7 @@ in VS_OUT {
 } gs_in[];
 
 out vec4 fragColor;
-const float MAGNITURE = 0.4f;
+const float MAGNITURE = 0.1f;
 
 void main()
 {
