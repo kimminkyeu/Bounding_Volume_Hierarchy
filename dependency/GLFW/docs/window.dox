@@ -342,7 +342,7 @@ APIs in a single process will cause the application to segfault.  Stick to one
 API or the other on Linux for now.
 
 @note __OSMesa:__ As its name implies, an OpenGL context created with OSMesa
-does not update the window contents when its buffers are swapped.  Use OpenGL
+does not update the window contents when its buffers are swapped.  Bind OpenGL
 functions or the OSMesa native access functions @ref glfwGetOSMesaColorBuffer
 and @ref glfwGetOSMesaDepthBuffer to retrieve the framebuffer contents.
 
@@ -621,7 +621,7 @@ glfwGetWindowSize(window, &width, &height);
 @endcode
 
 @note Do not pass the window size to `glViewport` or other pixel-based OpenGL
-calls.  The window size is in screen coordinates, not pixels.  Use the
+calls.  The window size is in screen coordinates, not pixels.  BindCurrentShader the
 [framebuffer size](@ref window_fbsize), which is in pixels, for pixel-based
 calls.
 

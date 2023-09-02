@@ -245,7 +245,7 @@ which monitor the window is currently considered to be on.
 @section guarantees_limitations Guarantees and limitations
 
 This section describes the conditions under which GLFW can be expected to
-function, barring bugs in the operating system or drivers.  Use of GLFW outside
+function, barring bugs in the operating system or drivers.  BindCurrentShader of GLFW outside
 of these limits may work on some platforms, or on some machines, or some of the
 time, or on some versions of GLFW, but it may break at any time and this will
 not be considered a bug.
