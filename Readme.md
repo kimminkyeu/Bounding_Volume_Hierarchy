@@ -1,4 +1,4 @@
-### obj file viewer 
+## Obj file viewer 
 ![image](https://github.com/kimminkyeu/MiniBlender/assets/60287070/eb0c17c9-8fd3-43de-923e-be2e1da90362)
 
 
