@@ -136,24 +136,24 @@ struct Triangle // Triangle[0] = Triangle.v0
 	T v2 = T();
 
 	Triangle() = default;
-	Triangle(T _v0, T _v1, T _v2) noexcept
+	Triangle(T _v0, T _v1, T _v2)
 		: v0(_v0), v1(_v1), v2(_v2)
 	{}
 
 	T& operator[] (int index)
 	{
-		if (index >= 3) throw std::out_of_range("index out of range");
 		if (index == 0) return v0;
 		if (index == 1) return v1;
 		if (index == 2) return v2;
+		else throw std::out_of_range("Triangle: index out of range");
 	}
 
 	const T& operator[] (int index) const
 	{
-		if (index >= 3) throw std::out_of_range("index out of range");
 		if (index == 0) return v0;
 		if (index == 1) return v1;
 		if (index == 2) return v2;
+		else throw std::out_of_range("Triangle: index out of range");
 	}
 };
 
