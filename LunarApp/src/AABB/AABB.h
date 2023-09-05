@@ -30,6 +30,17 @@ struct Ray
 {
 	glm::vec3 origin;
 	glm::vec3 direction;
+	glm::vec3 directionDivision; // = 1 / dir
+
+	Ray() = delete;
+	Ray(const glm::vec3& origin, const glm::vec3& direction)
+		: origin(origin), direction(direction)
+	{
+		// NOTE: pre-calculation for division speed at BBox intersection
+		directionDivision.x = 1 / direction.x;
+		directionDivision.y = 1 / direction.y;
+		directionDivision.z = 1 / direction.z;
+	}
 };
 
 // https://box2d.org/files/ErinCatto_DynamicBVH_Full.pdf
@@ -66,14 +77,14 @@ struct BoundingBox
 	bool Intersect(const Ray& ray) // hitPoint = rayOrigin + rayDirection * t;  --> for every x, y, z plain, t must be the same.
 	{
 		// get t for x axis
-		float tx1 = (m_LowerBound.x - ray.origin.x) / ray.direction.x;
-		float tx2 = (m_UpperBound.x - ray.origin.x) / ray.direction.x;
+		float tx1 = (m_LowerBound.x - ray.origin.x) * ray.directionDivision.x;
+		float tx2 = (m_UpperBound.x - ray.origin.x) * ray.directionDivision.x;
 		// get t for y axis
-		float ty1 = (m_LowerBound.y - ray.origin.y) / ray.direction.y;
-		float ty2 = (m_UpperBound.y - ray.origin.y) / ray.direction.y;
+		float ty1 = (m_LowerBound.y - ray.origin.y) * ray.directionDivision.y;
+		float ty2 = (m_UpperBound.y - ray.origin.y) * ray.directionDivision.y;
 		// get t for z axis
-		float tz1 = (m_LowerBound.z - ray.origin.z) / ray.direction.z;
-		float tz2 = (m_UpperBound.z - ray.origin.z) / ray.direction.z;
+		float tz1 = (m_LowerBound.z - ray.origin.z) * ray.directionDivision.z;
+		float tz2 = (m_UpperBound.z - ray.origin.z) * ray.directionDivision.z;
 		// get min, max for every t
 		float txmin = glm::min(tx1, tx2); float txmax = glm::max(tx1, tx2);
 		float tymin = glm::min(ty1, ty2); float tymax = glm::max(ty1, ty2);
