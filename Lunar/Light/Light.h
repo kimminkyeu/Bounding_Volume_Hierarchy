@@ -32,6 +32,7 @@ namespace Lunar {
 		inline float GetAmbientIntensity() const { return m_AmbientIntensity; }
 		inline float GetDiffuseIntensity() const { return m_DiffuseIntensity; }
 		inline float GetSpecularIntensity() const { return m_SpecularIntensity; }
+		inline glm::vec3 GetDirection() const { return m_Direction; }
 	};
 }
 
