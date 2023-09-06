@@ -108,9 +108,12 @@ public:
 			m_ImageColumnIterator[i] = i;
 	}
 
-	// TODO: use Multi-Threading later
 	void Render(const Lunar::EditorCamera& camera)
 	{
+		// TODO: 이 부분에서 main thread 하나가 계속 화면에 pixel를 덮어쓰는 역할을 하고
+		// 		  worker들이 계속 배열에다가 그림을 그리는데, 화면이 바뀌어야 할 때 마다
+		// 		  기존에 하던 일을 버리고 처음부터 일을 다시 배정받는 방식으로 설계 필요.
+
 		Lunar::Timer timer;
 		m_ActiveEditorCamera = &camera;
 
@@ -156,9 +159,7 @@ private:
 		glm::vec4 ambientColor = glm::vec4(m_Material.m_AmbientColor, 1.0f) * m_MainLight.GetAmbientIntensity();
 		glm::vec3 lightDir = glm::normalize(m_MainLight.GetDirection());
 		float diffuseFactor = glm::max(glm::dot(-hit.blendedPointNormal, lightDir), 0.0f);
-		//		float diffuseFactor = max(dot(-Normal, normalize(DirectionLight.Direction)), 0.0f);
 		glm::vec4 diffuseColor = glm::vec4(m_Material.m_DiffuseColor, 1.0f) * m_MainLight.GetDiffuseIntensity() * diffuseFactor;
-
 		glm::vec4 specularColor { 0.0f };
 		if (diffuseFactor > 0)
 		{
@@ -258,8 +259,8 @@ public:
 		m_RasterizationFrameBuffer.Init(width, height); // Init Rasterization buffer
 
 	// 1. Create object
-		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+//		m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture

@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <stack>
 
 #include "LunarApp/src/AABB/Mesh.h"
 
@@ -77,7 +78,8 @@ struct BoundingBox
 
 	// https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
 	// https://youtu.be/TrqK-atFfWY?t=1349
-	bool Intersect(const Ray& ray) // hitPoint = rayOrigin + rayDirection * t;  --> for every x, y, z plain, t must be the same.
+	// NOTE: return hit BBox distance
+	float Intersect(const Ray& ray) // hitPoint = rayOrigin + rayDirection * t;  --> for every x, y, z plain, t must be the same.
 	{
 		// get t for x axis
 		float tx1 = (m_LowerBound.x - ray.origin.x) * ray.directionDivision.x;
@@ -95,19 +97,15 @@ struct BoundingBox
 		// get tmin, tmax
 		float tmin = glm::max(txmin, tymin); tmin = glm::max(tmin, tzmin);
 		float tmax = glm::min(txmax, tymax); tmax = glm::min(tmax, tzmax);
-		/*
-		 * TODO: Implement intersection pass logic
-		 * https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
-		*/
+
+		/* TODO: Implement intersection pass logic
+		 * 		https://www.youtube.com/shorts/GqwUHXvQ7oA
+		 * 		https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html */
 		// if tmax < 0, ray (line) is intersecting AABB, but whole AABB is behing us
-		if (tmax < 0.0f) {
-			return false;
-		}
-		// if tmin > tmax, ray doesn't intersect AABB
-		if (tmin > tmax) {
-			return false;
-		}
-		return true;
+		if (tmax < 0.0f) return -1.0f;
+		if (tmin > tmax) return -1.0f;
+		if (tmin < 0.0f) return tmax;
+		else			 return tmin;
 	}
 };
 
@@ -168,11 +166,11 @@ struct Hit
 	using triangle_type = Triangle<TriangleDataFormat>;
 	float distance = -1.0f; // hit distance
 
-	glm::vec3 point = glm::vec3(0.0f); // hit point
-	glm::vec3 blendedPointNormal = glm::vec3(0.0f); // for ray-tracing. --> blend normal with Barycentric coord
+	glm::vec3 point; // hit point
+	glm::vec3 blendedPointNormal; // for ray-tracing. --> blend normal with Barycentric coord
 
 	triangle_type triangle; // 충돌한 삼각형 3개의 각 vertex data.
-	glm::vec3 faceNormal = glm::vec3(0.0f); // hit point normal
+	glm::vec3 faceNormal; // hit point normal
 };
 
 // ------------------------------------------------
@@ -489,45 +487,53 @@ public:
 		hit.distance = t;
 		hit.point = point;
 		hit.faceNormal = glm::normalize(faceNormal);
+		hit.triangle = triangle;
 		return hit;
 	}
 
 	// calculate ray-intersection.
+	// NOTE: 방문 순서를 고정된 순서가 아닌, 자식 2개중 가까운 bounding를 우선 방문하는 것으로 결정. (BFS)
 	Hit IntersectBVH(const Ray& ray, const uint nodeIdx = 0)
 	{
-		AABBNode& node = m_Nodes[nodeIdx]; // 시작 노드 (Root)에서 부터 접근.
-		if (!node.m_Bounds.Intersect(ray))
+		Hit hit;
+		if (m_Nodes[nodeIdx].m_Bounds.Intersect(ray) < 0.0f) return hit; // no hit, early return.
+
+		std::stack<uint> Stack;
+		Stack.push(nodeIdx);
+		while (!Stack.empty())
 		{
-			return Hit(); // no hit
-		}
-		if (node.IsLeaf())
-		{
-			Hit hit;
-			for (size_t i=0; i<node.m_TriangeCount; ++i) {
-				const auto triangleIndex = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
-				// NOTE: Triangle 충돌 함수 검증 필요.
-				hit = IntersectTriangle(ray, m_Triangles[triangleIndex]);
-				if (hit.distance > 0.0f) { // if hit success
-					hit.triangle = m_Triangles[triangleIndex]; // 하나의 삼각형이라도 충돌을 감지했을 경우
-					break ;
+			const uint currIdx = Stack.top(); Stack.pop();
+			AABBNode* node = &m_Nodes[currIdx]; // 시작 노드 (Root)에서 부터 접근.
+			// if visited node is leaf, them check triangle intersection
+			if (node->IsLeaf())
+			{
+				for (size_t i=0; i<node->m_TriangeCount; ++i)
+				{
+					// 여기서 삼각형 충돌을 감지했다 하더라도, 일단 모든 bvh를 돌아야 한다.
+					const size_t triangleIndex = m_TriangleIndexBuffer[node->m_TriangleStartIndex + i];
+					Hit new_hit = IntersectTriangle(ray, m_Triangles[triangleIndex]);
+					if (new_hit.distance >= 0.0f) {
+						hit = new_hit; // update hit
+						break;
+					}
 				}
 			}
-			return hit;
-		}
-		else // if intersected + not leaf
-		{
-			Hit h1 = IntersectBVH(ray, node.m_Left);
-			Hit h2 = IntersectBVH(ray, node.m_Right);
-
-			// NOTE: 이 부분 역시 검증 필요.
-			// 둘다 충돌일 경우, 두 Hit 중에서 양수이면서 가까운 값을 최종 반환. (2개 bounding box 모두 충돌 가능하기 때문)
-			if (h1.distance > 0.0f && h2.distance > 0.0f)
-				return (h1.distance < h2.distance ? h1 : h2);
-			else if (h1.distance > 0.0f)
-				return h1;
 			else
-				return h2;
+			{
+				float distLeft = m_Nodes[node->m_Left].m_Bounds.Intersect(ray); // distance to left bbox
+				float distRight = m_Nodes[node->m_Right].m_Bounds.Intersect(ray); // distance to right bbox
+				if (distLeft >= 0.0f && distRight >= 0.0f) // visit close BBox first
+				{
+					if (distLeft > distRight)	{ Stack.push(node->m_Right); Stack.push(node->m_Left); } // visit right first
+					else /* Left < Right */		{ Stack.push(node->m_Left); Stack.push(node->m_Right); } // visit left first
+				}
+				else if (distLeft >= 0.0f)
+					Stack.push(node->m_Left);
+				else if (distRight >= 0.0f)
+					Stack.push(node->m_Right);
+			}
 		}
+		return hit;
 	}
 
 	// HELPER FUNCTIONS
