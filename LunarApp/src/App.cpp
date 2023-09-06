@@ -34,14 +34,15 @@
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.cpp
 
+//#define TEST
 
 namespace Utils {
 	static uint32_t ConvertToRGBA(const glm::vec4& color)
 	{
-		uint8_t r = (uint8_t)(color.r * 255.0f);
-		uint8_t g = (uint8_t)(color.g * 255.0f);
-		uint8_t b = (uint8_t)(color.b * 255.0f);
-		uint8_t a = (uint8_t)(color.a * 255.0f);
+		uint8_t r = (uint8_t)(glm::clamp(color.r, 0.0f, 1.0f) * 255.0f);
+		uint8_t g = (uint8_t)(glm::clamp(color.g, 0.0f, 1.0f) * 255.0f);
+		uint8_t b = (uint8_t)(glm::clamp(color.b, 0.0f, 1.0f) * 255.0f);
+		uint8_t a = (uint8_t)(glm::clamp(color.a, 0.0f, 1.0f) * 255.0f);
 
 		uint32_t result = (a << 24) | (b << 16) | (g << 8) | r;
 		return result;
@@ -55,6 +56,11 @@ public:
 	float m_LastRenderTime = 0.0f;
 
 private:
+	// TODO: remove light and material later. this is just for phong test.
+	Lunar::Light m_MainLight = { glm::vec3(2.0f, -1.0f, -1.0f), 0.1f, 0.7f, 0.3f };
+	Lunar::Material m_Material;
+	// TODO ---------------------------------------------------------------
+
 	uint32_t* m_ImageData = nullptr;                            // ray-tracing render buffer
 	std::shared_ptr<Lunar::FrameBuffer> m_FinalImageFrameBuffer;// framebuffer
 	std::shared_ptr<AABBTree> m_ActiveAABBScene;
@@ -67,12 +73,12 @@ public:
 		: m_ActiveAABBScene(aabbScene), m_ActiveEditorCamera(&camera)
 	{}
 
+	RayTracer& operator=(const RayTracer& other) = delete;
+
 	void InitAABBScene(const std::shared_ptr<AABBTree>& aabbScene)
 	{
 		m_ActiveAABBScene = aabbScene;
 	}
-
-	RayTracer& operator=(const RayTracer& other) = delete;
 
 	void OnResize(uint32_t width, uint32_t height)
 	{
@@ -96,7 +102,6 @@ public:
 	void Render(const Lunar::EditorCamera& camera)
 	{
 		Lunar::Timer timer;
-//		m_ActiveAABBScene = aabbScene;
 		m_ActiveEditorCamera = &camera;
 
 		for (uint32_t y = 0; y < m_FinalImageFrameBuffer->GetHeight(); y++)
@@ -116,24 +121,43 @@ public:
 
 
 private:
+	glm::vec4 GetPhongShadedColor(Hit hit)
+	{
+		glm::vec4 ambientColor = glm::vec4(m_Material.m_AmbientColor, 1.0f) * m_MainLight.GetAmbientIntensity();
+		glm::vec3 lightDir = glm::normalize(m_MainLight.GetDirection());
+		float diffuseFactor = glm::max(glm::dot(-hit.blendedPointNormal, lightDir), 0.0f);
+		//		float diffuseFactor = max(dot(-Normal, normalize(DirectionLight.Direction)), 0.0f);
+		glm::vec4 diffuseColor = glm::vec4(m_Material.m_DiffuseColor, 1.0f) * m_MainLight.GetDiffuseIntensity() * diffuseFactor;
+
+		glm::vec4 specularColor { 0.0f };
+		if (diffuseFactor > 0)
+		{
+			glm::vec3 lightReflectionDir = glm::normalize(2 * dot(-hit.blendedPointNormal, lightDir) * hit.blendedPointNormal - lightDir);
+			glm::vec3 eyeToPointDir = glm::normalize(hit.point - m_ActiveEditorCamera->GetPosition());
+			float specularFactor = glm::max(glm::dot(lightReflectionDir, -eyeToPointDir), 0.0f);
+			float specularPowFactor = glm::pow(specularFactor, m_Material.m_SpecularExponent);
+			specularColor = glm::vec4(m_Material.m_SpecularColor, 1.0f) * m_MainLight.GetSpecularIntensity() * specularPowFactor;
+		}
+		return ambientColor + diffuseColor + specularColor;
+	}
+
 	glm::vec4 CalculateColorPerPixel(uint32_t x, uint32_t y)
 	{
+		glm::vec4 color { 0.0f };
 		Ray ray = ConvertPixelPositionToWorldSpaceRay(x, y);
 		Hit hit = TraceRay(ray);
-		if (hit.distance < 0.0f) {
-			return glm::vec4(0.0f);
-		}
-		return glm::vec4(1.0f);
+
+		if (hit.distance < 0.0f)
+			return glm::vec4(0.0f); // BLACK
+		else
+			return glm::max(GetPhongShadedColor(hit), color);
 	}
 
 public:
+	// NOTE: Converting screen coordinate to world space Ray
 	Ray ConvertPixelPositionToWorldSpaceRay(uint32_t pixelX, uint32_t pixelY)
 	{
-		// NOTE: Converting screen coordinate to world space Ray
-		// -----------------------------------------------------------
-//		ray.Origin = m_ActiveCamera->GetPosition();
-//		 https://antongerdelan.net/opengl/raycasting.html
-//		 1. xy screen coord to NDC
+		// https://antongerdelan.net/opengl/raycasting.html
 		float NDC_X = ((2.0f * pixelX) / m_FinalImageFrameBuffer->GetWidth()) - 1.0f;
 		float NDC_Y = 1.0f - (2.0f * pixelY) / m_FinalImageFrameBuffer->GetHeight();
 		// ---------------------------------------------------------
@@ -162,22 +186,22 @@ class ExampleLayer final : public Lunar::Layer
 private:
 	ImVec2 m_ViewportSize; // NOTE: ImGUI Viewport Content Size, not screen size.
     Lunar::FrameBuffer m_RasterizationFrameBuffer; // NOTE: Rasterization Viewport Buffer (Only Rendering)
-	DisplayMode m_DisplayMode; // main display mode
-	RayTracer m_RayTracer;
 
+	DisplayMode m_DisplayMode; // main display mode
+	DataVisualizer m_DataVisualizer; // vertex, polygon, normal visualizer
+
+	RayTracer m_RayTracer;
 	bool m_RayTracingMode = false;
 
-private:
-	DataVisualizer m_DataVisualizer; // vertex, polygon, normal visualizer
 	Lunar::EditorCamera m_EditorCamera;
-	Lunar::Model m_Model;
 	Lunar::Light m_MainLight;
 	Lunar::Material m_Material;
 	// Lunar::Texture m_BrickTexture;
 
-	// -----------------------------------------------------------
 	bool m_ShowMesh = true;
 	int m_BBoxDebugDrawLevel = 0;
+
+	Lunar::Model m_Model;
 	TestObject m_TestObject; // NOTE: Temporary data For AABB Test
 	std::shared_ptr<AABBTree> m_AABB = nullptr;
 	// -----------------------------------------------------------
@@ -194,7 +218,7 @@ public:
 		LOG_TRACE("Layer [{0}] destructor called", _m_Name);
 	}
 
-	// called once pushed to m_LayerStack
+	// called once pu/shed to m_LayerStack
 	void OnAttach() override
 	{
 		LOG_TRACE("Layer [{0}] has been attached", _m_Name);
@@ -235,8 +259,11 @@ public:
         m_DataVisualizer.Init(); // init wireframe, normal, vertex (Shader)
 
 		// ------ AABB TEST -------------------
-//		m_AABB = std::make_shared<AABBTree>(m_TestObject.m_Vertices, m_TestObject.m_Indices);
+#ifdef TEST
+		m_AABB = std::make_shared<AABBTree>(m_TestObject.m_Vertices, m_TestObject.m_Indices);
+#else
 		m_AABB = std::make_shared<AABBTree>(m_Model.vertices, m_Model.indices);
+#endif
 		m_RayTracer.InitAABBScene(m_AABB);
 		// ------------------------------------
 	}
@@ -282,13 +309,16 @@ public:
 
 			if (hit.distance > 0.0f) {
 				LOG_INFO("*********************************************************");
-				LOG_INFO("HIT SUCCESS!!");
+				LOG_INFO("*             HIT SUCCESS!!                             *");
+				LOG_INFO("*********************************************************");
 				LOG_INFO("Distance 		   {0}", hit.distance);
 				LOG_INFO("Point 		  X{0} Y{1} Z{2}", hit.point.x, hit.point.y, hit.point.z);
-				LOG_INFO("Surface normal  X{0} Y{1} Z{2}", hit.normal.x, hit.normal.y, hit.normal.z);
-				LOG_INFO("Triangle v0     X{0} Y{1} Z{2}", hit.triangleInfo.v0.x, hit.triangleInfo.v0.y, hit.triangleInfo.v0.z);
-				LOG_INFO("Triangle v1     X{0} Y{1} Z{2}", hit.triangleInfo.v1.x, hit.triangleInfo.v1.y, hit.triangleInfo.v1.z);
-				LOG_INFO("Triangle v2     X{0} Y{1} Z{2}\n", hit.triangleInfo.v2.x, hit.triangleInfo.v2.y, hit.triangleInfo.v2.z);
+				LOG_INFO("Surface normal  X{0} Y{1} Z{2}", hit.faceNormal.x, hit.faceNormal.y, hit.faceNormal.z);
+				LOG_INFO("Triangle v0     X{0} Y{1} Z{2}", hit.triangle.v0.x, hit.triangle.v0.y, hit.triangle.v0.z);
+				LOG_INFO("Triangle v1     X{0} Y{1} Z{2}", hit.triangle.v1.x, hit.triangle.v1.y, hit.triangle.v1.z);
+				LOG_INFO("Triangle v2     X{0} Y{1} Z{2}\n", hit.triangle.v2.x, hit.triangle.v2.y, hit.triangle.v2.z);
+				LOG_INFO("Surface normal  X{0} Y{1} Z{2}", hit.faceNormal.x, hit.faceNormal.y, hit.faceNormal.z);
+				LOG_INFO("Blended normal  X{0} Y{1} Z{2}", hit.blendedPointNormal.x, hit.blendedPointNormal.y, hit.blendedPointNormal.z);
 			}
 		}
 
@@ -316,9 +346,14 @@ public:
 					m_Material.UseMaterial(*shaderProcPtr);
 					//			m_BrickTexture.UseTexture();
 					m_MainLight.UseLight(*shaderProcPtr);
-//					m_TestObject.Render(GL_TRIANGLES);
-									m_Model.RenderModel(GL_TRIANGLES);
+
+#ifdef TEST
+					m_TestObject.Render(GL_TRIANGLES);
+#else
+					m_Model.RenderModel(GL_TRIANGLES);
+#endif
 					m_DisplayMode.UnbindCurrentShader();
+
 				}
 				// ----------------  Normal Render ------------------
 				if (m_DataVisualizer.m_ShowNormal)
@@ -330,8 +365,11 @@ public:
 						normalShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 						normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 						normalShaderPtr->SetUniformModel(glm::value_ptr(model));
-//						m_TestObject.Render(GL_TRIANGLES);
-											m_Model.RenderModel(GL_TRIANGLES);
+#ifdef TEST
+						m_TestObject.Render(GL_TRIANGLES);
+#else
+						m_Model.RenderModel(GL_TRIANGLES);
+#endif
 						normalShaderPtr->Unbind();
 					}
 				}
@@ -345,8 +383,11 @@ public:
 						wireframeShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 						wireframeShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 						wireframeShaderPtr->SetUniformModel(glm::value_ptr(model));
-//						m_TestObject.Render(GL_TRIANGLES);
-											m_Model.RenderModel(GL_TRIANGLES);
+#ifdef TEST
+						m_TestObject.Render(GL_TRIANGLES);
+#else
+						m_Model.RenderModel(GL_TRIANGLES);
+#endif
 						wireframeShaderPtr->Unbind();
 					}
 				}
@@ -360,8 +401,11 @@ public:
 						pointShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 						pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 						pointShaderPtr->SetUniformModel(glm::value_ptr(model));
-//						m_TestObject.Render(GL_POINTS);
-											m_Model.RenderModel(GL_POINTS);
+#ifdef TEST
+						m_TestObject.Render(GL_TRIANGLES);
+#else
+						m_Model.RenderModel(GL_TRIANGLES);
+#endif
 						pointShaderPtr->Unbind();
 					}
 				}
