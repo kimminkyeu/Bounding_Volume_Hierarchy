@@ -5,9 +5,9 @@
 #ifndef SCOOP_LIGHT_H
 #define SCOOP_LIGHT_H
 
+#include "Lunar/Shader/Shader.h"
 #include <GL/glew.h>
 #include <glm.hpp>
-#include "Lunar/Shader/ShaderProgram.h"
 
 namespace Lunar {
 	class Light
@@ -22,7 +22,7 @@ namespace Lunar {
 		Light() = default;
 		Light(const glm::vec3& direction, float ambientIntensity, float diffuseIntensity, float specularIntensity);
 		~Light();
-		void UseLight(const Lunar::ShaderProgram& shader);
+		void UseLight(const Lunar::Shader& shader);
 
 		inline void SetDirection(const glm::vec3& dir) { m_Direction = dir; }
 		inline void SetAmbientIntensity(float intensity) { m_AmbientIntensity = intensity; }
@@ -32,6 +32,7 @@ namespace Lunar {
 		inline float GetAmbientIntensity() const { return m_AmbientIntensity; }
 		inline float GetDiffuseIntensity() const { return m_DiffuseIntensity; }
 		inline float GetSpecularIntensity() const { return m_SpecularIntensity; }
+		inline glm::vec3 GetDirection() const { return m_Direction; }
 	};
 }
 

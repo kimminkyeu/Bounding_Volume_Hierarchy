@@ -11,7 +11,7 @@ namespace Lunar {
 
 	class Mesh
 	{
-	private:
+	protected:
 		GLuint 	m_VAO;
 		GLuint 	m_VBO;
 		GLuint 	m_IBO;
@@ -20,8 +20,8 @@ namespace Lunar {
 		Mesh();
 		Mesh(GLfloat* verticies, unsigned int *indicies, unsigned int numOfVertices, unsigned int numOfIndicies);
 		~Mesh();
-		void CreateMesh(GLfloat* verticies, unsigned int *indicies, unsigned int numOfVertices, unsigned int numOfIndicies);
-		void RenderMesh();
+		virtual void CreateMesh(GLfloat* verticies, unsigned int *indicies, unsigned int numOfVertices, unsigned int numOfIndicies);
+		void RenderMesh(GLenum mode = GL_TRIANGLES);
 		void ClearMesh(); // delete data from GPU
 	};
 }

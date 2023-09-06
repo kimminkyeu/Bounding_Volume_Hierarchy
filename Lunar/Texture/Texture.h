@@ -25,7 +25,7 @@ namespace Lunar {
 		Texture();
 		Texture(const std::string& fileLocation);
 		~Texture();
-		void LoadTexture();
+		bool LoadTexture();
 		void UseTexture();
 		void ClearTexture();
 

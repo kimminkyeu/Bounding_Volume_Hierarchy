@@ -29,14 +29,14 @@ namespace Lunar {
 		// 이렇게 하면, frag_shader의 texture unit 0 를 접근하면 위 texture가 불러와지는 거임.
 	}
 
-	void Texture::LoadTexture()
+	bool Texture::LoadTexture()
 	{
 		std::string fullTexturePath = std::string(PROJECT_ROOT_DIR) + "/" + std::string(m_FileLocation);
 		unsigned char* textureData = stbi_load(fullTexturePath.c_str(), &m_Width, &m_Height, &m_Channels, 0);
 		if (!textureData)
 		{
 			LOG_ERROR("Failed to find texture at {0}", fullTexturePath);
-			return;
+			return false;
 		}
 		else
 		{
@@ -58,6 +58,7 @@ namespace Lunar {
 		glBindTexture(GL_TEXTURE_2D, 0);
 
 		stbi_image_free(textureData);
+		return true;
 	}
 
 	void Texture::ClearTexture()

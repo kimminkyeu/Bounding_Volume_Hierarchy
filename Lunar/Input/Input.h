@@ -17,10 +17,12 @@ namespace Lunar {
     public:
         static bool IsKeyPressed(KeyCode keycode);
         static bool IsMouseButtonPressed(MouseCode button);
+		static bool IsMouseButtonReleased(MouseCode code);
+		static bool IsMouseButtonPressedOnce(MouseCode code);
         static glm::vec2 GetMousePosition();
 		static float GetMouseX();
 		static float GetMouseY();
-    };
+	};
 
 }
 

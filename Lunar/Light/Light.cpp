@@ -10,7 +10,7 @@ namespace Lunar {
 		: m_Direction(direction), m_AmbientIntensity(ambientIntensity), m_DiffuseIntensity(diffuseIntensity), m_SpecularIntensity(specularIntensity)
 	{}
 
-	void Light::UseLight(const Lunar::ShaderProgram& shader)
+	void Light::UseLight(const Lunar::Shader& shader)
 	{
 		// Set value of uniform variable inside GPU
 		auto locs = shader.GetUniformDirectionLight();

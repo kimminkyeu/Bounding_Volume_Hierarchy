@@ -14,16 +14,20 @@
 
 #include "Lunar/Mesh/Mesh.h"
 #include "Lunar/Texture/Texture.h"
+#include "LunarApp/src/AABB/AABB.h"
 
 namespace Lunar {
 
 	class Model
 	{
+	public: // NOTE: temporary data for AABB creation. delete later!
+		std::vector<float> vertices;
+		std::vector<unsigned int> indices;
 	public:
 		Model();
 		~Model();
 		void LoadModel(const std::string& filePath);
-		void RenderModel();
+		void RenderModel(GLenum mode);
 		void ClearModel();
 	private:
 		void LoadNode(aiNode* node, const aiScene* scene);

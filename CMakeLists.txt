@@ -1,4 +1,6 @@
 
+# TODO: QTGUI 브랜치의 cmake을 참고해서 내용 정리할 것.
+
 # CMAKE SETTING
 # -------------------------------------------------
 # https://cmake.org/cmake/help/latest/guide/tutorial/index.html
@@ -7,34 +9,6 @@ cmake_minimum_required(VERSION 3.24) # set cmake version
 set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE) # close DEPRECATION WARNING...
 # include cmake custom util functions (ex. color message)
 include( ${CMAKE_SOURCE_DIR}/utils.cmake ) # custom print_message() function.
-
-# set variable
-# ********************************************
-set( DEBUG_MODE 1 ) # DEBUG MODE --> use Log
-# *******************************************
-
-set( NAME scoop )
-set( CMAKE_CXX_STANDARD 20 ) # Cpp compiler version
-set( CMAKE_CXX_STANDARD_REQUIRED True )
-set( SOURCE_FILES
-    # Project
-        LunarApp/src/App.cpp
-    # Lunar Core
-        Lunar/Core/Application.cpp
-        Lunar/Input/Input.cpp
-        Lunar/Shader/ShaderProgram.cpp
-        Lunar/Mesh/Mesh.cpp
-#        Lunar/Camera/PlayerCamera.cpp # Player's view
-        Lunar/Camera/EditorCamera.cpp # Editor View
-        Lunar/Texture/Texture.cpp
-        Lunar/Model/Model.cpp
-        Lunar/Light/Light.cpp
-        Lunar/Material/Material.cpp
-        )
-# configure cmake project
-# ----------------------------------------------------------------------------
-project( ${NAME} ) # set project name
-add_executable( ${NAME} ${SOURCE_FILES} )
 
 # run build_dependency.sh script before compilation (ex. GLEW, GLFW)
 # ----------------------------------------------------------------------------
@@ -45,12 +19,51 @@ add_executable( ${NAME} ${SOURCE_FILES} )
 #        COMMENT "${BoldGreen}Building project dependency binaries [GLEW, GLFW]...${ColourReset}"
 #)
 
+# set variable
+# ********************************************
+set( DEBUG_MODE 1 ) # DEBUG MODE --> use Log
+if( DEFINED TBB) # if CPU in Intel, then build_dependency script will set TBB variable (true)
+    set ( MT 1 )
+    print_message( STATUS "Intel TBB Multi-threading is ON" ) # path set by "find_package"
+endif ()
+
+# *******************************************
+
+set( NAME scoop )
+set( CMAKE_CXX_STANDARD 20 ) # Cpp compiler version
+set( CMAKE_CXX_STANDARD_REQUIRED True )
+set( SOURCE_FILES
+    # ImGui
+        Lunar/ImGui/ImGuiBuild.cpp # ImGui Source
+    # Project
+        LunarApp/src/App.cpp
+        LunarApp/src/shaders/DisplayMode.cpp
+        LunarApp/src/shaders/DataVisualizer.cpp
+        # Lunar Core
+        Lunar/Core/Application.cpp
+        Lunar/Input/Input.cpp
+        Lunar/Shader/Shader.cpp
+        Lunar/Mesh/Mesh.cpp
+#        Lunar/Camera/PlayerCamera.cpp # Player's view
+        Lunar/Camera/EditorCamera.cpp # Editor View
+        Lunar/Texture/Texture.cpp
+        Lunar/Model/Model.cpp
+        Lunar/Light/Light.cpp
+        Lunar/Material/Material.cpp
+        Lunar/FrameBuffer/FrameBuffer.cpp
+        LunarApp/src/AABB/Mesh.cpp LunarApp/src/TestObject/TestObject.h)
+# configure cmake project
+# ----------------------------------------------------------------------------
+project( ${NAME} ) # set project name
+add_executable( ${NAME} ${SOURCE_FILES} )
+
 # Set cmake to add define variable to specific target.
 # ----------------------------------------------------------------------------
 # 이 행위를 통해, 실행 파일 내부 에서 fopen등 함수 사용시 CMakelist.txt 파일 기준 절대경로 설정하기 위함.
 target_compile_definitions( ${NAME}
         PRIVATE
-        DEBUG_MODE
+        DEBUG_MODE # SPDLOG activation
+        MT  # TBB multi-threading
         PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}"
         GLM_FORCE_SWIZZLE # force GLM to report the configuration as part of the build log
         )
@@ -70,6 +83,11 @@ find_package( glm CONFIG REQUIRED )
 target_link_libraries( ${NAME} PRIVATE glm::glm )
 print_message( STATUS "GLM included at ${GLM_INCLUDE_DIRS}" ) # path set by "find_package"
 
+# ImGui
+# ----------------------------------------------------------------------------
+
+
+
 # spdlog logging library
 # ----------------------------------------------------------------------------
 # https://github.com/gabime/spdlog/blob/v1.x/example/CMakeLists.txt
@@ -78,9 +96,14 @@ find_package( spdlog CONFIG REQUIRED )
 target_link_libraries( ${NAME} PRIVATE spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32> )
 print_message( STATUS "SpdLog included at ${CMAKE_SOURCE_DIR}/dependency/spdlog" ) # path set by "find_package"
 
+
+set (BREW_LIBRARY_INCLUDE_PATH "$(brew --prefix)/include")
+
 # set include path for GLEW, GLFW
 # ----------------------------------------------------------------------------
 include_directories( SYSTEM # to use '#include <...>'
+        ${BREW_LIBRARY_PATH}/include
+
         ${CMAKE_SOURCE_DIR}/dependency/GLEW/include
         ${CMAKE_SOURCE_DIR}/dependency/GLFW/include
         ${CMAKE_SOURCE_DIR}/dependency/glm/glm
@@ -91,7 +114,7 @@ include_directories( SYSTEM # to use '#include <...>'
         ${CMAKE_SOURCE_DIR}/dependency/assimp/include
         ${CMAKE_SOURCE_DIR}/dependency/assimp/build/include
     # TODO: *****************************************
-
+        ${CMAKE_SOURCE_DIR}/dependency/imgui
         )
 
 # TODO: Include Lunar
@@ -119,7 +142,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux") # Linux
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin") # MacOS
     target_link_libraries( ${NAME}
             PRIVATE
-            ${CMAKE_SOURCE_DIR}/dependency/assimp/build/bin/libassimp.5.2.5.dylib
+            ${CMAKE_SOURCE_DIR}/dependency/assimp/build/bin/libassimp.5.2.4.dylib
             )
     # ... ?
 endif ()
@@ -129,12 +152,11 @@ endif ()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux") # Linux
     target_link_libraries( ${NAME}
             PRIVATE
-            -lX11 )
+            -lX11 -ltbb )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin") # MacOS
     target_link_libraries( ${NAME}
             PRIVATE
-            "-framework Cocoa"
-            "-framework IOKit"
+            -framework Cocoa -framework IOKit -ltbb
             )
     # ... ?
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows") # Windows

@@ -231,7 +231,7 @@ booleans.
 @code
 if (GLAD_GL_ARB_gl_spirv)
 {
-    // Use GL_ARB_gl_spirv
+    // BindCurrentShader GL_ARB_gl_spirv
 }
 @endcode
 

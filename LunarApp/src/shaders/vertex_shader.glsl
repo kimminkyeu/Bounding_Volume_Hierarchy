@@ -20,8 +20,6 @@ void main(void)
     gl_Position = Projection * View * Model * vec4(in_position, 1.0f);
     TexCoord = in_texture;
 
-    // model matrix에 의한 normal 변화 반영.
-    // 이때, 모델에 대한 scale정보만 normal에 반영되기 때문에 (이동은 x), 굳이 4차원으로 가져갈 이유 없음.
     // *********************************************************
     // NOTE: WHat is Normal Transformation?
     // https://paroj.github.io/gltut/Illumination/Tut09%20Normal%20Transformation.html

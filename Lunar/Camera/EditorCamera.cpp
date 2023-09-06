@@ -67,7 +67,7 @@ namespace Lunar {
 	{
 		if (Input::IsKeyPressed(Key::LeftAlt))
 		{
-			const glm::vec2& mouse{Input::GetMousePosition()};
+			const glm::vec2& mouse { Input::GetMousePosition() };
 			glm::vec2 delta = (mouse - m_InitialMousePosition) * 0.003f;
 			m_InitialMousePosition = mouse;
 
@@ -77,8 +77,8 @@ namespace Lunar {
 				MouseRotate(delta);
 			else if (Input::IsMouseButtonPressed(Mouse::ButtonRight))
 				MouseZoom(delta.y);
+			UpdateView();
 		}
-		UpdateView();
 	}
 
 	void EditorCamera::OnResize(float width, float height)

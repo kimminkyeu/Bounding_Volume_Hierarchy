@@ -730,7 +730,7 @@ You can check whether a joystick is both present and has a gamepad mapping with
 @code
 if (glfwJoystickIsGamepad(GLFW_JOYSTICK_2))
 {
-    // Use as gamepad
+    // BindCurrentShader as gamepad
 }
 @endcode
 

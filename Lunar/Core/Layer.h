@@ -36,7 +36,7 @@ namespace Lunar {
 		virtual void OnUIRender()
 		{};
 
-		virtual void OnWindowResize(float width, float height)
+		virtual void OnResize(float width, float height)
 		{};
 
 		inline const std::string& GetName() const

@@ -25,7 +25,6 @@ namespace Lunar {
 	void Mesh::CreateMesh(GLfloat* verticies, unsigned int* indicies, unsigned int numOfVertices, unsigned int numOfIndicies)
 	{
 		m_indexCount = numOfIndicies;
-
 		// **************************************************
 		// | Q1. 왜 bind 한 뒤 다시 unbind 하는지 도저히 이해가 안함. |
 		// **************************************************
@@ -66,7 +65,6 @@ namespace Lunar {
 		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GL_FLOAT), (void *)(sizeof(GL_FLOAT) * 5));
 		glEnableVertexAttribArray(2);
 
-
 		// Unbind Buffer for later use
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -75,11 +73,11 @@ namespace Lunar {
 //		glBindVertexArray(0); // BUG: 이거 하면 안됨.... mac에서 오류 남...
 	}
 
-	void Mesh::RenderMesh()
+	void Mesh::RenderMesh(GLenum mode)
 	{
 		glBindVertexArray(m_VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_IBO);
-			glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, 0);
+			glDrawElements(mode, m_indexCount, GL_UNSIGNED_INT, 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 	}
