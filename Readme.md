@@ -1,8 +1,26 @@
+## Obj file viewer 
+![image](https://github.com/kimminkyeu/MiniBlender/assets/60287070/eb0c17c9-8fd3-43de-923e-be2e1da90362)
 
-![image](https://github.com/kimminkyeu/MiniBlender/assets/60287070/40884d75-d404-4642-a035-4c82396890f6)
+
+## Compile & Run
+this project is for Linux, MacOS. (Windows is currently not supported)
+```bash
+#1) compile with cmake
+ cmake -B build && make -C build
+#2) run program
+ ./build/scoop
+```
+
+
 
 ---
-## 1. 참고 설계
+## To do List
+1. faster BVH build (Threaded ?)
+2. implement Ray-tracing (
+3. store Mesh to Half-edge structure
+---
+
+### 1. 참고 설계
 0. SAH(surface area huristic) 을 이용한 Bounding Volume Hirachy 구현
 0. Entity Component System (ECS) 방식으로 구조 작성할 것.
     - https://github.com/skypjack/entt#introduction
@@ -15,7 +33,7 @@
 5. Walnut Framework ```Vulkan```
     - https://github.com/StudioCherno/Walnut/tree/20f940b9d23946d4836b8549ff3e2c0750c5d985/Walnut/src/Walnut
 ---
-## 2. 목표
+### 2. 목표
 0. 프로젝트마다 해당 구조를 재사용 할 수 있도록 Template화 할 것.
 1. ```OpenGL```로 먼저 구현 후, ```Vulkan```으로 이전.
 2. 구조는 Hazel Engine을  분석하여 반영할 것.
