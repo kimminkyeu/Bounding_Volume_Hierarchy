@@ -41,6 +41,9 @@ struct Ray
 		directionDivision.y = 1 / direction.y;
 		directionDivision.z = 1 / direction.z;
 	}
+	Ray(const Ray& other)
+		: origin(other.origin), direction(other.direction), directionDivision(other.directionDivision)
+	{}
 };
 
 // https://box2d.org/files/ErinCatto_DynamicBVH_Full.pdf
@@ -92,7 +95,6 @@ struct BoundingBox
 		// get tmin, tmax
 		float tmin = glm::max(txmin, tymin); tmin = glm::max(tmin, tzmin);
 		float tmax = glm::min(txmax, tymax); tmax = glm::min(tmax, tzmax);
-
 		/*
 		 * TODO: Implement intersection pass logic
 		 * https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
@@ -101,32 +103,36 @@ struct BoundingBox
 		if (tmax < 0.0f) {
 			return false;
 		}
-
 		// if tmin > tmax, ray doesn't intersect AABB
 		if (tmin > tmax) {
 			return false;
 		}
-
 		return true;
 	}
 };
 
-
-// NOTE: Input Data is an array of triangles.
-//union TriangleDataBaseFormat// VBO structure -> x, y, z, tx, ty, nx, ny, nz
-//{
-//	struct {
-//		float x;
-//		float y;
-//		float z;
-//		float tx;
-//		float ty;
-//		float nx;
-//		float ny;
-//		float nz;
-//	};
-//	float d[8];
-//};
+union TriangleDataFormat// VBO structure -> x, y, z, tx, ty, nx, ny, nz
+{
+	struct {
+		float x;
+		float y;
+		float z;
+		float tx; // uv
+		float ty; // uv
+		float nx; // normal x
+		float ny; // normal y
+		float nz; // normal z
+	};
+	float d[8];
+	float& operator[] (int index)
+	{
+		if (index >= 0 && index < 8) return d[index];
+		else throw std::out_of_range("TriangleDataFormat: index out of range");
+	}
+	inline glm::vec3 GetVertex() const { return { x, y, z }; }
+	inline glm::vec2 GetUV() const { return { tx, ty }; }
+	inline glm::vec3 GetNormal() const { return { nx, ny, nz }; }
+};
 
 template <typename T>
 struct Triangle // Triangle[0] = Triangle.v0
@@ -159,12 +165,14 @@ struct Triangle // Triangle[0] = Triangle.v0
 
 struct Hit
 {
-	using triangle_type = Triangle<glm::vec3>;
-
+	using triangle_type = Triangle<TriangleDataFormat>;
 	float distance = -1.0f; // hit distance
-	glm::vec3 normal = glm::vec3(0.0f); // hit point normal
+
 	glm::vec3 point = glm::vec3(0.0f); // hit point
-	triangle_type triangleInfo; // 충돌한 삼각형 3개의 각 vertex data.
+	glm::vec3 blendedPointNormal = glm::vec3(0.0f); // for ray-tracing. --> blend normal with Barycentric coord
+
+	triangle_type triangle; // 충돌한 삼각형 3개의 각 vertex data.
+	glm::vec3 faceNormal = glm::vec3(0.0f); // hit point normal
 };
 
 // ------------------------------------------------
@@ -192,7 +200,7 @@ class AABBTree
 public:
 	unsigned int m_MaxDepth = 0; // 0 = root
 private: // typedef and namespace scope
-	using triangle_type = Triangle<glm::vec3>;
+	using triangle_type = Triangle<TriangleDataFormat>;
 	// ...
 private: // member data
 	std::vector<AABBNode> m_Nodes; // Node Pool
@@ -214,7 +222,6 @@ private:
 		m_Nodes.emplace_back( 0, m_Triangles.size() ); // (0) insert node at root
 		__UpdateNodeBounds(m_RootIndex); // (1) Update Each Bode Bound
 		__Subdivide_recur(m_RootIndex); // (2) Subdivide space recursively
-//		__PrintTreeDebug();
 		__GenerateDebugMesh_recur(m_RootIndex, 0); // (3) for debug render, generate mesh(VAO, VBO.. etc) for each Bounding Box;
 	}
 
@@ -395,8 +402,8 @@ public:
 			{   // for each vertex
 				primitive[j] = { // Vertex Position     // Texture Coord // Normal Coord --> not used
 						vertices[indices[i * 3 + j] * STRIDE + 0], vertices[indices[i * 3 + j] * STRIDE + 1], vertices[indices[i * 3 + j] * STRIDE + 2],
-//						vertices[indices[i * 3 + j] * STRIDE + 3], vertices[indices[i * 3 + j] * STRIDE + 4],
-//						vertices[indices[i * 3 + j] * STRIDE + 5], vertices[indices[i * 3 + j] * STRIDE + 6], vertices[indices[i * 3 + j] * STRIDE + 7],
+						vertices[indices[i * 3 + j] * STRIDE + 3], vertices[indices[i * 3 + j] * STRIDE + 4],
+						vertices[indices[i * 3 + j] * STRIDE + 5], vertices[indices[i * 3 + j] * STRIDE + 6], vertices[indices[i * 3 + j] * STRIDE + 7],
 				};
 			}
 			m_Triangles.emplace_back(primitive);
@@ -443,33 +450,45 @@ public:
 
 	Hit IntersectTriangle(const Ray& ray, const triangle_type& triangle)
 	{
+		const glm::vec3 v0 = triangle.v0.GetVertex();
+		const glm::vec3 v1 = triangle.v1.GetVertex();
+		const glm::vec3 v2 = triangle.v2.GetVertex();
+
 		Hit hit; // default hit = no hit
-		const auto triangleNormal = glm::cross(triangle.v2 - triangle.v1, triangle.v0 - triangle.v1);
+		const auto faceNormal = glm::cross(v2 - v1, v0 - v1);
 		// (1) backface culling
-		if (glm::dot(-ray.direction, triangleNormal) < 0.0f)
+		if (glm::dot(-ray.direction, faceNormal) < 0.0f)
 			return hit;
 		// (2) if ray is parallel to triangle
-		if (glm::abs(glm::dot(ray.direction, triangleNormal)) < 0.00001f)
+		if (glm::abs(glm::dot(ray.direction, faceNormal)) < 0.00001f)
 			return hit;
 		// (3) calcaute t (무한 평면)
-		float t = (glm::dot(triangle.v1, triangleNormal) - glm::dot(ray.origin, triangleNormal)) / glm::dot(ray.direction, triangleNormal);
+		float t = (glm::dot(v1, faceNormal) - glm::dot(ray.origin, faceNormal)) / glm::dot(ray.direction, faceNormal);
 		// (4) t가 음수. 즉 뒷방향
 		if (t < 0.0f) return hit; // no hit
 		// (5) 작은 삼각형 normal 계산 // 츙돌 점 p가 삼각형 안에 있는가?
 		const glm::vec3 point = ray.origin + (t * ray.direction);
-		const glm::vec3 n0 = (glm::cross(point - triangle.v2, triangle.v1 - triangle.v2));
-		if (glm::dot(n0, triangleNormal) < 0.0f) return hit; // no hit
-		const glm::vec3 n1 = (glm::cross(point - triangle.v0, triangle.v2 - triangle.v0));
-		if (glm::dot(n1, triangleNormal) < 0.0f) return hit; // no hit
-		const glm::vec3 n2 = (glm::cross(triangle.v1 - triangle.v0, point - triangle.v0));
-		if (glm::dot(n2, triangleNormal) < 0.0f) return hit; // no hit
+		const glm::vec3 n0 = (glm::cross(point - v2, v1 - v2));
+		if (glm::dot(n0, faceNormal) < 0.0f) return hit; // no hit
+		const glm::vec3 n1 = (glm::cross(point - v0, v2 - v0));
+		if (glm::dot(n1, faceNormal) < 0.0f) return hit; // no hit
+		const glm::vec3 n2 = (glm::cross(v1 - v0, point - v0));
+		if (glm::dot(n2, faceNormal) < 0.0f) return hit; // no hit
 
-		// (6) TODO: texture 정보에 따라 추가 구현.
+		// (6) for Barycentric interpolation
+		float area0 = glm::length(n0) * 0.5f;
+		float area1 = glm::length(n1) * 0.5f;
+		float area2 = glm::length(n2) * 0.5f;
+		float areaSum = area0 + area1 + area2;
+		float w0 = area0 / areaSum;
+		float w1 = area1 / areaSum;
+		float w2 = 1 - w0 - w1;
 
-		// return valid hit result.
+		// (7) TODO: normal blending 정보도 필요함. hit에 barycentric coord를 담기보단, 직접 blending한 값을 넣는것도 좋을 듯.
+		hit.blendedPointNormal = triangle.v0.GetNormal() * w0 + triangle.v1.GetNormal() * w1 + triangle.v2.GetNormal() * w2;
 		hit.distance = t;
 		hit.point = point;
-		hit.normal = glm::normalize(triangleNormal);
+		hit.faceNormal = glm::normalize(faceNormal);
 		return hit;
 	}
 
@@ -489,7 +508,7 @@ public:
 				// NOTE: Triangle 충돌 함수 검증 필요.
 				hit = IntersectTriangle(ray, m_Triangles[triangleIndex]);
 				if (hit.distance > 0.0f) { // if hit success
-					hit.triangleInfo = m_Triangles[triangleIndex]; // 하나의 삼각형이라도 충돌을 감지했을 경우
+					hit.triangle = m_Triangles[triangleIndex]; // 하나의 삼각형이라도 충돌을 감지했을 경우
 					break ;
 				}
 			}
@@ -572,33 +591,6 @@ private:
 			__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Left, depth + 1);
 			__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Right, depth + 1);
 		}
-	}
-
-	void __PrintTreeDebug()
-	{
-		// traverse bfs. // store index of node.
-		using node_index = int;
-		using tree_level = int;
-		std::queue<std::pair<node_index, tree_level>> queue;
-		queue.push({m_RootIndex, 0});
-		int prev_level = -1;
-		while (!queue.empty())
-		{
-			auto top = queue.front(); queue.pop();
-			auto node = m_Nodes[top.first];
-			queue.push({node.m_Left, top.second + 1});
-			queue.push({node.m_Right, top.second + 1});
-
-			if (prev_level != top.second)
-				std::cout << "\n" << "L" << top.second << "      ";
-			if (node.IsLeaf()) {
-				std::cout << std::left << std::setw(5) << "#" << " ";
-			} else {
-				std::cout << std::left << std::setw(5) << top.first << " ";
-			}
-			prev_level = top.second;
-		}
-		std::cout << "\n";
 	}
 };
 
