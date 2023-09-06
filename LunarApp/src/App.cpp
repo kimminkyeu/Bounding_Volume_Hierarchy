@@ -402,9 +402,9 @@ public:
 						pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
 						pointShaderPtr->SetUniformModel(glm::value_ptr(model));
 #ifdef TEST
-						m_TestObject.Render(GL_TRIANGLES);
+						m_TestObject.Render(GL_POINTS);
 #else
-						m_Model.RenderModel(GL_TRIANGLES);
+						m_Model.RenderModel(GL_POINTS);
 #endif
 						pointShaderPtr->Unbind();
 					}
