@@ -1,6 +1,5 @@
 
-#include <glm/glm.hpp>
-
+#include "glm/glm.hpp"
 #include "Lunar/Camera/EditorCamera.h"
 #include "Lunar/Core/Application.h"
 #include "Lunar/Core/Timer.h"
@@ -34,7 +33,7 @@
 
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.cpp
-#include <random>
+
 
 namespace Utils {
 	static uint32_t ConvertToRGBA(const glm::vec4& color)
@@ -119,10 +118,6 @@ public:
 private:
 	glm::vec4 CalculateColorPerPixel(uint32_t x, uint32_t y)
 	{
-//		auto r = ((double) rand() / (RAND_MAX));
-
-//		return glm::vec4{r, r, r, 1.0f};
-
 		Ray ray = ConvertPixelPositionToWorldSpaceRay(x, y);
 		Hit hit = TraceRay(ray);
 		if (hit.distance < 0.0f) {
@@ -141,8 +136,10 @@ public:
 //		 1. xy screen coord to NDC
 		float NDC_X = ((2.0f * pixelX) / m_FinalImageFrameBuffer->GetWidth()) - 1.0f;
 		float NDC_Y = 1.0f - (2.0f * pixelY) / m_FinalImageFrameBuffer->GetHeight();
+		// ---------------------------------------------------------
+		NDC_Y = -NDC_Y; // NOTE: 이 부분 해결 필요. 왜 뒤집히는 건지?
+		// ---------------------------------------------------------
 		glm::vec4 ray_NDC = glm::vec4(NDC_X, NDC_Y, -1.0f, 1.0f); // z(-1) = far
-
 		// 2. NDC ray * Projection inverse * View inverse = World coord ray
 		// +) homogeneous coordinate의 마지막 w 가 1.0이면 point이고, 0.0이면 벡터이다.
 		glm::vec4 ray_EYE = glm::inverse(m_ActiveEditorCamera->GetProjection()) * ray_NDC;
@@ -281,20 +278,17 @@ public:
 			ray_WORLD_DIR = glm::normalize(ray_WORLD_DIR);
 			Ray ray {m_EditorCamera.GetPosition(), ray_WORLD_DIR };
 
-//			Ray ray = m_RayTracer.ConvertPixelPositionToWorldSpaceRay(mouse.x, mouse.y);
 			auto hit = m_RayTracer.TraceRay(ray);
 
 			if (hit.distance > 0.0f) {
-				LOG_INFO("HIT SUCCESS!!");
-				/*
 				LOG_INFO("*********************************************************");
+				LOG_INFO("HIT SUCCESS!!");
 				LOG_INFO("Distance 		   {0}", hit.distance);
 				LOG_INFO("Point 		  X{0} Y{1} Z{2}", hit.point.x, hit.point.y, hit.point.z);
 				LOG_INFO("Surface normal  X{0} Y{1} Z{2}", hit.normal.x, hit.normal.y, hit.normal.z);
 				LOG_INFO("Triangle v0     X{0} Y{1} Z{2}", hit.triangleInfo.v0.x, hit.triangleInfo.v0.y, hit.triangleInfo.v0.z);
 				LOG_INFO("Triangle v1     X{0} Y{1} Z{2}", hit.triangleInfo.v1.x, hit.triangleInfo.v1.y, hit.triangleInfo.v1.z);
 				LOG_INFO("Triangle v2     X{0} Y{1} Z{2}\n", hit.triangleInfo.v2.x, hit.triangleInfo.v2.y, hit.triangleInfo.v2.z);
-				*/
 			}
 		}
 
@@ -431,7 +425,7 @@ public:
 				);
 				// NOTE: 윈도우 사이즈는 동일하지만 ImGUI Viewport 사이즈가 바뀌었을 경우
 				m_EditorCamera.OnResize(m_ViewportSize.x, m_ViewportSize.y);
-//				m_RayTracer.OnResize(m_ViewportSize.x, m_ViewportSize.y);
+				m_RayTracer.OnResize(m_ViewportSize.x, m_ViewportSize.y);
 				ImGui::End();
 			}
 			else // shader, GPU mode. ***************************************************************************
