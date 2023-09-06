@@ -5,19 +5,21 @@
 ## Compile & Run
 this project is for Linux, MacOS. (Windows is currently not supported)
 ```bash
-#1) compile with cmake
- cmake -B build && make -C build
+#1) compile with cmake (Realease version)
+ cmake -DCMAKE_BUILD_TYPE=Release -B release && make -C release
 #2) run program
- ./build/scoop
+ ./release/scoop
 ```
 
 
 
 ---
 ## To do List
-1. faster BVH build (Threaded ?)
-2. implement Ray-tracing (
-3. store Mesh to Half-edge structure
+1. faster BVH build (!!!)
+2. Mesh picking (for texture coloring)
+3. implement Global-illumination (ray-tracing)
+4. store Mesh to Half-edge structure
+5. optimize ray-tracing structure (threading 구조 변경 필요)
 ---
 
 ### 1. 참고 설계
