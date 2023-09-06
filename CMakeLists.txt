@@ -10,9 +10,23 @@ set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE) # close DEPRECATION WARNING..
 # include cmake custom util functions (ex. color message)
 include( ${CMAKE_SOURCE_DIR}/utils.cmake ) # custom print_message() function.
 
+# run build_dependency.sh script before compilation (ex. GLEW, GLFW)
+# ----------------------------------------------------------------------------
+#ADD_CUSTOM_COMMAND(
+#        TARGET ${NAME}
+#        COMMAND ${CMAKE_SOURCE_DIR}/dependency/build_dependency.sh
+#        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} # where CMakeLists.txt is located
+#        COMMENT "${BoldGreen}Building project dependency binaries [GLEW, GLFW]...${ColourReset}"
+#)
+
 # set variable
 # ********************************************
 set( DEBUG_MODE 1 ) # DEBUG MODE --> use Log
+if( DEFINED TBB) # if CPU in Intel, then build_dependency script will set TBB variable (true)
+    set ( MT 1 )
+    print_message( STATUS "Intel TBB Multi-threading is ON" ) # path set by "find_package"
+endif ()
+
 # *******************************************
 
 set( NAME scoop )
@@ -43,21 +57,13 @@ set( SOURCE_FILES
 project( ${NAME} ) # set project name
 add_executable( ${NAME} ${SOURCE_FILES} )
 
-# run build_dependency.sh script before compilation (ex. GLEW, GLFW)
-# ----------------------------------------------------------------------------
-#ADD_CUSTOM_COMMAND(
-#        TARGET ${NAME}
-#        COMMAND ${CMAKE_SOURCE_DIR}/dependency/build_dependency.sh
-#        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} # where CMakeLists.txt is located
-#        COMMENT "${BoldGreen}Building project dependency binaries [GLEW, GLFW]...${ColourReset}"
-#)
-
 # Set cmake to add define variable to specific target.
 # ----------------------------------------------------------------------------
 # 이 행위를 통해, 실행 파일 내부 에서 fopen등 함수 사용시 CMakelist.txt 파일 기준 절대경로 설정하기 위함.
 target_compile_definitions( ${NAME}
         PRIVATE
-        DEBUG_MODE
+        DEBUG_MODE # SPDLOG activation
+        MT  # TBB multi-threading
         PROJECT_ROOT_DIR="${CMAKE_SOURCE_DIR}"
         GLM_FORCE_SWIZZLE # force GLM to report the configuration as part of the build log
         )
@@ -90,9 +96,14 @@ find_package( spdlog CONFIG REQUIRED )
 target_link_libraries( ${NAME} PRIVATE spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32> )
 print_message( STATUS "SpdLog included at ${CMAKE_SOURCE_DIR}/dependency/spdlog" ) # path set by "find_package"
 
+
+set (BREW_LIBRARY_INCLUDE_PATH "$(brew --prefix)/include")
+
 # set include path for GLEW, GLFW
 # ----------------------------------------------------------------------------
 include_directories( SYSTEM # to use '#include <...>'
+        ${BREW_LIBRARY_PATH}/include
+
         ${CMAKE_SOURCE_DIR}/dependency/GLEW/include
         ${CMAKE_SOURCE_DIR}/dependency/GLFW/include
         ${CMAKE_SOURCE_DIR}/dependency/glm/glm
@@ -141,12 +152,11 @@ endif ()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux") # Linux
     target_link_libraries( ${NAME}
             PRIVATE
-            -lX11 )
+            -lX11 -ltbb )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin") # MacOS
     target_link_libraries( ${NAME}
             PRIVATE
-            "-framework Cocoa"
-            "-framework IOKit"
+            -framework Cocoa -framework IOKit -ltbb
             )
     # ... ?
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows") # Windows

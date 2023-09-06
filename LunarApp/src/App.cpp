@@ -26,6 +26,7 @@
 #include "Lunar/Input/Input.h"
 #include "Lunar/Input/KeyCodes.h" // including Mouse Code.
 #include "Lunar/Input/MouseCodes.h"
+#include <execution>
 
 // https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h
@@ -57,7 +58,7 @@ public:
 
 private:
 	// TODO: remove light and material later. this is just for phong test.
-	Lunar::Light m_MainLight = { glm::vec3(2.0f, -1.0f, -1.0f), 0.1f, 0.7f, 0.3f };
+	Lunar::Light m_MainLight = { glm::vec3(2.0f, -1.0f, -1.0f), 0.1f, 0.7f, 0.5f };
 	Lunar::Material m_Material;
 	// TODO ---------------------------------------------------------------
 
@@ -65,6 +66,9 @@ private:
 	std::shared_ptr<Lunar::FrameBuffer> m_FinalImageFrameBuffer;// framebuffer
 	std::shared_ptr<AABBTree> m_ActiveAABBScene;
 	const Lunar::EditorCamera* m_ActiveEditorCamera = nullptr;
+
+	// for std::for_each
+	std::vector<uint32_t> m_ImageColumnIterator, m_ImageRowIterator;
 
 public:
 	RayTracer() = default;
@@ -75,7 +79,7 @@ public:
 
 	RayTracer& operator=(const RayTracer& other) = delete;
 
-	void InitAABBScene(const std::shared_ptr<AABBTree>& aabbScene)
+	void LoadAABBScene(const std::shared_ptr<AABBTree>& aabbScene)
 	{
 		m_ActiveAABBScene = aabbScene;
 	}
@@ -93,9 +97,15 @@ public:
 		{
 			m_FinalImageFrameBuffer = std::make_shared<Lunar::FrameBuffer>(width, height);
 		}
-
 		delete[] m_ImageData;
 		m_ImageData = new uint32_t[width * height];
+
+		m_ImageRowIterator.resize(width);
+		m_ImageColumnIterator.resize(height);
+		for (uint32_t i = 0; i < width; i++)
+			m_ImageRowIterator[i] = i;
+		for (uint32_t i = 0; i < height; i++)
+			m_ImageColumnIterator[i] = i;
 	}
 
 	// TODO: use Multi-Threading later
@@ -104,14 +114,34 @@ public:
 		Lunar::Timer timer;
 		m_ActiveEditorCamera = &camera;
 
-		for (uint32_t y = 0; y < m_FinalImageFrameBuffer->GetHeight(); y++)
+#if (MT == 1) // NOTE: this variable is set by CMakelist.txt
+		std::for_each(std::execution::par_unseq, m_ImageColumnIterator.begin(), m_ImageColumnIterator.end(),
+					  [this](uint32_t y)// capture reference of this
+					  {
+						std::for_each(std::execution::par_unseq, m_ImageRowIterator.begin(), m_ImageRowIterator.end(),
+									  [this, y](uint32_t x)
+									  {
+											glm::vec4 color = CalculateColorPerPixel(x, y);
+											m_ImageData[(x) + ((y) * m_FinalImageFrameBuffer->GetWidth())] = Utils::ConvertToRGBA(color);
+									  });
+					  });
+#else
+		for (uint32_t y = 0; y < m_FinalImageFrameBuffer->GetHeight(); y+=4)
 		{
-			for (uint32_t x = 0; x < m_FinalImageFrameBuffer->GetWidth(); x++)
+			for (uint32_t x = 0; x < m_FinalImageFrameBuffer->GetWidth(); x+=4)
 			{
-				glm::vec4 color = CalculateColorPerPixel(x, y);
-				m_ImageData[x + y * m_FinalImageFrameBuffer->GetWidth()] = Utils::ConvertToRGBA(color);
+				// For data locality, draw the pixels in a tile of e.g. 4×4 pixels often find the same triangles
+				for (uint32_t v = 0; v < 4; v++)
+				{
+					for (uint32_t u = 0; u < 4; u++)
+					{
+						glm::vec4 color = CalculateColorPerPixel(x + u, y + v);
+						m_ImageData[(x + u) + ((y + v) * m_FinalImageFrameBuffer->GetWidth())] = Utils::ConvertToRGBA(color);
+					}
+				}
 			}
 		}
+#endif
 		m_FinalImageFrameBuffer->LoadPixelsToTexture(m_ImageData);
 		m_LastRenderTime = timer.ElapsedMillis();
 	}
@@ -143,14 +173,12 @@ private:
 
 	glm::vec4 CalculateColorPerPixel(uint32_t x, uint32_t y)
 	{
-		glm::vec4 color { 0.0f };
 		Ray ray = ConvertPixelPositionToWorldSpaceRay(x, y);
 		Hit hit = TraceRay(ray);
-
 		if (hit.distance < 0.0f)
 			return glm::vec4(0.0f); // BLACK
 		else
-			return glm::max(GetPhongShadedColor(hit), color);
+			return GetPhongShadedColor(hit);
 	}
 
 public:
@@ -264,7 +292,7 @@ public:
 #else
 		m_AABB = std::make_shared<AABBTree>(m_Model.vertices, m_Model.indices);
 #endif
-		m_RayTracer.InitAABBScene(m_AABB);
+		m_RayTracer.LoadAABBScene(m_AABB);
 		// ------------------------------------
 	}
 

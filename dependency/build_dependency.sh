@@ -2,6 +2,13 @@
 
 # save absolute location of dependency directory
 DEPENDENCY_DIR=$(pwd)
+PLATFORM='unknown'
+unamestr=$(uname)
+if [[ "$unamestr" == 'Linux' ]]; then # Linux
+   PLATFORM='Linux'
+elif [[ "$unamestr" == 'Darwin' ]]; then # MacOS
+   PLATFORM='Darwin'
+fi
 
 # prints colored text
 print_style () {
@@ -49,6 +56,20 @@ dependencyNotInstalled () {
   fi
 }
 
+
+# if CPU manufacturer is Intel, install TBB C++ library
+if cat /proc/cpuinfo | grep 'model name' | grep 'Intel' | uniq ; then
+  TBB=1;
+  # install tbb (Intel Multi-threading)
+  # -----------------------------------------------------
+  TARGET="TBB: Intel Thread Building Blocks"
+  print_dependency_header $TARGET
+  if [ "${PLATFORM}" = "Linux" ] ; then
+    sudo apt install gcc libtbb-dev
+  elif [ "${PLATFORM}" = "Darwin" ]; then
+    brew install tbb
+  fi
+fi
 
 # get ImGui       # https://github.com/ocornut/imgui/tree/docking
 # -----------------------------------------------------
