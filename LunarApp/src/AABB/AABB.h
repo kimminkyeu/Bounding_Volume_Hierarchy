@@ -57,10 +57,17 @@ struct BoundingBox
 
 	// compute the surface area of bounding box (표면적)
 	// later used in Surface Area Huristic
-	float SurfaceArea()
+	float SurfaceArea() const
 	{
 		glm::vec3 d = m_UpperBound - m_LowerBound;
 		return 2.0f * (d.x * d.y + d.y * d.z + d.z * d.x);
+	}
+
+	// axis x=0 y=1 z=2
+	float GetAxisLength(int axis) const
+	{
+		glm::vec3 d = m_UpperBound - m_LowerBound;
+		return d[axis];
 	}
 
 	// box를 주어진 vertex를 포함하도록 키움.
@@ -79,7 +86,7 @@ struct BoundingBox
 	// https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
 	// https://youtu.be/TrqK-atFfWY?t=1349
 	// NOTE: return hit BBox distance
-	float Intersect(const Ray& ray) // hitPoint = rayOrigin + rayDirection * t;  --> for every x, y, z plain, t must be the same.
+	float Intersect(const Ray& ray) const // hitPoint = rayOrigin + rayDirection * t;  --> for every x, y, z plain, t must be the same.
 	{
 		// get t for x axis
 		float tx1 = (m_LowerBound.x - ray.origin.x) * ray.directionDivision.x;
@@ -282,20 +289,23 @@ private:
 		float cost; // split cost (SAH)
 	};
 
-	// calcalate best split plane via SAH
+	// calcalate best split plane via SAH.
 	SplitEvaluation __FindBestSplitPlane(const AABBNode& node)
 	{
+		const int SPLIT_DIVISION = 100; // number of split division plane.
+
 		int bestAxis = -1;
 		float bestPos = 0;
 		float bestCost = std::numeric_limits<float>::max();
-		for (int axis=0; axis < 3; ++axis)
+		for (int axis = 0; axis < 3; ++axis)
 		{
-			for (size_t i=0; i < node.m_TriangeCount; i++)
+			if (node.m_Bounds.m_LowerBound[axis] == node.m_Bounds.m_UpperBound[axis]) {
+				continue; // 해당 axis의 min max가 같다면, Cost를 체크하지 않기.
+			}
+			for (int i=0; i < SPLIT_DIVISION; i++)
 			{
-				auto triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
-				auto& triangle = m_Triangles[triIdx];
 				// 노드 안의 모든 삼각형들을 돌면서, 각 삼각형의 무게중심을 기준으로 SAH 계산.
-				const auto candidatePos = (triangle.v0[axis] + triangle.v1[axis] + triangle.v2[axis]) * 0.3333f;
+				const float candidatePos = node.m_Bounds.m_LowerBound[axis] + node.m_Bounds.GetAxisLength(axis) / SPLIT_DIVISION * i;
 				const float cost = __ComputeCostbySAH(node, axis, candidatePos);
 				if (cost < bestCost) { // find min cost
 					bestPos = candidatePos;
@@ -329,8 +339,8 @@ private:
 		{
 			// 해당 삼각형의 axis의 중심과 splitPos를 비교 // 삼각형 중심으로 분할하기 때문에, 겹치는 영역이 발생.
 			const auto triIdx = m_TriangleIndexBuffer[startIdx];
-			const auto centerOfTargetPrimitiveAxis = (m_Triangles[triIdx].v0[axis] + m_Triangles[triIdx].v1[axis] + m_Triangles[triIdx].v2[axis]) * 0.3333f;
-			if (centerOfTargetPrimitiveAxis < splitPos) {
+			const auto centerOfTargetAxisPrimitive = (m_Triangles[triIdx].v0[axis] + m_Triangles[triIdx].v1[axis] + m_Triangles[triIdx].v2[axis]) * 0.3333f;
+			if (centerOfTargetAxisPrimitive < splitPos) {
 				startIdx++;
 			} else {
 				// same as quick-sort pivot move
