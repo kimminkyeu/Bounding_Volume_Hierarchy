@@ -24,6 +24,7 @@
 
 // test for ray tracing + mouse click
 #include "Lunar/Input/Input.h"
+
 #include "Lunar/Input/KeyCodes.h" // including Mouse Code.
 #include "Lunar/Input/MouseCodes.h"
 #include <execution>
@@ -333,10 +334,13 @@ public:
 			glm::vec3 ray_WORLD_DIR = glm::inverse(m_EditorCamera.GetViewMatrix()) * ray_EYE;
 			ray_WORLD_DIR = glm::normalize(ray_WORLD_DIR);
 			Ray ray {m_EditorCamera.GetPosition(), ray_WORLD_DIR };
-
 			auto hit = m_RayTracer.TraceRay(ray);
-
+			const auto shaderProcPtr = dynamic_cast<PhongShader *>(m_DisplayMode.GetByName("Phong"));
 			if (hit.distance > 0.0f) {
+				shaderProcPtr->SetPickMode(1);
+				shaderProcPtr->SetPickedMeshData(hit.triangle.v0.GetVertex(), hit.triangle.v1.GetVertex(), hit.triangle.v2.GetVertex());
+				LOG_INFO("HIT SUCCESS");
+				/*
 				LOG_INFO("*********************************************************");
 				LOG_INFO("*             HIT SUCCESS!!                             *");
 				LOG_INFO("*********************************************************");
@@ -348,6 +352,11 @@ public:
 				LOG_INFO("Triangle v2     X{0} Y{1} Z{2}\n", hit.triangle.v2.x, hit.triangle.v2.y, hit.triangle.v2.z);
 				LOG_INFO("Surface normal  X{0} Y{1} Z{2}", hit.faceNormal.x, hit.faceNormal.y, hit.faceNormal.z);
 				LOG_INFO("Blended normal  X{0} Y{1} Z{2}", hit.blendedPointNormal.x, hit.blendedPointNormal.y, hit.blendedPointNormal.z);
+				*/
+			}
+			else // no hit.
+			{
+				shaderProcPtr->SetPickMode(0);
 			}
 		}
 
@@ -363,7 +372,12 @@ public:
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			{
 				glm::mat4 model(1.0f); // init unit matrix
+//				model = glm::scale(model, glm::vec3(3.0f));
+				// TODO: model이 변화했을때, mouse picking시 이 부분이 반영되어야 한다... 레이트레이싱도 마찬가지로 해야 되지 않나..?)
+
 				// ---------------- Main Object Render ------------------
+				// model이 변화했을때, 충돌 감지에 따라 이 부분이 반영되어야 한다.
+
 				if (m_ShowMesh)
 				{
 					m_DisplayMode.BindCurrentShader();

@@ -466,6 +466,7 @@ public:
 		if (t < 0.0f) return hit; // no hit
 		// (5) 작은 삼각형 normal 계산 // 츙돌 점 p가 삼각형 안에 있는가?
 		const glm::vec3 point = ray.origin + (t * ray.direction);
+
 		const glm::vec3 n0 = (glm::cross(point - v2, v1 - v2));
 		if (glm::dot(n0, faceNormal) < 0.0f) return hit; // no hit
 		const glm::vec3 n1 = (glm::cross(point - v0, v2 - v0));
