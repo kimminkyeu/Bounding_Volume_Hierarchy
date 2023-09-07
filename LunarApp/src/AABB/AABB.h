@@ -240,8 +240,8 @@ private:
 		}
 	}
 
-	// Surface Area Huristic
-	float ComputeCostbySAH(AABBNode& node, int axis, float splitPos)
+	// Surface Area Heuristic
+	float __ComputeCostbySAH(const AABBNode& node, int axis, float splitPos)
 	{
 		// determine triangle counts and bounds.
 		BoundingBox leftBox, rightBox;
@@ -275,20 +275,28 @@ private:
 		return cost > 0 ? cost : std::numeric_limits<float>::max();
 	}
 
-	void __Subdivide_recur(unsigned int parentNodeIdx)
+	struct SplitEvaluation
 	{
-		AABBNode& node = m_Nodes[parentNodeIdx];
+		int axis; // x=0 y=1 z=2
+		float position; // split pos
+		float cost; // split cost (SAH)
+	};
 
+	// calcalate best split plane via SAH
+	SplitEvaluation __FindBestSplitPlane(const AABBNode& node)
+	{
 		int bestAxis = -1;
 		float bestPos = 0;
 		float bestCost = std::numeric_limits<float>::max();
-		for (int axis=0; axis < 3; ++axis) {
-			for (size_t i=0; i < node.m_TriangeCount; i++) {
+		for (int axis=0; axis < 3; ++axis)
+		{
+			for (size_t i=0; i < node.m_TriangeCount; i++)
+			{
 				auto triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
 				auto& triangle = m_Triangles[triIdx];
 				// 노드 안의 모든 삼각형들을 돌면서, 각 삼각형의 무게중심을 기준으로 SAH 계산.
 				const auto candidatePos = (triangle.v0[axis] + triangle.v1[axis] + triangle.v2[axis]) * 0.3333f;
-				const float cost = ComputeCostbySAH(node, axis, candidatePos);
+				const float cost = __ComputeCostbySAH(node, axis, candidatePos);
 				if (cost < bestCost) { // find min cost
 					bestPos = candidatePos;
 					bestAxis = axis;
@@ -296,18 +304,25 @@ private:
 				}
 			}
 		}
-		int axis = bestAxis;
-		float splitPos = bestPos;
-
-		// NOTE: recursion stops here -----------------------
-		// Split은 자식 둘의 SAH합이 부모의 SAH보다 작을 경우에만 진행.
-		const float parentArea = node.m_Bounds.SurfaceArea();
-		const float parentCost = node.m_TriangeCount * parentArea;
-		if (bestCost >= parentCost) return ;
+		return { bestAxis, bestPos, bestCost };
+	}
 
 
-		// *********************************
-		// split via axis
+	void __Subdivide_recur(unsigned int parentNodeIdx)
+	{
+		// NOTE: find best split plane -----------------------
+		AABBNode& node = m_Nodes[parentNodeIdx];
+		SplitEvaluation evaluationResult = __FindBestSplitPlane(node);
+		const int axis = evaluationResult.axis;
+		const float splitPos = evaluationResult.position;
+
+		// checks if the best split cost is actually an improvement over not splitting.
+		const float parentCost = node.m_TriangeCount * node.m_Bounds.SurfaceArea();
+		if (evaluationResult.cost >= parentCost) {
+			return ;
+		}
+
+		// NOTE: split via best plane -----------------------
 		unsigned int startIdx = node.m_TriangleStartIndex;
 		unsigned int endIdx = startIdx + node.m_TriangeCount - 1;
 		while (startIdx <= endIdx)
