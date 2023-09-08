@@ -1,6 +1,7 @@
 ## Obj file viewer 
-![image](https://github.com/kimminkyeu/MiniBlender/assets/60287070/eb0c17c9-8fd3-43de-923e-be2e1da90362)
 
+![image](https://github.com/kimminkyeu/MiniBlender/assets/60287070/eb0c17c9-8fd3-43de-923e-be2e1da90362)
+[Youtube 시연 영상](https://youtu.be/IXdCqPJfspo?si=NZ0x4q1wBHoGwQnw)
 
 ## Compile & Run
 this project is for Linux, MacOS. (Windows is currently not supported)
