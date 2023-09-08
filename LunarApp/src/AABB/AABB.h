@@ -214,7 +214,11 @@ private: // member data
 	std::vector<size_t> m_TriangleIndexBuffer; // just like IBO, we change triangle sequence with this.
 
 private: // member data tmp
-	using bbox_level_type = unsigned int; // tree depth of bbox
+	struct bbox_level_type
+	{
+		int level = 0;
+		bool isLeaf = false;
+	};
 	using aabb_mesh_data_type = std::pair<std::shared_ptr<AABB::Mesh>, bbox_level_type>;
 	std::vector<aabb_mesh_data_type> m_AABBMeshList;
 
@@ -385,10 +389,14 @@ private:
 
 
 public:
-	void DebugRender(int bbox_level)
+	void DebugRender(int bbox_show_level)
 	{
+		// 3일 경우, 3인 데이터
 		for (auto &itr : m_AABBMeshList) {
-			if (itr.second == bbox_level) { // 특정 bbox level만 그리기 위함.
+			const auto bboxType = itr.second;
+			if (bboxType.isLeaf && bboxType.level < bbox_show_level) { // if leaf
+				itr.first->RenderMesh(GL_TRIANGLES);
+			} else if (bboxType.level == bbox_show_level) { // 특정 bbox level만 그리기 위함.
 				itr.first->RenderMesh(GL_TRIANGLES);
 			}
 		}
@@ -567,10 +575,8 @@ private:
 	// Tree를 순회하면서 각 box에 대한 mesh를 생성, m_meshList에 삽입.
 	// TODO: meshList가 배열이기에, 이걸 level에 따라 순회하려면 재귀를 BFS로 해줘야 한다.
 	// 	     일단은 DFS로 함. 나중에 수정할 예정.
-	void __GenerateDebugMesh_recur(unsigned int node_idx, bbox_level_type depth)
+	void __GenerateDebugMesh_recur(unsigned int node_idx, int depth)
 	{
-		auto i = m_Nodes[node_idx];
-
 		auto bbox = m_Nodes[node_idx].m_Bounds;
 		const auto ub = bbox.m_UpperBound;
 		const auto lb = bbox.m_LowerBound;
@@ -611,7 +617,11 @@ private:
 
 		auto mesh_ptr = std::make_shared<AABB::Mesh>();
 		mesh_ptr->CreateMesh(cube_vertices, cube_elements, 24, 36);
-		m_AABBMeshList.emplace_back(mesh_ptr, depth);
+		if (m_Nodes[node_idx].IsLeaf()) {
+			m_AABBMeshList.emplace_back(mesh_ptr, bbox_level_type{depth, true});
+		} else {
+			m_AABBMeshList.emplace_back(mesh_ptr, bbox_level_type{depth, false});
+		}
 
 		if (depth > m_MaxDepth) { // just for IMGUI debug draw.
 			m_MaxDepth = depth;
