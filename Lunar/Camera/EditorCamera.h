@@ -59,6 +59,8 @@ namespace Lunar {
 		glm::vec3 GetForwardDirection() const;
 		glm::quat GetOrientation() const;
 		inline glm::vec2 GetViewportSize() const { return glm::vec2(m_ViewportWidth, m_ViewportHeight); }
+		inline float GetFarClip() const  { return m_FarClip; }
+		inline float GetNearClip() const  { return m_NearClip; }
 
 
 	private:
@@ -78,16 +80,16 @@ namespace Lunar {
 		float ZoomSpeed() const;
 
 	private:
-		float m_FOV = 45.0f, m_AspectRatio = 1.778f, m_NearClip = 0.1f, m_FarClip = 1000.0f;
+		float m_FOV = 45.0f, m_AspectRatio = 1.778f, m_NearClip = 0.01f, m_FarClip = 100.0f;
 
 		glm::mat4 m_ViewMatrix;
-		glm::vec3 m_Position = { 0.0f, 0.0f, 0.0f };
+		glm::vec3 m_Position = { 4.0f, 4.0f, 8.0f };
 		glm::vec3 m_FocalPoint = { 0.0f, 0.0f, 0.0f };
 
 		glm::vec2 m_InitialMousePosition = { 0.0f, 0.0f };
 
 		float m_Distance = 10.0f;
-		float m_Pitch = 0.0f, m_Yaw = 0.0f;
+		float m_Pitch = 0.4f, m_Yaw = -0.4f;
 
 		float m_ViewportWidth = 1280, m_ViewportHeight = 720;
 	};
