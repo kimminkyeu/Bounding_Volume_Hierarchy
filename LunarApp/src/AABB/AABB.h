@@ -73,14 +73,19 @@ struct BoundingBox
 	// box를 주어진 vertex를 포함하도록 키움.
 	void Grow(const glm::vec3& v)
 	{
-		m_LowerBound = glm::vec3(std::min(m_LowerBound.x, v.x), std::min(m_LowerBound.y, v.y), std::min(m_LowerBound.z, v.z));
-		m_UpperBound = glm::vec3(std::max(m_UpperBound.x, v.x), std::max(m_UpperBound.y, v.y), std::max(m_UpperBound.z, v.z));
+		Grow(v.x, v.y, v.z);
 	}
 
 	void Grow(float x, float y, float z)
 	{
 		m_LowerBound = glm::vec3(std::min(m_LowerBound.x, x), std::min(m_LowerBound.y, y), std::min(m_LowerBound.z, z));
 		m_UpperBound = glm::vec3(std::max(m_UpperBound.x, x), std::max(m_UpperBound.y, y), std::max(m_UpperBound.z, z));
+	}
+
+	void Grow(const BoundingBox& box)
+	{
+		Grow(box.m_LowerBound);
+		Grow(box.m_UpperBound);
 	}
 
 	// https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
@@ -276,119 +281,121 @@ private:
 		}
 	}
 
-	// NOTE:	[ Fast, Binnded BVH building ]
+	// NOTE:	[ 참고자료. Fast, Binnded BVH building ]
 	//  		Reference : https://www.sci.utah.edu/~wald/Publications/2007/ParallelBVHBuild/fastbuild.pdf
-	// 		    --------------------------------------------------------------------
-	// 		 	Currently, we place bins only along axis in which
-	//		 	the centroids’ bounding box is widest. Though checking all three
-	//			axis in turn might yield even better results, binning only along the
-	//			dominant axis so far has produced quite reasonable results.
-	// 		    --------------------------------------------------------------------
+	// 		    --------------------------------------------------------------------------------
+	// 		 	( Option 1 : 위 논문에서는 bbox의 가장 긴 axis만 체크하였다)
+	// 		 	"...place bins only along axis in which the centroids’ bounding box is widest.
+	// 		 	Though checking all three axis in turn might yield even better results,
+	// 		 	binning only along the dominant axis so far has produced quite reasonable results."
+	// 		    --------------------------------------------------------------------------------
+	// 		 	( Option 2 : 이건 내가 선택한 방법으로, 시간은 더 걸릴 지 모르나 (1)보다 나은 품질 획득 )
+	// 		    --------------------------------------------------------------------------------
+	//          추후 thread build를 진행할 때를 고려해서 수정할 것.
+
 	struct Bin
 	{
 		BoundingBox bbox;
 		int triangleCount = 0;
 	};
 
-	// Surface Area Heuristic
-	float __ComputeCostbySAH(const AABBNode& node, int axis, float splitPos)
-	{
-		// determine triangle counts and bounds.
-		BoundingBox leftBox, rightBox;
-		int leftCount = 0, rightCount = 0;
-		// 모든 노드 내 삼각형에 대해 주어진 pos 기준 왼쪽, 오른쪽인지 구분.
-		for (size_t i=0; i < node.m_TriangeCount; ++i)
-		{
-			auto triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
-			auto &triangle = m_Triangles[triIdx];
-			const auto centroid = triangle.GetCentroid()[axis];
-			if (centroid < splitPos)
-			{
-				++leftCount;
-				leftBox.Grow(triangle.v0.x, triangle.v0.y, triangle.v0.z);
-				leftBox.Grow(triangle.v1.x, triangle.v1.y, triangle.v1.z);
-				leftBox.Grow(triangle.v2.x, triangle.v2.y, triangle.v2.z);
-			}
-			else
-			{
-				++rightCount;
-				rightBox.Grow(triangle.v0.x, triangle.v0.y, triangle.v0.z);
-				rightBox.Grow(triangle.v1.x, triangle.v1.y, triangle.v1.z);
-				rightBox.Grow(triangle.v2.x, triangle.v2.y, triangle.v2.z);
-			}
-			//   left AABB [num of triangle] * [surface area]
-			// + right AABB [num of triangle] * [surface area]
-			// -------------------------------------------------
-			// = SAH cost
-		}
-		float cost = leftCount * leftBox.SurfaceArea() + rightCount * rightBox.SurfaceArea();
-		return cost > 0 ? cost : std::numeric_limits<float>::max();
-	}
-
 	struct SplitEvaluationResult
 	{
-		int axis; // x=0 y=1 z=2
-		float position; // split pos
-		float cost; // split cost (SAH)
+		int axis = -1; // x=0 y=1 z=2
+		float position = 0; // split pos
+		float cost = std::numeric_limits<float>::max(); // split cost (SAH)
+	};
+
+	struct SAHData
+	{
+		float leftSurfaceArea;
+		float leftTriangleCount;
+		float rightSurfaceArea;
+		float rightTriangleCount;
 	};
 
 	// calcalate best split plane via SAH.
+	// TODO: NUM_OF_BINS 변수에 따라 Tree 깊이가 점점 짧아지는 이유는?
 	SplitEvaluationResult __FindBestSplitPlane(const AABBNode& node)
 	{
-		// 1. prepare bins
-		// 	  populate the bins by visiting the primitives once (per axis)
-		const int NUM_OF_BINS = 100;
-		Bin bins[NUM_OF_BINS];
+		SplitEvaluationResult bestResult;
+		const int NUM_OF_BINS = 8;
+		const float NUM_OF_BINS_INVERSE = 1.0f / (float)NUM_OF_BINS;
 
-		for (int axis = 0; axis < 3; ++axis)
+		for (int currAxis = 0; currAxis < 3; ++currAxis)
 		{
-			float scale = NUM_OF_BINS / node.m_Bounds.GetAxisLength(axis);
+			// NOTE: 0. re-calculate split plane range with centroids.
+			//          plain을 정할 때, 그 분할의 시작/끝을 AABB가 아닌 Centroid들 기준으로 잡는게 더 Compact하다.
+			//          왜냐면 비어있는 bin이 적을 수록 좋기 때문.
+			float boundsMin = std::numeric_limits<float>::max();
+			float boundsMax = std::numeric_limits<float>::min();
+			for (int i = 0; i < node.m_TriangeCount; ++i)
+			{
+				size_t triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
+				auto& triangle = m_Triangles[triIdx];
+				boundsMin = std::min( boundsMin, triangle.GetCentroid()[currAxis] );
+				boundsMax = std::max( boundsMax, triangle.GetCentroid()[currAxis] );
+			}
+
+
+			// NOTE: 1. prepare bins
+			// 	     populate the bins by visiting the primitives once (per axis)
+			Bin bins[NUM_OF_BINS];
+
+			float scale = NUM_OF_BINS / (boundsMax - boundsMin);
+			// 노드의 모든 삼각형에 대해, 하나씩 돌면서 bin의 크기를 설정.
 			for (uint i = 0; i < node.m_TriangeCount; ++i)
 			{
 				size_t triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
-				auto &triangle = m_Triangles[triIdx];
-				const float centroid = (m_Triangles[triIdx].v0[axis] + m_Triangles[triIdx].v1[axis] + m_Triangles[triIdx].v2[axis]) * 0.3333f;
-
+				auto& triangle = m_Triangles[triIdx];
 				// 삼각형 centroid를 가지고, bin의 index를 계산해야 함.
-				int binIdx = std::min(NUM_OF_BINS - 1, 1);
-
+				const float maxBinIdx = NUM_OF_BINS - 1;
+				// centroid를 이용한 binxIdx 계산.
+				const float calculateBinIdx = (triangle.GetCentroid()[currAxis] - boundsMin) * scale;
+				const int binIdx = std::min(maxBinIdx, calculateBinIdx);// just for safety.
+				bins[binIdx].triangleCount++;
+				bins[binIdx].bbox.Grow(triangle.v0.GetVertex());
+				bins[binIdx].bbox.Grow(triangle.v1.GetVertex());
+				bins[binIdx].bbox.Grow(triangle.v2.GetVertex());
 			}
-		}
 
-
-
-
-
-
-
-
-
-
-		const int SPLIT_DIVISION = 100; // number of split division plane.
-		const float SPLIT_DIVISION_INVERSE = 1.0f / (float)SPLIT_DIVISION;
-
-		int bestAxis = -1; float bestPos = 0; float bestCost = std::numeric_limits<float>::max();
-
-		for (int axis = 0; axis < 3; ++axis)
-		{
-			// UNIT * Step = LENGTH;
-			const float UNIT = node.m_Bounds.GetAxisLength(axis) * SPLIT_DIVISION_INVERSE;
-			if (node.m_Bounds.m_LowerBound[axis] == node.m_Bounds.m_UpperBound[axis]) {
-				continue; // 해당 axis의 bbox 차원이 1차원, 즉 납작한 bbox인 경우.
-			}
-			for (int i=0; i < SPLIT_DIVISION; i++)
+			// NOTE: 2. gather data for the 7 planes between the 8 bis.
+			// [ - - - - ]
+			// [ - ] p0 [ - - - ] : bins[i] (i=0) NOTE: Left  sweep starts from here ↓↓↓
+			// [ - - ] p1 [ - - ] : bins[i] (i=1)
+			// [ - - - ] p2 [ - ] : bins[i] (i=2) NOTE: Right sweep starts from here ↑↑↑
+			SAHData splitPlains[NUM_OF_BINS - 1];
+			BoundingBox leftBox, rightBox;// 누적용 변수
+			int leftSum = 0, rightSum = 0;// 누적용 변수
+			// 양 끝에서 함께 확장되면서 SAH를 위한 값 동시 계산
+			for (int i = 0; i < NUM_OF_BINS - 1; ++i)
 			{
-				// 노드 안의 모든 삼각형들을 돌면서, 각 삼각형의 무게중심을 기준으로 SAH 계산.
-				const float candidatePos = node.m_Bounds.m_LowerBound[axis] + (UNIT * i);
-				const float cost = __ComputeCostbySAH(node, axis, candidatePos);
-				if (cost < bestCost) { // find min cost
-					bestPos = candidatePos;
-					bestAxis = axis;
-					bestCost = cost;
+				leftSum += bins[i].triangleCount;
+				splitPlains[i].leftTriangleCount = leftSum;// bbox 화장되면서 점점 누적.
+				leftBox.Grow(bins[i].bbox);
+				splitPlains[i].leftSurfaceArea = leftBox.SurfaceArea();
+
+				rightSum += bins[NUM_OF_BINS - i - 1].triangleCount;
+				splitPlains[NUM_OF_BINS - i - 2].rightTriangleCount = rightSum;
+				rightBox.Grow(bins[NUM_OF_BINS - i - 1].bbox);
+				splitPlains[NUM_OF_BINS - i - 2].rightSurfaceArea = rightBox.SurfaceArea();
+			}
+
+			// NOTE: 3. calculate SAH cost for the 7 planes
+			const float UNIT_SCALE = (boundsMax - boundsMin) * NUM_OF_BINS_INVERSE;
+			for (int i = 0; i < NUM_OF_BINS - 1; ++i)
+			{
+				float planeCost = splitPlains[i].leftSurfaceArea * splitPlains[i].leftTriangleCount \
+								+ splitPlains[i].rightSurfaceArea * splitPlains[i].rightTriangleCount;
+				if (planeCost < bestResult.cost)
+				{
+					bestResult.axis = currAxis;
+					bestResult.position = node.m_Bounds.m_LowerBound[currAxis] + (UNIT_SCALE * float(i + 1));
+					bestResult.cost = planeCost;
 				}
 			}
 		}
-		return { bestAxis, bestPos, bestCost };
+		return bestResult;
 	}
 
 
@@ -397,18 +404,18 @@ private:
 		AABBNode& node = m_Nodes[parentNodeIdx];
 		LOG_INFO("Building BVH...    [{0}/{1}]", node.m_TriangeCount, m_TotalTriangleCount);
 
-		// NOTE: find best split plane -----------------------
+		// NOTE: find best split plane.
 		SplitEvaluationResult evaluationResult = __FindBestSplitPlane(node);
 		const int axis = evaluationResult.axis;
 		const float splitPos = evaluationResult.position;
 
-		// checks if the best split cost is actually an improvement over not splitting.
+		// NOTE: check if the best split cost is actually an improvement over not splitting.
 		const float parentCost = node.m_TriangeCount * node.m_Bounds.SurfaceArea();
 		if (evaluationResult.cost >= parentCost) {
 			return ;
 		}
 
-		// NOTE: split via best plane -----------------------
+		// NOTE: split via best plane.
 		unsigned int startIdx = node.m_TriangleStartIndex;
 		unsigned int endIdx = startIdx + node.m_TriangeCount - 1;
 		while (startIdx <= endIdx)
