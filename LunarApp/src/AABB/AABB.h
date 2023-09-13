@@ -212,6 +212,7 @@ private: // member data
 	unsigned int m_RootIndex = 0; // root index of node pool
 	std::vector<triangle_type> m_Triangles; // primitive pool
 	std::vector<size_t> m_TriangleIndexBuffer; // just like IBO, we change triangle sequence with this.
+	size_t m_TotalTriangleCount;
 
 private: // member data tmp
 	struct bbox_level_type
@@ -251,6 +252,20 @@ private:
 		}
 	}
 
+	// NOTE:	[ Fast, Binnded BVH building ]
+	//  		Reference : https://www.sci.utah.edu/~wald/Publications/2007/ParallelBVHBuild/fastbuild.pdf
+	// 		    --------------------------------------------------------------------
+	// 		 	Currently, we place bins only along axis in which
+	//		 	the centroids’ bounding box is widest. Though checking all three
+	//			axis in turn might yield even better results, binning only along the
+	//			dominant axis so far has produced quite reasonable results.
+	// 		    --------------------------------------------------------------------
+	struct Bin
+	{
+		BoundingBox bbox;
+		int triangleCount = 0;
+	};
+
 	// Surface Area Heuristic
 	float __ComputeCostbySAH(const AABBNode& node, int axis, float splitPos)
 	{
@@ -286,7 +301,7 @@ private:
 		return cost > 0 ? cost : std::numeric_limits<float>::max();
 	}
 
-	struct SplitEvaluation
+	struct SplitEvaluationResult
 	{
 		int axis; // x=0 y=1 z=2
 		float position; // split pos
@@ -294,22 +309,24 @@ private:
 	};
 
 	// calcalate best split plane via SAH.
-	SplitEvaluation __FindBestSplitPlane(const AABBNode& node)
+	SplitEvaluationResult __FindBestSplitPlane(const AABBNode& node)
 	{
 		const int SPLIT_DIVISION = 100; // number of split division plane.
+		const float SPLIT_DIVISION_INVERSE = 1.0f / (float)SPLIT_DIVISION;
 
-		int bestAxis = -1;
-		float bestPos = 0;
-		float bestCost = std::numeric_limits<float>::max();
+		int bestAxis = -1; float bestPos = 0; float bestCost = std::numeric_limits<float>::max();
+
 		for (int axis = 0; axis < 3; ++axis)
 		{
+			// UNIT * Step = LENGTH;
+			const float UNIT = node.m_Bounds.GetAxisLength(axis) * SPLIT_DIVISION_INVERSE;
 			if (node.m_Bounds.m_LowerBound[axis] == node.m_Bounds.m_UpperBound[axis]) {
-				continue; // 해당 axis의 min max가 같다면, Cost를 체크하지 않기.
+				continue; // 해당 axis의 bbox 차원이 1차원, 즉 납작한 bbox인 경우.
 			}
 			for (int i=0; i < SPLIT_DIVISION; i++)
 			{
 				// 노드 안의 모든 삼각형들을 돌면서, 각 삼각형의 무게중심을 기준으로 SAH 계산.
-				const float candidatePos = node.m_Bounds.m_LowerBound[axis] + node.m_Bounds.GetAxisLength(axis) / SPLIT_DIVISION * i;
+				const float candidatePos = node.m_Bounds.m_LowerBound[axis] + (UNIT * i);
 				const float cost = __ComputeCostbySAH(node, axis, candidatePos);
 				if (cost < bestCost) { // find min cost
 					bestPos = candidatePos;
@@ -324,9 +341,11 @@ private:
 
 	void __Subdivide_recur(unsigned int parentNodeIdx)
 	{
-		// NOTE: find best split plane -----------------------
 		AABBNode& node = m_Nodes[parentNodeIdx];
-		SplitEvaluation evaluationResult = __FindBestSplitPlane(node);
+		LOG_INFO("Building BVH...    [{0}/{1}]", node.m_TriangeCount, m_TotalTriangleCount);
+
+		// NOTE: find best split plane -----------------------
+		SplitEvaluationResult evaluationResult = __FindBestSplitPlane(node);
 		const int axis = evaluationResult.axis;
 		const float splitPos = evaluationResult.position;
 
@@ -346,8 +365,7 @@ private:
 			const auto centerOfTargetAxisPrimitive = (m_Triangles[triIdx].v0[axis] + m_Triangles[triIdx].v1[axis] + m_Triangles[triIdx].v2[axis]) * 0.3333f;
 			if (centerOfTargetAxisPrimitive < splitPos) {
 				startIdx++;
-			} else {
-				// same as quick-sort pivot move
+			} else { // same as quick-sort pivot move
 				std::swap(m_TriangleIndexBuffer[startIdx], m_TriangleIndexBuffer[endIdx--]);
 			}
 		}
@@ -411,9 +429,10 @@ public:
 		// Pool of Triangles
 		const size_t prevNumOfTriangles = m_Triangles.size();
 		const size_t newNumOfTriangles = indices.size() / 3; // testObj's numOfTriangles == 4
-		m_Triangles.reserve(prevNumOfTriangles + newNumOfTriangles); // 기존 크기 + 새로운 크기
+		m_TotalTriangleCount = prevNumOfTriangles + newNumOfTriangles;
+		m_Triangles.reserve(m_TotalTriangleCount); // 기존 크기 + 새로운 크기
 
-		// Triangles index buffer (for Pool)
+				// Triangles index buffer (for Pool)
 		m_TriangleIndexBuffer.reserve(prevNumOfTriangles + newNumOfTriangles);
 
 		for (int i = 0; i < newNumOfTriangles; i++) // 모든 triangle들이 정렬되어 있는 상태서 시작.
@@ -577,6 +596,7 @@ private:
 	// 	     일단은 DFS로 함. 나중에 수정할 예정.
 	void __GenerateDebugMesh_recur(unsigned int node_idx, int depth)
 	{
+		LOG_INFO("Generating BVH DebugMesh...    [node:{0}/{1}]", node_idx, m_Nodes.size());
 		auto bbox = m_Nodes[node_idx].m_Bounds;
 		const auto ub = bbox.m_UpperBound;
 		const auto lb = bbox.m_LowerBound;
