@@ -16,10 +16,10 @@ class DataVisualizer
 {
 public:
 	bool m_ShowNormal = false;
-	bool m_ShowWireframe = false;
-	bool m_ShowPoint = false;
+	bool m_ShowWireframe = true;
+	bool m_ShowPoint = true;
 	bool m_ShowAABB = false;
-	bool m_ShowGrid = false;
+	bool m_ShowGrid = true;
 
 	Lunar::Shader* m_NormalShader = nullptr;
 	Lunar::Shader* m_WireframeShader = nullptr;

@@ -57,17 +57,23 @@ struct BoundingBox
 
 	// compute the surface area of bounding box (표면적)
 	// later used in Surface Area Huristic
-	float SurfaceArea()
+	float SurfaceArea() const
 	{
 		glm::vec3 d = m_UpperBound - m_LowerBound;
 		return 2.0f * (d.x * d.y + d.y * d.z + d.z * d.x);
 	}
 
+	// axis x=0 y=1 z=2
+	float GetAxisLength(int axis) const
+	{
+		glm::vec3 d = m_UpperBound - m_LowerBound;
+		return d[axis];
+	}
+
 	// box를 주어진 vertex를 포함하도록 키움.
 	void Grow(const glm::vec3& v)
 	{
-		m_LowerBound = glm::vec3(std::min(m_LowerBound.x, v.x), std::min(m_LowerBound.y, v.y), std::min(m_LowerBound.z, v.z));
-		m_UpperBound = glm::vec3(std::max(m_UpperBound.x, v.x), std::max(m_UpperBound.y, v.y), std::max(m_UpperBound.z, v.z));
+		Grow(v.x, v.y, v.z);
 	}
 
 	void Grow(float x, float y, float z)
@@ -76,10 +82,16 @@ struct BoundingBox
 		m_UpperBound = glm::vec3(std::max(m_UpperBound.x, x), std::max(m_UpperBound.y, y), std::max(m_UpperBound.z, z));
 	}
 
+	void Grow(const BoundingBox& box)
+	{
+		Grow(box.m_LowerBound);
+		Grow(box.m_UpperBound);
+	}
+
 	// https://gdbooks.gitbooks.io/3dcollisions/content/Chapter3/raycast_aabb.html
 	// https://youtu.be/TrqK-atFfWY?t=1349
 	// NOTE: return hit BBox distance
-	float Intersect(const Ray& ray) // hitPoint = rayOrigin + rayDirection * t;  --> for every x, y, z plain, t must be the same.
+	float Intersect(const Ray& ray) const // hitPoint = rayOrigin + rayDirection * t;  --> for every x, y, z plain, t must be the same.
 	{
 		// get t for x axis
 		float tx1 = (m_LowerBound.x - ray.origin.x) * ray.directionDivision.x;
@@ -133,17 +145,41 @@ union TriangleDataFormat// VBO structure -> x, y, z, tx, ty, nx, ny, nz
 };
 
 template <typename T>
-struct Triangle // Triangle[0] = Triangle.v0
+class Triangle // Triangle[0] = Triangle.v0
 {
+public:
 	T v0 = T();
 	T v1 = T();
 	T v2 = T();
+private:
+	// if inf, then value is not set.
+	glm::vec3 m_Centroid = glm::vec3(std::numeric_limits<float>::infinity());
 
+public:
 	Triangle() = default;
-	Triangle(T _v0, T _v1, T _v2)
-		: v0(_v0), v1(_v1), v2(_v2)
-	{}
 
+	Triangle(T _v0, T _v1, T _v2)
+		: v0(_v0), v1(_v1), v2(_v2), m_Centroid()
+	{ __CalculateCentroid(); }
+
+	glm::vec3 GetCentroid()
+	{
+		if (m_Centroid == glm::vec3(std::numeric_limits<float>::infinity()))
+		{
+			__CalculateCentroid();
+		}
+		return m_Centroid;
+	}
+
+private:
+	void __CalculateCentroid()
+	{
+		this->m_Centroid.x = (v0[0] + v1[0] + v2[0]) * 0.3333f;
+		this->m_Centroid.y = (v0[1] + v1[1] + v2[1]) * 0.3333f;
+		this->m_Centroid.z = (v0[2] + v1[2] + v2[2]) * 0.3333f;
+	}
+
+public:
 	T& operator[] (int index)
 	{
 		if (index == 0) return v0;
@@ -205,9 +241,14 @@ private: // member data
 	unsigned int m_RootIndex = 0; // root index of node pool
 	std::vector<triangle_type> m_Triangles; // primitive pool
 	std::vector<size_t> m_TriangleIndexBuffer; // just like IBO, we change triangle sequence with this.
+	size_t m_TotalTriangleCount;
 
 private: // member data tmp
-	using bbox_level_type = unsigned int; // tree depth of bbox
+	struct bbox_level_type
+	{
+		int level = 0;
+		bool isLeaf = false;
+	};
 	using aabb_mesh_data_type = std::pair<std::shared_ptr<AABB::Mesh>, bbox_level_type>;
 	std::vector<aabb_mesh_data_type> m_AABBMeshList;
 
@@ -215,6 +256,7 @@ private:
 	// Subdivide space
 	void __BuildBVH_TopDown()
 	{
+//		LOG_INFO("Building BVH...    [total: {0}]", m_TotalTriangleCount);
 		m_Nodes.clear();
 		// to start, assign all triangles to root node.
 		m_Nodes.emplace_back( 0, m_Triangles.size() ); // (0) insert node at root
@@ -240,100 +282,150 @@ private:
 		}
 	}
 
-	// Surface Area Heuristic
-	float __ComputeCostbySAH(const AABBNode& node, int axis, float splitPos)
-	{
-		// determine triangle counts and bounds.
-		BoundingBox leftBox, rightBox;
-		int leftCount = 0, rightCount = 0;
-		// 모든 노드 내 삼각형에 대해 주어진 pos 기준 왼쪽, 오른쪽인지 구분.
-		for (size_t i=0; i < node.m_TriangeCount; ++i)
-		{
-			auto triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
-			auto &triangle = m_Triangles[triIdx];
-			const auto centroid = (triangle.v0[axis] + triangle.v1[axis] + triangle.v2[axis]) * 0.3333f;
-			if (centroid < splitPos)
-			{
-				++leftCount;
-				leftBox.Grow(triangle.v0.x, triangle.v0.y, triangle.v0.z);
-				leftBox.Grow(triangle.v1.x, triangle.v1.y, triangle.v1.z);
-				leftBox.Grow(triangle.v2.x, triangle.v2.y, triangle.v2.z);
-			}
-			else
-			{
-				++rightCount;
-				rightBox.Grow(triangle.v0.x, triangle.v0.y, triangle.v0.z);
-				rightBox.Grow(triangle.v1.x, triangle.v1.y, triangle.v1.z);
-				rightBox.Grow(triangle.v2.x, triangle.v2.y, triangle.v2.z);
-			}
-			//   left AABB [num of triangle] * [surface area]
-			// + right AABB [num of triangle] * [surface area]
-			// -------------------------------------------------
-			// = SAH cost
-		}
-		float cost = leftCount * leftBox.SurfaceArea() + rightCount * rightBox.SurfaceArea();
-		return cost > 0 ? cost : std::numeric_limits<float>::max();
-	}
+	// NOTE:	[ 참고자료. Fast, Binnded BVH building ]
+	//  		Reference : https://www.sci.utah.edu/~wald/Publications/2007/ParallelBVHBuild/fastbuild.pdf
+	// 		    --------------------------------------------------------------------------------
+	// 		 	( Option 1 : 위 논문에서는 bbox의 가장 긴 axis만 체크하였다)
+	// 		 	"...place bins only along axis in which the centroids’ bounding box is widest.
+	// 		 	Though checking all three axis in turn might yield even better results,
+	// 		 	binning only along the dominant axis so far has produced quite reasonable results."
+	// 		    --------------------------------------------------------------------------------
+	// 		 	( Option 2 : 이건 내가 선택한 방법으로, 시간은 더 걸릴 지 모르나 (1)보다 나은 품질 획득 )
+	// 		    --------------------------------------------------------------------------------
+	//          추후 thread build를 진행할 때를 고려해서 수정할 것.
 
-	struct SplitEvaluation
+	struct Bin
 	{
-		int axis; // x=0 y=1 z=2
-		float position; // split pos
-		float cost; // split cost (SAH)
+		BoundingBox bbox;
+		int triangleCount = 0;
 	};
 
-	// calcalate best split plane via SAH
-	SplitEvaluation __FindBestSplitPlane(const AABBNode& node)
+	struct SplitEvaluationResult
 	{
-		int bestAxis = -1;
-		float bestPos = 0;
-		float bestCost = std::numeric_limits<float>::max();
-		for (int axis=0; axis < 3; ++axis)
+		int axis = -1; // x=0 y=1 z=2
+		float position = 0; // split pos
+		float cost = std::numeric_limits<float>::max(); // split cost (SAH)
+	};
+
+	struct SAHData
+	{
+		float leftSurfaceArea;
+		float leftTriangleCount;
+		float rightSurfaceArea;
+		float rightTriangleCount;
+	};
+
+	// calcalate best split plane via SAH.
+	// TODO: NUM_OF_BINS 변수에 따라 Tree 깊이가 점점 짧아지는 이유는?
+	SplitEvaluationResult __FindBestSplitPlane(const AABBNode& node)
+	{
+		SplitEvaluationResult bestResult;
+		const int NUM_OF_BINS = 8;
+		const float NUM_OF_BINS_INVERSE = 1.0f / (float)NUM_OF_BINS;
+
+		for (int currAxis = 0; currAxis < 3; ++currAxis)
 		{
-			for (size_t i=0; i < node.m_TriangeCount; i++)
+			// NOTE: 0. re-calculate split plane range with centroids.
+			//          plain을 정할 때, 그 분할의 시작/끝을 AABB가 아닌 Centroid들 기준으로 잡는게 더 Compact하다.
+			//          왜냐면 비어있는 bin이 적을 수록 좋기 때문.
+			float boundsMin = std::numeric_limits<float>::max();
+			float boundsMax = std::numeric_limits<float>::min();
+			for (int i = 0; i < node.m_TriangeCount; ++i)
 			{
-				auto triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
+				size_t triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
 				auto& triangle = m_Triangles[triIdx];
-				// 노드 안의 모든 삼각형들을 돌면서, 각 삼각형의 무게중심을 기준으로 SAH 계산.
-				const auto candidatePos = (triangle.v0[axis] + triangle.v1[axis] + triangle.v2[axis]) * 0.3333f;
-				const float cost = __ComputeCostbySAH(node, axis, candidatePos);
-				if (cost < bestCost) { // find min cost
-					bestPos = candidatePos;
-					bestAxis = axis;
-					bestCost = cost;
+				boundsMin = std::min( boundsMin, triangle.GetCentroid()[currAxis] );
+				boundsMax = std::max( boundsMax, triangle.GetCentroid()[currAxis] );
+			}
+
+
+			// NOTE: 1. prepare bins
+			// 	     populate the bins by visiting the primitives once (per axis)
+			Bin bins[NUM_OF_BINS];
+
+			float scale = NUM_OF_BINS / (boundsMax - boundsMin);
+			// 노드의 모든 삼각형에 대해, 하나씩 돌면서 bin의 크기를 설정.
+			for (uint i = 0; i < node.m_TriangeCount; ++i)
+			{
+				size_t triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
+				auto& triangle = m_Triangles[triIdx];
+				// 삼각형 centroid를 가지고, bin의 index를 계산해야 함.
+				const float maxBinIdx = NUM_OF_BINS - 1;
+				// centroid를 이용한 binxIdx 계산.
+				const float calculateBinIdx = (triangle.GetCentroid()[currAxis] - boundsMin) * scale;
+				const int binIdx = std::min(maxBinIdx, calculateBinIdx);// just for safety.
+				bins[binIdx].triangleCount++;
+				bins[binIdx].bbox.Grow(triangle.v0.GetVertex());
+				bins[binIdx].bbox.Grow(triangle.v1.GetVertex());
+				bins[binIdx].bbox.Grow(triangle.v2.GetVertex());
+			}
+
+			// NOTE: 2. gather data for the 7 planes between the 8 bis.
+			// [ - - - - ]
+			// [ - ] p0 [ - - - ] : bins[i] (i=0) NOTE: Left  sweep starts from here ↓↓↓
+			// [ - - ] p1 [ - - ] : bins[i] (i=1)
+			// [ - - - ] p2 [ - ] : bins[i] (i=2) NOTE: Right sweep starts from here ↑↑↑
+			SAHData splitPlains[NUM_OF_BINS - 1];
+			BoundingBox leftBox, rightBox;// 누적용 변수
+			int leftSum = 0, rightSum = 0;// 누적용 변수
+			// 양 끝에서 함께 확장되면서 SAH를 위한 값 동시 계산
+			for (int i = 0; i < NUM_OF_BINS - 1; ++i)
+			{
+				leftSum += bins[i].triangleCount;
+				splitPlains[i].leftTriangleCount = leftSum;// bbox 화장되면서 점점 누적.
+				leftBox.Grow(bins[i].bbox);
+				splitPlains[i].leftSurfaceArea = leftBox.SurfaceArea();
+
+				rightSum += bins[NUM_OF_BINS - i - 1].triangleCount;
+				splitPlains[NUM_OF_BINS - i - 2].rightTriangleCount = rightSum;
+				rightBox.Grow(bins[NUM_OF_BINS - i - 1].bbox);
+				splitPlains[NUM_OF_BINS - i - 2].rightSurfaceArea = rightBox.SurfaceArea();
+			}
+
+			// NOTE: 3. calculate SAH cost for the 7 planes
+			const float UNIT_SCALE = (boundsMax - boundsMin) * NUM_OF_BINS_INVERSE;
+			for (int i = 0; i < NUM_OF_BINS - 1; ++i)
+			{
+				float planeCost = splitPlains[i].leftSurfaceArea * splitPlains[i].leftTriangleCount \
+								+ splitPlains[i].rightSurfaceArea * splitPlains[i].rightTriangleCount;
+				if (planeCost < bestResult.cost)
+				{
+					bestResult.axis = currAxis;
+					bestResult.position = node.m_Bounds.m_LowerBound[currAxis] + (UNIT_SCALE * float(i + 1));
+					bestResult.cost = planeCost;
 				}
 			}
 		}
-		return { bestAxis, bestPos, bestCost };
+		return bestResult;
 	}
 
 
 	void __Subdivide_recur(unsigned int parentNodeIdx)
 	{
-		// NOTE: find best split plane -----------------------
 		AABBNode& node = m_Nodes[parentNodeIdx];
-		SplitEvaluation evaluationResult = __FindBestSplitPlane(node);
+
+		// NOTE: find best split plane.
+		SplitEvaluationResult evaluationResult = __FindBestSplitPlane(node);
 		const int axis = evaluationResult.axis;
 		const float splitPos = evaluationResult.position;
 
-		// checks if the best split cost is actually an improvement over not splitting.
+		// NOTE: check if the best split cost is actually an improvement over not splitting.
 		const float parentCost = node.m_TriangeCount * node.m_Bounds.SurfaceArea();
 		if (evaluationResult.cost >= parentCost) {
 			return ;
 		}
 
-		// NOTE: split via best plane -----------------------
+		// NOTE: split via best plane.
 		unsigned int startIdx = node.m_TriangleStartIndex;
 		unsigned int endIdx = startIdx + node.m_TriangeCount - 1;
 		while (startIdx <= endIdx)
 		{
 			// 해당 삼각형의 axis의 중심과 splitPos를 비교 // 삼각형 중심으로 분할하기 때문에, 겹치는 영역이 발생.
 			const auto triIdx = m_TriangleIndexBuffer[startIdx];
-			const auto centerOfTargetPrimitiveAxis = (m_Triangles[triIdx].v0[axis] + m_Triangles[triIdx].v1[axis] + m_Triangles[triIdx].v2[axis]) * 0.3333f;
-			if (centerOfTargetPrimitiveAxis < splitPos) {
+			const auto centerOfTargetAxisPrimitive = (m_Triangles[triIdx].GetCentroid())[axis];
+			if (centerOfTargetAxisPrimitive < splitPos) {
 				startIdx++;
-			} else {
-				// same as quick-sort pivot move
+			} else { // same as quick-sort pivot move
 				std::swap(m_TriangleIndexBuffer[startIdx], m_TriangleIndexBuffer[endIdx--]);
 			}
 		}
@@ -375,10 +467,14 @@ private:
 
 
 public:
-	void DebugRender(int bbox_level)
+	void DebugRender(int bbox_show_level)
 	{
+		// 3일 경우, 3인 데이터
 		for (auto &itr : m_AABBMeshList) {
-			if (itr.second == bbox_level) { // 특정 bbox level만 그리기 위함.
+			const auto bboxType = itr.second;
+			if (bboxType.isLeaf && bboxType.level < bbox_show_level) { // if leaf
+				itr.first->RenderMesh(GL_TRIANGLES);
+			} else if (bboxType.level == bbox_show_level) { // 특정 bbox level만 그리기 위함.
 				itr.first->RenderMesh(GL_TRIANGLES);
 			}
 		}
@@ -393,9 +489,10 @@ public:
 		// Pool of Triangles
 		const size_t prevNumOfTriangles = m_Triangles.size();
 		const size_t newNumOfTriangles = indices.size() / 3; // testObj's numOfTriangles == 4
-		m_Triangles.reserve(prevNumOfTriangles + newNumOfTriangles); // 기존 크기 + 새로운 크기
+		m_TotalTriangleCount = prevNumOfTriangles + newNumOfTriangles;
+		m_Triangles.reserve(m_TotalTriangleCount); // 기존 크기 + 새로운 크기
 
-		// Triangles index buffer (for Pool)
+				// Triangles index buffer (for Pool)
 		m_TriangleIndexBuffer.reserve(prevNumOfTriangles + newNumOfTriangles);
 
 		for (int i = 0; i < newNumOfTriangles; i++) // 모든 triangle들이 정렬되어 있는 상태서 시작.
@@ -557,10 +654,9 @@ private:
 	// Tree를 순회하면서 각 box에 대한 mesh를 생성, m_meshList에 삽입.
 	// TODO: meshList가 배열이기에, 이걸 level에 따라 순회하려면 재귀를 BFS로 해줘야 한다.
 	// 	     일단은 DFS로 함. 나중에 수정할 예정.
-	void __GenerateDebugMesh_recur(unsigned int node_idx, bbox_level_type depth)
+	void __GenerateDebugMesh_recur(unsigned int node_idx, int depth)
 	{
-		auto i = m_Nodes[node_idx];
-
+		LOG_INFO("Generating BVH DebugMesh...    [node:{0}/{1} of total {2} triangles]", node_idx, m_Nodes.size(), m_TotalTriangleCount);
 		auto bbox = m_Nodes[node_idx].m_Bounds;
 		const auto ub = bbox.m_UpperBound;
 		const auto lb = bbox.m_LowerBound;
@@ -601,7 +697,11 @@ private:
 
 		auto mesh_ptr = std::make_shared<AABB::Mesh>();
 		mesh_ptr->CreateMesh(cube_vertices, cube_elements, 24, 36);
-		m_AABBMeshList.emplace_back(mesh_ptr, depth);
+		if (m_Nodes[node_idx].IsLeaf()) {
+			m_AABBMeshList.emplace_back(mesh_ptr, bbox_level_type{depth, true});
+		} else {
+			m_AABBMeshList.emplace_back(mesh_ptr, bbox_level_type{depth, false});
+		}
 
 		if (depth > m_MaxDepth) { // just for IMGUI debug draw.
 			m_MaxDepth = depth;

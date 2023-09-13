@@ -10,9 +10,14 @@
 class GridShader : public Lunar::Shader
 {
 public:
-	glm::vec4 m_GridColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+	glm::vec4 m_GridColor = glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
+	float m_FarClip = 1000.0f;
+	float m_NearClip = 0.01f;
+
 private:
 	GLint m_GridColorLocation = 0;
+	GLint m_FarLocation = 0;
+	GLint m_NearLocation = 0;
 	GLuint m_DummyVAO = 0; // OpenGL Core는 VAO 0을 오브젝트 없음으로 해석함.
 
 public:
@@ -23,6 +28,8 @@ public:
 		  )
 				  {
 					  m_GridColorLocation = this->_GetUniformLocation("GridColor");
+					  m_FarLocation = this->_GetUniformLocation("FarClip"); // for gid fade-out
+					  m_NearLocation = this->_GetUniformLocation("NearClip"); // for gid fade-out
 					  glGenVertexArrays(1, &m_DummyVAO);
 				  };
 
@@ -32,6 +39,8 @@ private:
 	 {
 		 glEnable(GL_PROGRAM_POINT_SIZE);
 		 glUniform4fv(m_GridColorLocation, 1, glm::value_ptr(m_GridColor));
+		 glUniform1f(m_FarLocation, m_FarClip);
+		 glUniform1f(m_NearLocation, m_NearClip);
 	 };
 	 void OnUnbind() override
 	 {

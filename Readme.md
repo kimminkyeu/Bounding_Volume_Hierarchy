@@ -4,6 +4,8 @@
 ![제목 없는 동영상 - Clipchamp로 제작 (2)](https://github.com/kimminkyeu/MiniBlender/assets/60287070/df4a51de-530f-443a-bb34-0930e040f66d)
 ![image](https://github.com/kimminkyeu/MiniBlender/assets/60287070/eb0c17c9-8fd3-43de-923e-be2e1da90362)
 
+sample assets from
+https://casual-effects.com/data/
 
 ## Compile & Run
 this project is for Linux, MacOS. (Windows is currently not supported)
