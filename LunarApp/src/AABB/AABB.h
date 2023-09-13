@@ -140,17 +140,41 @@ union TriangleDataFormat// VBO structure -> x, y, z, tx, ty, nx, ny, nz
 };
 
 template <typename T>
-struct Triangle // Triangle[0] = Triangle.v0
+class Triangle // Triangle[0] = Triangle.v0
 {
+public:
 	T v0 = T();
 	T v1 = T();
 	T v2 = T();
+private:
+	// if inf, then value is not set.
+	glm::vec3 m_Centroid = glm::vec3(std::numeric_limits<float>::infinity());
 
+public:
 	Triangle() = default;
-	Triangle(T _v0, T _v1, T _v2)
-		: v0(_v0), v1(_v1), v2(_v2)
-	{}
 
+	Triangle(T _v0, T _v1, T _v2)
+		: v0(_v0), v1(_v1), v2(_v2), m_Centroid()
+	{ __CalculateCentroid(); }
+
+	glm::vec3 GetCentroid()
+	{
+		if (m_Centroid == glm::vec3(std::numeric_limits<float>::infinity()))
+		{
+			__CalculateCentroid();
+		}
+		return m_Centroid;
+	}
+
+private:
+	void __CalculateCentroid()
+	{
+		this->m_Centroid.x = (v0[0] + v1[0] + v2[0]) * 0.3333f;
+		this->m_Centroid.y = (v0[1] + v1[1] + v2[1]) * 0.3333f;
+		this->m_Centroid.z = (v0[2] + v1[2] + v2[2]) * 0.3333f;
+	}
+
+public:
 	T& operator[] (int index)
 	{
 		if (index == 0) return v0;
@@ -277,7 +301,7 @@ private:
 		{
 			auto triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
 			auto &triangle = m_Triangles[triIdx];
-			const auto centroid = (triangle.v0[axis] + triangle.v1[axis] + triangle.v2[axis]) * 0.3333f;
+			const auto centroid = triangle.GetCentroid()[axis];
 			if (centroid < splitPos)
 			{
 				++leftCount;
@@ -311,6 +335,35 @@ private:
 	// calcalate best split plane via SAH.
 	SplitEvaluationResult __FindBestSplitPlane(const AABBNode& node)
 	{
+		// 1. prepare bins
+		// 	  populate the bins by visiting the primitives once (per axis)
+		const int NUM_OF_BINS = 100;
+		Bin bins[NUM_OF_BINS];
+
+		for (int axis = 0; axis < 3; ++axis)
+		{
+			float scale = NUM_OF_BINS / node.m_Bounds.GetAxisLength(axis);
+			for (uint i = 0; i < node.m_TriangeCount; ++i)
+			{
+				size_t triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
+				auto &triangle = m_Triangles[triIdx];
+				const float centroid = (m_Triangles[triIdx].v0[axis] + m_Triangles[triIdx].v1[axis] + m_Triangles[triIdx].v2[axis]) * 0.3333f;
+
+				// 삼각형 centroid를 가지고, bin의 index를 계산해야 함.
+				int binIdx = std::min(NUM_OF_BINS - 1, 1);
+
+			}
+		}
+
+
+
+
+
+
+
+
+
+
 		const int SPLIT_DIVISION = 100; // number of split division plane.
 		const float SPLIT_DIVISION_INVERSE = 1.0f / (float)SPLIT_DIVISION;
 
@@ -362,7 +415,7 @@ private:
 		{
 			// 해당 삼각형의 axis의 중심과 splitPos를 비교 // 삼각형 중심으로 분할하기 때문에, 겹치는 영역이 발생.
 			const auto triIdx = m_TriangleIndexBuffer[startIdx];
-			const auto centerOfTargetAxisPrimitive = (m_Triangles[triIdx].v0[axis] + m_Triangles[triIdx].v1[axis] + m_Triangles[triIdx].v2[axis]) * 0.3333f;
+			const auto centerOfTargetAxisPrimitive = (m_Triangles[triIdx].GetCentroid())[axis];
 			if (centerOfTargetAxisPrimitive < splitPos) {
 				startIdx++;
 			} else { // same as quick-sort pivot move
