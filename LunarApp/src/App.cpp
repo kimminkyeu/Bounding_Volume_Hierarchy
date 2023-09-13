@@ -261,9 +261,9 @@ public:
 
 	// 1. Create object
 //		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/bunny/bunny.obj");
-		//		m_Model.LoadModel("LunarApp/assets/dragon.obj");
-//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+//		m_Model.LoadModel("LunarApp/assets/bunny/bunny.obj");
+//				m_Model.LoadModel("LunarApp/assets/dragon.obj");
+		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
@@ -278,7 +278,7 @@ public:
 
 	// 4. Init Camera
 		auto aspectRatio = (float)width / (float)height;
-		m_EditorCamera = Lunar::EditorCamera(45.0f, aspectRatio, 0.1f, 100.0f);
+		m_EditorCamera = Lunar::EditorCamera(45.0f, aspectRatio, 0.01f, 100.0f);
 		const auto p = m_EditorCamera.GetPosition();
 		LOG_INFO("camera pos x{0} y{1} z{2}", p.x, p.y, p.z);
 		const auto l = m_EditorCamera.GetForwardDirection();
@@ -342,6 +342,10 @@ public:
 				shaderProcPtr->SetPickMode(1);
 				shaderProcPtr->SetPickedMeshData(hit.triangle.v0.GetVertex(), hit.triangle.v1.GetVertex(), hit.triangle.v2.GetVertex());
 				LOG_INFO("HIT SUCCESS");
+				auto p = m_EditorCamera.GetPosition();
+				auto k = m_EditorCamera.GetPitch(); auto e = m_EditorCamera.GetYaw();
+				LOG_INFO("camera pos    X{0} Y{1} Z{2}", p.x, p.y, p.z);
+				LOG_INFO("camera angle  Pitch{0} Yaw{1}", k, e);
 				/*
 				LOG_INFO("*********************************************************");
 				LOG_INFO("*             HIT SUCCESS!!                             *");
@@ -370,6 +374,7 @@ public:
 		{
 			// 0. bind frame buffer ( = render target image )
 			m_RasterizationFrameBuffer.Bind();
+
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // 1. Unbind current frame buffer data.
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			{
@@ -382,6 +387,8 @@ public:
 
 				if (m_ShowMesh)
 				{
+					glEnable(GL_DEPTH_TEST); // 약간 야매 방식. depth buffer 없이 실시간 검사로 일단 테스트 (임시 방편)
+					glEnable(GL_CULL_FACE); //  enable backface culling
 					m_DisplayMode.BindCurrentShader();
 					const auto shaderProcPtr = m_DisplayMode.GetCurrentShaderPtr();
 					shaderProcPtr->SetUniformEyePos(m_EditorCamera.GetPosition());
@@ -477,6 +484,8 @@ public:
 						// NOTE: Draw a full screen covering triangle for bufferless rendering...
 						// https://trass3r.github.io/coding/2019/09/11/bufferless-rendering.html
 						// https://asliceofrendering.com/scene%20helper/2020/01/05/InfiniteGrid/
+						gridShaderPtr->m_FarClip = m_EditorCamera.GetFarClip();
+						gridShaderPtr->m_NearClip = m_EditorCamera.GetNearClip();
 						gridShaderPtr->Bind();
 						gridShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera.GetProjection()));
 						gridShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera.GetViewMatrix()));
