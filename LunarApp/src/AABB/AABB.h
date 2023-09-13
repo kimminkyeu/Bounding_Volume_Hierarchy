@@ -256,7 +256,7 @@ private:
 	// Subdivide space
 	void __BuildBVH_TopDown()
 	{
-		LOG_INFO("Building BVH...    [total: {0}]", m_TotalTriangleCount);
+//		LOG_INFO("Building BVH...    [total: {0}]", m_TotalTriangleCount);
 		m_Nodes.clear();
 		// to start, assign all triangles to root node.
 		m_Nodes.emplace_back( 0, m_Triangles.size() ); // (0) insert node at root
@@ -656,7 +656,7 @@ private:
 	// 	     일단은 DFS로 함. 나중에 수정할 예정.
 	void __GenerateDebugMesh_recur(unsigned int node_idx, int depth)
 	{
-		LOG_INFO("Generating BVH DebugMesh...    [node:{0}/{1}]", node_idx, m_Nodes.size());
+		LOG_INFO("Generating BVH DebugMesh...    [node:{0}/{1} of total {2} triangles]", node_idx, m_Nodes.size(), m_TotalTriangleCount);
 		auto bbox = m_Nodes[node_idx].m_Bounds;
 		const auto ub = bbox.m_UpperBound;
 		const auto lb = bbox.m_LowerBound;
