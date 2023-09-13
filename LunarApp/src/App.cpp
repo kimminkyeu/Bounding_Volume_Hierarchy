@@ -260,8 +260,8 @@ public:
 		m_RasterizationFrameBuffer.Init(width, height); // Init Rasterization buffer
 
 	// 1. Create object
-		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-//		m_Model.LoadModel("LunarApp/assets/bunny/bunny.obj");
+//		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+		m_Model.LoadModel("LunarApp/assets/bunny/bunny.obj");
 		//		m_Model.LoadModel("LunarApp/assets/dragon.obj");
 //		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");

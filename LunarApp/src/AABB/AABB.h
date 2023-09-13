@@ -256,6 +256,7 @@ private:
 	// Subdivide space
 	void __BuildBVH_TopDown()
 	{
+		LOG_INFO("Building BVH...    [total: {0}]", m_TotalTriangleCount);
 		m_Nodes.clear();
 		// to start, assign all triangles to root node.
 		m_Nodes.emplace_back( 0, m_Triangles.size() ); // (0) insert node at root
@@ -402,7 +403,6 @@ private:
 	void __Subdivide_recur(unsigned int parentNodeIdx)
 	{
 		AABBNode& node = m_Nodes[parentNodeIdx];
-		LOG_INFO("Building BVH...    [{0}/{1}]", node.m_TriangeCount, m_TotalTriangleCount);
 
 		// NOTE: find best split plane.
 		SplitEvaluationResult evaluationResult = __FindBestSplitPlane(node);
