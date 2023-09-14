@@ -5,34 +5,40 @@
 #ifndef SCOOP_THREADWORKER_H
 #define SCOOP_THREADWORKER_H
 
+class ThreadPool;
+
 #include "ThreadPool.h"
 
 class ThreadWorker
 {
-//	friend class ThreadPool;
+private:
+	ThreadPool* m_ThreadPoolPtr;
 
 public:
 	ThreadWorker() = delete;
 
 	explicit ThreadWorker(ThreadPool* pool)
-		: thread_pool(pool)
+		: m_ThreadPoolPtr(pool)
 	{}
 
 	void operator()()
 	{
-		std::unique_lock<std::mutex> lock(thread_pool->m_Mutex);
-		while (!thread_pool->m_ShutdownRequested || (thread_pool->m_ShutdownRequested && !thread_pool->m_Queue.empty()))
+		std::unique_lock<std::mutex> lock(m_ThreadPoolPtr->m_Mutex);
+		while ( (!m_ThreadPoolPtr->m_ShutdownRequested)
+				|| ( m_ThreadPoolPtr->m_ShutdownRequested && !m_ThreadPoolPtr->m_TaskQueue.empty()) )
 		{
-			thread_pool->BusyThreads--;
-			thread_pool->m_ConditionVariable.wait(lock, [this] {
-				return (this->thread_pool->m_ShutdownRequested || !this->thread_pool->m_Queue.empty());
-			});
-			thread_pool->BusyThreads++;
-
-			if (!this->thread_pool->m_Queue.empty())
+			m_ThreadPoolPtr->BusyThreads--;
+			m_ThreadPoolPtr->m_ConditionVariable.wait(lock, [this]
 			{
-				auto func = thread_pool->m_Queue.front();
-				thread_pool->m_Queue.pop();
+				return (this->m_ThreadPoolPtr->m_ShutdownRequested || !this->m_ThreadPoolPtr->m_TaskQueue.empty());
+			});
+
+			m_ThreadPoolPtr->BusyThreads++;
+
+			if (!this->m_ThreadPoolPtr->m_TaskQueue.empty())
+			{
+				auto func = m_ThreadPoolPtr->m_TaskQueue.front();
+				m_ThreadPoolPtr->m_TaskQueue.pop();
 
 				lock.unlock();
 				func();
@@ -40,8 +46,6 @@ public:
 			}
 		}
 	}
-private:
-	ThreadPool* thread_pool;
 };
 
 #endif//SCOOP_THREADWORKER_H
