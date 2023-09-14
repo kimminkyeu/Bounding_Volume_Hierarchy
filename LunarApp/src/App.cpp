@@ -118,18 +118,18 @@ public:
 		Lunar::Timer timer;
 		m_ActiveEditorCamera = &camera;
 
-#if (MT == 1) // NOTE: this variable is set by CMakelist.txt
-		std::for_each(std::execution::par_unseq, m_ImageColumnIterator.begin(), m_ImageColumnIterator.end(),
-					  [this](uint32_t y)// capture reference of this
-					  {
-						std::for_each(std::execution::par_unseq, m_ImageRowIterator.begin(), m_ImageRowIterator.end(),
-									  [this, y](uint32_t x)
-									  {
-											glm::vec4 color = CalculateColorPerPixel(x, y);
-											m_ImageData[(x) + ((y) * m_FinalImageFrameBuffer->GetWidth())] = Utils::ConvertToRGBA(color);
-									  });
-					  });
-#else
+//#if (MT == 1) // NOTE: this variable is set by CMakelist.txt
+//		std::for_each(std::execution::par_unseq, m_ImageColumnIterator.begin(), m_ImageColumnIterator.end(),
+//					  [this](uint32_t y)// capture reference of this
+//					  {
+//						std::for_each(std::execution::par_unseq, m_ImageRowIterator.begin(), m_ImageRowIterator.end(),
+//									  [this, y](uint32_t x)
+//									  {
+//											glm::vec4 color = CalculateColorPerPixel(x, y);
+//											m_ImageData[(x) + ((y) * m_FinalImageFrameBuffer->GetWidth())] = Utils::ConvertToRGBA(color);
+//									  });
+//					  });
+//#else
 		for (uint32_t y = 0; y < m_FinalImageFrameBuffer->GetHeight(); y+=4)
 		{
 			for (uint32_t x = 0; x < m_FinalImageFrameBuffer->GetWidth(); x+=4)
@@ -145,7 +145,7 @@ public:
 				}
 			}
 		}
-#endif
+//#endif
 		m_FinalImageFrameBuffer->LoadPixelsToTexture(m_ImageData);
 		m_LastRenderTime = timer.ElapsedMillis();
 	}
@@ -261,9 +261,9 @@ public:
 
 	// 1. Create object
 //		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/bunny/bunny.obj");
+//		m_Model.LoadModel("LunarApp/assets/bunny/bunny.obj");
 //				m_Model.LoadModel("LunarApp/assets/dragon.obj");
-//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
