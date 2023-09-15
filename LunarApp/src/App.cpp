@@ -27,7 +27,8 @@
 
 #include "Lunar/Input/KeyCodes.h" // including Mouse Code.
 #include "Lunar/Input/MouseCodes.h"
-#include <execution>
+
+#include "LunarApp/src/Thread/ThreadPool.h"
 
 // https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h
@@ -68,8 +69,12 @@ private:
 	std::shared_ptr<AABBTree> m_ActiveAABBScene;
 	const Lunar::EditorCamera* m_ActiveEditorCamera = nullptr;
 
-	// for std::for_each
+	// --------------------------------------------------------------------
+	// for Thread
 	std::vector<uint32_t> m_ImageColumnIterator, m_ImageRowIterator;
+	// NOTE: thread pool for render
+	ThreadPool m_ThreadPool;
+
 
 public:
 	RayTracer() = default;
@@ -115,20 +120,55 @@ public:
 		// 		  worker들이 계속 배열에다가 그림을 그리는데, 화면이 바뀌어야 할 때 마다
 		// 		  기존에 하던 일을 버리고 처음부터 일을 다시 배정받는 방식으로 설계 필요.
 
+
+	//	https://alain.xyz/blog/ray-tracing-denoising
+	// render loop
+		// n개 thread 들이 m_Image를 채우는 동안.
+		// painter thread 하나가 계속 framebuffer를 update한다.
+
+		// 이때, 한줄씩 채우는 것이 아닌 clustering 방식으로 쓰레딩을 진행하는게 좋겠다.
+		// (속도 비교 필요)
+
+		// 둘째로, 화면을 움직이는 동안 accumulation 방식으로 데이터를 점점 쌓아나가는게 좋겠다.
+		// Global Illumination 으로 accumulation이 계속 진행되도록 할 것.
+
+		// 셋째, 물체를 회전시키는 도중이거나 Zoom in Zoom out 하는중 움직임이 반영될 때는
+		// Ray-tracing을 하지 않는다. Performance shader로 진행.
+
+
+
 		Lunar::Timer timer;
 		m_ActiveEditorCamera = &camera;
 
+
 #if (MT == 1) // NOTE: this variable is set by CMakelist.txt
-		std::for_each(std::execution::par_unseq, m_ImageColumnIterator.begin(), m_ImageColumnIterator.end(),
-					  [this](uint32_t y)// capture reference of this
-					  {
-						std::for_each(std::execution::par_unseq, m_ImageRowIterator.begin(), m_ImageRowIterator.end(),
-									  [this, y](uint32_t x)
-									  {
-											glm::vec4 color = CalculateColorPerPixel(x, y);
-											m_ImageData[(x) + ((y) * m_FinalImageFrameBuffer->GetWidth())] = Utils::ConvertToRGBA(color);
-									  });
-					  });
+
+		std::vector<std::future<void>> futures;
+		futures.reserve(m_ImageColumnIterator.size());
+
+		// lamda function
+		auto drawEachRow = [this](uint32_t y) -> void
+		{
+//			LOG_TRACE("Row {0} from thread id {1}, total busy threads are {2}", y, std::this_thread::get_id(), m_ThreadPool.BusyThreads);
+			for (unsigned int x : m_ImageRowIterator)
+			{
+					glm::vec4 color = CalculateColorPerPixel(x, y);
+					m_ImageData[(x) + ((y) * m_FinalImageFrameBuffer->GetWidth())] = Utils::ConvertToRGBA(color);
+			}
+		};
+
+		// render row
+		for (unsigned int y : m_ImageColumnIterator)
+		{
+			futures.push_back(m_ThreadPool.AddTask(drawEachRow, y));
+		}
+
+//		// wait until all tasks all done
+		std::for_each(futures.begin(), futures.end(), [](std::future<void> &future) -> void
+		{
+		  future.wait();
+		});
+
 #else
 		for (uint32_t y = 0; y < m_FinalImageFrameBuffer->GetHeight(); y+=4)
 		{
@@ -260,8 +300,8 @@ public:
 		m_RasterizationFrameBuffer.Init(width, height); // Init Rasterization buffer
 
 	// 1. Create object
-//		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/bunny/bunny.obj");
+		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
+//		m_Model.LoadModel("LunarApp/assets/bunny/bunny.obj");
 //				m_Model.LoadModel("LunarApp/assets/dragon.obj");
 //		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");

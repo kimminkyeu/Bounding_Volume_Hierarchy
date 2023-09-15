@@ -22,10 +22,10 @@ include( ${CMAKE_SOURCE_DIR}/utils.cmake ) # custom print_message() function.
 # set variable
 # ********************************************
 set( DEBUG_MODE 1 ) # DEBUG MODE --> use Log
-if( DEFINED TBB) # if CPU in Intel, then build_dependency script will set TBB variable (true)
+#if( DEFINED TBB) # if CPU in Intel, then build_dependency script will set TBB variable (true)
     set ( MT 1 )
-    print_message( STATUS "Intel TBB Multi-threading is ON" ) # path set by "find_package"
-endif ()
+#    print_message( STATUS "Intel TBB Multi-threading is ON" ) # path set by "find_package"
+#endif ()
 
 # *******************************************
 
@@ -51,7 +51,8 @@ set( SOURCE_FILES
         Lunar/Light/Light.cpp
         Lunar/Material/Material.cpp
         Lunar/FrameBuffer/FrameBuffer.cpp
-        LunarApp/src/AABB/Mesh.cpp LunarApp/src/TestObject/TestObject.h)
+        LunarApp/src/AABB/Mesh.cpp
+        )
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name
@@ -152,11 +153,15 @@ endif ()
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux") # Linux
     target_link_libraries( ${NAME}
             PRIVATE
-            -lX11 -ltbb )
+            -lX11
+#            -ltbb
+            )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin") # MacOS
     target_link_libraries( ${NAME}
             PRIVATE
-            -framework Cocoa -framework IOKit -ltbb
+            "-framework Cocoa"
+            "-framework IOKit"
+#            -ltbb
             )
     # ... ?
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows") # Windows
