@@ -94,6 +94,18 @@ public:
 				m_Threads[i].join();
 			}
 		}
+
+		// clear queue
+		while (!m_TaskQueue.empty())
+		{
+			m_TaskQueue.pop();
+		}
+
+		{
+			// if Shutdown finished, reset flag
+			std::lock_guard<std::mutex> lock(m_Mutex);
+			m_ShutdownRequested = false;
+		}
 	}
 
 	// https://www.youtube.com/watch?v=6re5U82KwbY
@@ -146,8 +158,9 @@ private:
 		{
 			std::unique_lock<std::mutex> lock(m_ThreadPoolPtr->m_Mutex);
 			// Note: 아래 조건 주의할 것. TaskQueue가 빌 때 까지는 비우지 않는 방식임.
-			while ( (!m_ThreadPoolPtr->m_ShutdownRequested)
-					|| ( m_ThreadPoolPtr->m_ShutdownRequested && !m_ThreadPoolPtr->m_TaskQueue.empty()) )
+//			while ( (!m_ThreadPoolPtr->m_ShutdownRequested)
+//					|| ( m_ThreadPoolPtr->m_ShutdownRequested && !m_ThreadPoolPtr->m_TaskQueue.empty()) )
+			while ( !m_ThreadPoolPtr->m_ShutdownRequested )
 			{
 				m_ThreadPoolPtr->BusyThreads--;
 				m_ThreadPoolPtr->m_ConditionVariable.wait(lock, [this]

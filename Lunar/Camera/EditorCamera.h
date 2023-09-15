@@ -36,6 +36,9 @@ namespace Lunar {
 
 	class EditorCamera : public CameraBase
 	{
+	private:
+		bool m_IsCameraMoved = false;
+
 	public:
 		EditorCamera() = default;
 		EditorCamera(float fov, float aspectRatio, float nearClip, float farClip);
@@ -62,6 +65,8 @@ namespace Lunar {
 		inline float GetFarClip() const  { return m_FarClip; }
 		inline float GetNearClip() const  { return m_NearClip; }
 
+		inline bool IsMoved() const { return m_IsCameraMoved; }
+
 
 	private:
 		void UpdateProjection();
@@ -80,6 +85,8 @@ namespace Lunar {
 		float ZoomSpeed() const;
 
 	private:
+		// 1. 카메라가 변화했을 때만 렌더링을 멈추고, 변화하지 않을 경우엔 렌더링을 진행.
+		//
 		float m_FOV = 45.0f, m_AspectRatio = 1.778f, m_NearClip = 0.01f, m_FarClip = 100.0f;
 
 		glm::mat4 m_ViewMatrix;

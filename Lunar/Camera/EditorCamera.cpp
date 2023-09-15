@@ -13,7 +13,6 @@
 #include <glm/gtx/quaternion.hpp>
 
 namespace Lunar {
-
 	EditorCamera::EditorCamera(float fov, float aspectRatio, float nearClip, float farClip)
 			: m_FOV(fov), m_AspectRatio(aspectRatio), m_NearClip(nearClip), m_FarClip(farClip),
 			  CameraBase(glm::perspective(glm::radians(fov), aspectRatio, nearClip, farClip))
@@ -71,12 +70,26 @@ namespace Lunar {
 			glm::vec2 delta = (mouse - m_InitialMousePosition) * 0.003f;
 			m_InitialMousePosition = mouse;
 
-			if (Input::IsMouseButtonPressed(Mouse::ButtonMiddle))
+			if (Input::IsMouseButtonPressed(Mouse::ButtonMiddle)) {
+				this->m_IsCameraMoved = true;
 				MousePan(delta);
-			else if (Input::IsMouseButtonPressed(Mouse::ButtonLeft))
+			}
+			else if (Input::IsMouseButtonPressed(Mouse::ButtonLeft)) {
+				this->m_IsCameraMoved = true;
 				MouseRotate(delta);
-			else if (Input::IsMouseButtonPressed(Mouse::ButtonRight))
+			}
+			else if (Input::IsMouseButtonPressed(Mouse::ButtonRight)) {
+				this->m_IsCameraMoved = true;
 				MouseZoom(delta.y);
+			}
+			else if (Input::IsMouseButtonReleased(Mouse::ButtonMiddle)
+				|| Input::IsMouseButtonReleased(Mouse::ButtonLeft)
+				|| Input::IsMouseButtonReleased(Mouse::ButtonRight))
+			{
+				// Mouse Released
+				this->m_IsCameraMoved = false;
+			}
+
 			UpdateView();
 		}
 	}
