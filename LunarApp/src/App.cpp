@@ -147,7 +147,7 @@ public:
 		futures.reserve(m_ImageColumnIterator.size());
 
 		// lamda function
-		auto drawEachRow = [this](uint32_t y) -> void
+		auto DrawEachRow = [this](uint32_t y) -> void
 		{
 //			LOG_TRACE("Row {0} from thread id {1}, total busy threads are {2}", y, std::this_thread::get_id(), m_ThreadPool.BusyThreads);
 			for (unsigned int x : m_ImageRowIterator)
@@ -160,7 +160,7 @@ public:
 		// render row
 		for (unsigned int y : m_ImageColumnIterator)
 		{
-			futures.push_back(m_ThreadPool.AddTask(drawEachRow, y));
+			futures.push_back(m_ThreadPool.AddTask(DrawEachRow, y));
 		}
 
 //		// wait until all tasks all done
@@ -301,7 +301,7 @@ public:
 
 	// 1. Create object
 		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-//		m_Model.LoadModel("LunarApp/assets/bunny/bunny.obj");
+//		m_Model.LoadModel("LunarApp/assets/bunny.obj");
 //				m_Model.LoadModel("LunarApp/assets/dragon.obj");
 //		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
