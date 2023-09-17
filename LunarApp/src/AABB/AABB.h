@@ -14,8 +14,9 @@
 #include <string>
 #include <vector>
 #include <stack>
-
 #include "LunarApp/src/AABB/Mesh.h"
+#include "LunarApp/src/Thread/ThreadPool.h"
+#include "Lunar/Core/Timer.h"
 
 // TODO: 구현이 끝나면, Template으로 바꿀 수 있는 부분 체크하기. (glm::vec3, glm::vec2, custom vec2 ... etc)
 
@@ -213,6 +214,8 @@ struct Hit
 // Implementation of Axis-aligned bounding box
 struct AABBNode
 {
+	AABBNode() = default;
+
 	AABBNode(unsigned int triStartIdx, size_t triCount)
 		: m_TriangleStartIndex(triStartIdx), m_TriangeCount(triCount)
 	{};
@@ -243,10 +246,22 @@ private: // member data
 	std::vector<size_t> m_TriangleIndexBuffer; // just like IBO, we change triangle sequence with this.
 	size_t m_TotalTriangleCount;
 
+	// NOTE: AABB Thread test
+	mutable std::mutex m_TaskMutex; // bfs queue pop시 lock 걸기.
+	ThreadPool m_ThreadPool;
+
+	mutable std::mutex m_FinishedCountMutex; // 특정 노드가 leaf로 분할 종료될 경우, 해당 노드의 삼각형 count를 sum하여 main thread에서 감지하는 용도.
+	size_t m_FinishedTrianglesCount = 0;
+
+	mutable std::mutex m_NodeCountMutex; // 생성하는 노드 개수에 대한 ++ increment용 mutex (node_idx increment용)
+	size_t m_NodeCount = 0; // 생성되는 node에 대한 count++
+
+
+
 private: // member data tmp
 	struct bbox_level_type
 	{
-		int level = 0;
+		int level = -1;
 		bool isLeaf = false;
 	};
 	using aabb_mesh_data_type = std::pair<std::shared_ptr<AABB::Mesh>, bbox_level_type>;
@@ -256,13 +271,27 @@ private:
 	// Subdivide space
 	void __BuildBVH_TopDown()
 	{
-//		LOG_INFO("Building BVH...    [total: {0}]", m_TotalTriangleCount);
+		Lunar::Timer timer;
+		LOG_INFO("BVH build start");
+
 		m_Nodes.clear();
 		// to start, assign all triangles to root node.
 		m_Nodes.emplace_back( 0, m_Triangles.size() ); // (0) insert node at root
+		// update root node bound
 		__UpdateNodeBounds(m_RootIndex); // (1) Update Each Bode Bound
-		__Subdivide_recur(m_RootIndex); // (2) Subdivide space recursively
-		__GenerateDebugMesh_recur(m_RootIndex, 0); // (3) for debug render, generate mesh(VAO, VBO.. etc) for each Bounding Box;
+
+#if (MT == 1) // NOTE: this variable is set by CMakelist.txt
+		__SubdivideParallel(m_RootIndex);
+#else
+		// divide BBOX
+		__SubdivideBFS(m_RootIndex); // (2) Subdivide space recursively
+#endif
+		LOG_INFO("BVH build finished at {0} ms", timer.ElapsedMillis());
+
+
+
+		// create AABB mesh for visualization
+		__GenerateDebugMeshBFS(m_RootIndex); // (3) for debug render, generate mesh(VAO, VBO.. etc) for each Bounding Box;
 	}
 
 	void __UpdateNodeBounds(unsigned int nodeIdx)
@@ -399,72 +428,183 @@ private:
 		return bestResult;
 	}
 
-
-	void __Subdivide_recur(unsigned int parentNodeIdx)
+	// NOTE: 아래 방식의 top-Down은 루트에서 부터 내려가면서 생성됨으로 상단 노드에서 bottle-neck이 발생한다.
+	// 		  즉 bottle-neck이 발생하는 쓰레드 방식이다!
+	// 이 부분은 bottom up 방식으로 Tree를 생성하는 로직을 통해 해결할 수 있지 않을까?
+	// 참고 : https://www.sci.utah.edu/~wald/Publications/2007/ParallelBVHBuild/fastbuild.pdf
+	void __SubdivideParallel(unsigned int parentNodeIdx)
 	{
-		AABBNode& node = m_Nodes[parentNodeIdx];
+		// NOTE: push_back이 thread-safe가 아니여서, 미리 메모리에 잡아두었다.
+		m_Nodes.resize(m_TotalTriangleCount * 2 - 1);
 
-		// NOTE: find best split plane.
-		SplitEvaluationResult evaluationResult = __FindBestSplitPlane(node);
-		const int axis = evaluationResult.axis;
-		const float splitPos = evaluationResult.position;
-
-		// NOTE: check if the best split cost is actually an improvement over not splitting.
-		const float parentCost = node.m_TriangeCount * node.m_Bounds.SurfaceArea();
-		if (evaluationResult.cost >= parentCost) {
-			return ;
-		}
-
-		// NOTE: split via best plane.
-		unsigned int startIdx = node.m_TriangleStartIndex;
-		unsigned int endIdx = startIdx + node.m_TriangeCount - 1;
-		while (startIdx <= endIdx)
+		// lamda function (재귀 호출 구조)
+		auto Subdivide_recur = [&](auto&& Subdivide_recur, unsigned int currIdx) -> void
 		{
-			// 해당 삼각형의 axis의 중심과 splitPos를 비교 // 삼각형 중심으로 분할하기 때문에, 겹치는 영역이 발생.
-			const auto triIdx = m_TriangleIndexBuffer[startIdx];
-			const auto centerOfTargetAxisPrimitive = (m_Triangles[triIdx].GetCentroid())[axis];
-			if (centerOfTargetAxisPrimitive < splitPos) {
-				startIdx++;
-			} else { // same as quick-sort pivot move
-				std::swap(m_TriangleIndexBuffer[startIdx], m_TriangleIndexBuffer[endIdx--]);
+		  AABBNode& node = m_Nodes[currIdx];
+
+		  // NOTE: find best split plane.
+		  SplitEvaluationResult evaluationResult = __FindBestSplitPlane(node);
+		  const int axis = evaluationResult.axis;
+		  const float splitPos = evaluationResult.position;
+
+		  // NOTE: check if the best split cost is actually an improvement over not splitting.
+		  const float parentCost = node.m_TriangeCount * node.m_Bounds.SurfaceArea();
+		  if (evaluationResult.cost >= parentCost)
+		  {
+			  // NOTE: 메인 쓰레드에서 각 쓰레드들이 모두 끝났음을 알려면, 이 return 조건에서 파악해야 한다.
+			  {
+				  std::lock_guard<std::mutex> lock(m_FinishedCountMutex);
+				  m_FinishedTrianglesCount += node.m_TriangeCount;
+			  }
+			  return ; // stop Thread. finished.
+		  }
+
+		  // NOTE: split via best plane.
+		  unsigned int startIdx = node.m_TriangleStartIndex;
+		  unsigned int endIdx = startIdx + node.m_TriangeCount - 1;
+		  while (startIdx <= endIdx)
+		  {
+			  // 해당 삼각형의 axis의 중심과 splitPos를 비교 // 삼각형 중심으로 분할하기 때문에, 겹치는 영역이 발생.
+			  const auto triIdx = m_TriangleIndexBuffer[startIdx];
+			  // 잠깐... m_Triangles는 일단 공유하는 애잖아...
+			  const auto centerOfTargetAxisPrimitive = (m_Triangles[triIdx].GetCentroid())[axis];
+			  if (centerOfTargetAxisPrimitive < splitPos) {
+				  startIdx++;
+			  } else { // same as quick-sort pivot move
+				  std::swap(m_TriangleIndexBuffer[startIdx], m_TriangleIndexBuffer[endIdx--]);
+			  }
+		  }
+
+		  // abort split if one of the sides is empty
+		  size_t leftCount = startIdx - node.m_TriangleStartIndex;
+		  if (leftCount == 0 || leftCount == node.m_TriangeCount)
+		  {
+			  // NOTE: 메인 쓰레드에서 각 쓰레드들이 모두 끝났음을 알려면, 이 return 조건에서 파악해야 한다.
+			  {
+				  std::lock_guard<std::mutex> lock(m_FinishedCountMutex);
+				  m_FinishedTrianglesCount += node.m_TriangeCount;
+			  }
+			  return ; // Stop Thread
+		  };
+
+		  unsigned int leftChildIdx;
+		  unsigned int rightChildIdx;
+		  {
+			  // NOTE: 이 부분이 정말 중요! node에 push_back으로 사이즈를 체크하는게 아니기 때문에, 각 쓰레드에서 이 부분을 인지하고 +2 카운트.
+			  std::lock_guard<std::mutex> lock(m_NodeCountMutex);
+			  leftChildIdx = m_NodeCount + 1;
+			  rightChildIdx = m_NodeCount + 2;
+			  m_NodeCount += 2;
+		  }
+		  // insert left
+		  node.m_Left = leftChildIdx;
+		  m_Nodes[leftChildIdx].m_TriangleStartIndex = node.m_TriangleStartIndex;
+		  m_Nodes[leftChildIdx].m_TriangeCount = leftCount;
+		  __UpdateNodeBounds(leftChildIdx);
+
+		  // insert right
+		  node.m_Right = rightChildIdx;
+		  m_Nodes[rightChildIdx].m_TriangleStartIndex = startIdx;
+		  auto k = node.m_TriangeCount;
+		  m_Nodes[rightChildIdx].m_TriangeCount = node.m_TriangeCount - leftCount;
+		  __UpdateNodeBounds(rightChildIdx);
+
+		  // set prim count to 0, because it's not a leaf node anymore.
+		  node.m_TriangeCount = 0;
+
+		  // add child idx to Task Queue
+		  {
+			  std::lock_guard<std::mutex> lock(m_TaskMutex);
+			  m_ThreadPool.AddTask(Subdivide_recur, Subdivide_recur, leftChildIdx);
+			  m_ThreadPool.AddTask(Subdivide_recur, Subdivide_recur, rightChildIdx);
+		  }
+		};
+		m_ThreadPool.AddTask(Subdivide_recur, Subdivide_recur, m_RootIndex);
+
+		// NOTE: 람다가 재귀 호출되면서 task-queue에 데이터가 호출되는 방식인데... main thread에서 어떤 기준으로 wait하지...?
+		size_t triCountSum = 0;
+		while (triCountSum < m_TotalTriangleCount)
+		{
+			{
+				std::lock_guard<std::mutex> lock(m_FinishedCountMutex);
+				triCountSum = m_FinishedTrianglesCount;
 			}
 		}
-
-		// abort split if one of the sides is empty
-		size_t leftCount = startIdx - node.m_TriangleStartIndex; // NOTE: ??
-		if (leftCount == 0 || leftCount == node.m_TriangeCount) return; // NOTE: ??
-
-		// Create child nodes.
-		// ------------------------------
-		// quick sort partitioning과 유사함.
-		// 따라서, [ 0 .... startIdx - 1 | startIdx .... N ] 이렇게 나눠짐.
-		// AABB indexing (idx)
-		//                         0
-		//              1                    2
-		//          3       4            9      10
-		//        5   6   7   8       11  12   13  14
-		//      ...                                  ...
-
-		// insert left
-		unsigned int leftChildIdx = m_Nodes.size();  // if 1
-		node.m_Left = leftChildIdx;
-		m_Nodes.emplace_back(node.m_TriangleStartIndex, leftCount);
-		__UpdateNodeBounds(leftChildIdx);
-
-		// insert right
-		unsigned int rightChildIdx = m_Nodes.size(); // then 2
-		node.m_Right = rightChildIdx;
-		m_Nodes.emplace_back(startIdx, node.m_TriangeCount - leftCount);
-		__UpdateNodeBounds(rightChildIdx);
-
-		// set prim count to 0, because it's not a leaf node anymore.
-		node.m_TriangeCount = 0;
-
-		// recurse
-		__Subdivide_recur(leftChildIdx);
-		__Subdivide_recur(rightChildIdx);
 	}
 
+	void __SubdivideBFS(unsigned int parentNodeIdx)
+	{
+		std::queue<unsigned int> Queue;
+
+		Queue.push(parentNodeIdx);
+		while (!Queue.empty())
+		{
+			unsigned int currIdx = Queue.front(); Queue.pop();
+			AABBNode& node = m_Nodes[currIdx];
+
+			// NOTE: find best split plane.
+			SplitEvaluationResult evaluationResult = __FindBestSplitPlane(node);
+			const int axis = evaluationResult.axis;
+			const float splitPos = evaluationResult.position;
+
+			// NOTE: check if the best split cost is actually an improvement over not splitting.
+			const float parentCost = node.m_TriangeCount * node.m_Bounds.SurfaceArea();
+			if (evaluationResult.cost >= parentCost) {
+				continue ; // stop BFS
+			}
+
+			// NOTE: split via best plane.
+			unsigned int startIdx = node.m_TriangleStartIndex;
+			unsigned int endIdx = startIdx + node.m_TriangeCount - 1;
+			while (startIdx <= endIdx)
+			{
+				// 해당 삼각형의 axis의 중심과 splitPos를 비교 // 삼각형 중심으로 분할하기 때문에, 겹치는 영역이 발생.
+				const auto triIdx = m_TriangleIndexBuffer[startIdx];
+				const auto centerOfTargetAxisPrimitive = (m_Triangles[triIdx].GetCentroid())[axis];
+				if (centerOfTargetAxisPrimitive < splitPos) {
+					startIdx++;
+				} else { // same as quick-sort pivot move
+					std::swap(m_TriangleIndexBuffer[startIdx], m_TriangleIndexBuffer[endIdx--]);
+				}
+			}
+
+			// abort split if one of the sides is empty
+			size_t leftCount = startIdx - node.m_TriangleStartIndex;
+			if (leftCount == 0 || leftCount == node.m_TriangeCount) {
+				continue ; // continue to next bfs
+			};
+
+			// Create child nodes.
+			// ------------------------------
+			// quick sort partitioning과 유사함.
+			// 따라서, [ 0 .... startIdx - 1 | startIdx .... N ] 이렇게 나눠짐.
+			// AABB indexing (idx)
+			//                         0
+			//              1                    2
+			//          3       4            9      10
+			//        5   6   7   8       11  12   13  14
+			//      ...                                  ...
+
+			// insert left
+			unsigned int leftChildIdx = m_Nodes.size();  // if 1
+			node.m_Left = leftChildIdx;
+			m_Nodes.emplace_back(node.m_TriangleStartIndex, leftCount);
+			__UpdateNodeBounds(leftChildIdx);
+
+			// insert right
+			unsigned int rightChildIdx = m_Nodes.size(); // then 2
+			node.m_Right = rightChildIdx;
+			m_Nodes.emplace_back(startIdx, node.m_TriangeCount - leftCount);
+			__UpdateNodeBounds(rightChildIdx);
+
+			// set prim count to 0, because it's not a leaf node anymore.
+			node.m_TriangeCount = 0;
+
+			// child BFS
+			Queue.push(leftChildIdx);
+			Queue.push(rightChildIdx);
+		}
+	}
 
 public:
 	void DebugRender(int bbox_show_level)
@@ -472,9 +612,7 @@ public:
 		// 3일 경우, 3인 데이터
 		for (auto &itr : m_AABBMeshList) {
 			const auto bboxType = itr.second;
-			if (bboxType.isLeaf && bboxType.level < bbox_show_level) { // if leaf
-				itr.first->RenderMesh(GL_TRIANGLES);
-			} else if (bboxType.level == bbox_show_level) { // 특정 bbox level만 그리기 위함.
+			if (bboxType.level >= 0 && bboxType.level <= bbox_show_level) { // if leaf
 				itr.first->RenderMesh(GL_TRIANGLES);
 			}
 		}
@@ -482,7 +620,6 @@ public:
 
 	// https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics/
 	// build AABB tree with VAO & IBO array?
-
 	// TODO: model을 추가할 때 마다 AABB가 자동으로 갱신.추가되도록 할 것.
 	void AddPrimitive(const std::vector<float>& vertices, const std::vector<unsigned int>& indices)
 	{
@@ -492,15 +629,17 @@ public:
 		m_TotalTriangleCount = prevNumOfTriangles + newNumOfTriangles;
 		m_Triangles.reserve(m_TotalTriangleCount); // 기존 크기 + 새로운 크기
 
-				// Triangles index buffer (for Pool)
+		 // Triangles index buffer (for Pool)
 		m_TriangleIndexBuffer.reserve(prevNumOfTriangles + newNumOfTriangles);
 
 		for (int i = 0; i < newNumOfTriangles; i++) // 모든 triangle들이 정렬되어 있는 상태서 시작.
 			m_TriangleIndexBuffer.push_back(i);
 
 		// Pool of AABBTree node
-		// Full Binary Tree 의 max node 개수는 2n-1 개이다.
-		const size_t maxNumOfNodes = newNumOfTriangles * 2 - 1;
+		// Full Binary Tree 의 max node 개수는 2n-1 개이다. (n = 삼각형 개수)
+		// 왜냐면, 트리의 leaf들에 모든 triangle들이 위치하기 때문에, 최대 분할 결과를 바탕으로 예측 가능하다.
+		// leaf마다 triangle 1개 = max의 경우
+		const size_t maxNumOfNodes = m_TotalTriangleCount * 2 - 1;
 		m_Nodes.reserve(maxNumOfNodes);
 
 		// NOTE: 최적화 필요. 일단 triangle array로 변환해서 멤버로 갖고 있지만, 이 과정이 필요가 없다고 보임.
@@ -654,65 +793,62 @@ private:
 	// Tree를 순회하면서 각 box에 대한 mesh를 생성, m_meshList에 삽입.
 	// TODO: meshList가 배열이기에, 이걸 level에 따라 순회하려면 재귀를 BFS로 해줘야 한다.
 	// 	     일단은 DFS로 함. 나중에 수정할 예정.
-	void __GenerateDebugMesh_recur(unsigned int node_idx, int depth)
+
+	struct GenMeshFormat {
+		unsigned int idx = 0;
+		int depth = 0;
+	};
+
+	// Change to Queue BFS
+	void __GenerateDebugMeshBFS(unsigned int node_idx)
 	{
-		LOG_INFO("Generating BVH DebugMesh...    [node:{0}/{1} of total {2} triangles]", node_idx, m_Nodes.size(), m_TotalTriangleCount);
-		auto bbox = m_Nodes[node_idx].m_Bounds;
-		const auto ub = bbox.m_UpperBound;
-		const auto lb = bbox.m_LowerBound;
+		Lunar::Timer timer;
+		LOG_INFO("Generating BVH DebugMesh...  [total {1} node, {2} triangles]", node_idx, m_NodeCount, m_TotalTriangleCount);
 
-		float cube_vertices[] = { // https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_05#Adding_the_3rd_dimension
-								 // front
-								 lb.x, lb.y,  ub.z,
-								 ub.x, lb.y,  ub.z,
-								 ub.x,  ub.y,  ub.z,
-								 lb.x,  ub.y,  ub.z,
-								 // back
-								 lb.x, lb.y, lb.z,
-								 ub.x, lb.y, lb.z,
-								 ub.x,  ub.y, lb.z,
-								 lb.x,  ub.y, lb.z
-		};
+		m_AABBMeshList.resize(m_Nodes.size());
+		//    	   idx           depth
+		std::queue<GenMeshFormat> Queue;
+		Queue.push({node_idx, 0});
 
-		unsigned int cube_elements[] = {
-				// front
-				0, 1, 2,
-				2, 3, 0,
-				// right
-				1, 5, 6,
-				6, 2, 1,
-				// back
-				7, 6, 5,
-				5, 4, 7,
-				// left
-				4, 0, 3,
-				3, 7, 4,
-				// bottom
-				4, 5, 1,
-				1, 0, 4,
-				// top
-				3, 2, 6,
-				6, 7, 3
-		};
-
-		auto mesh_ptr = std::make_shared<AABB::Mesh>();
-		mesh_ptr->CreateMesh(cube_vertices, cube_elements, 24, 36);
-		if (m_Nodes[node_idx].IsLeaf()) {
-			m_AABBMeshList.emplace_back(mesh_ptr, bbox_level_type{depth, true});
-		} else {
-			m_AABBMeshList.emplace_back(mesh_ptr, bbox_level_type{depth, false});
-		}
-
-		if (depth > m_MaxDepth) { // just for IMGUI debug draw.
-			m_MaxDepth = depth;
-		}
-
-		// if not leaf, then traverse every tree to create mesh
-		if (!m_Nodes[node_idx].IsLeaf())
+		while (!Queue.empty())
 		{
-			__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Left, depth + 1);
-			__GenerateDebugMesh_recur(m_Nodes[node_idx].m_Right, depth + 1);
+			GenMeshFormat& curr = Queue.front(); Queue.pop();
+
+			AABBNode& currNode = m_Nodes[curr.idx];
+
+			// 방문
+			auto bbox = currNode.m_Bounds;
+			const auto ub = bbox.m_UpperBound;
+			const auto lb = bbox.m_LowerBound;
+			float cube_vertices[] = { // https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_05#Adding_the_3rd_dimension
+									 /* front */ lb.x, lb.y,  ub.z, ub.x, lb.y,  ub.z, ub.x,  ub.y,  ub.z, lb.x,  ub.y,  ub.z,
+									 /* back */ lb.x, lb.y, lb.z, ub.x, lb.y, lb.z, ub.x,  ub.y, lb.z, lb.x,  ub.y, lb.z
+			};
+			unsigned int cube_elements[] = {
+					/* front */ 0, 1, 2, 2, 3, 0,
+					/* right */ 1, 5, 6, 6, 2, 1,
+					/* back */ 7, 6, 5, 5, 4, 7,
+					/* left */ 4, 0, 3, 3, 7, 4,
+					/* bottom */4, 5, 1, 1, 0, 4,
+					/* top */ 3, 2, 6, 6, 7, 3
+			};
+
+			auto mesh_ptr = std::make_shared<AABB::Mesh>();
+			mesh_ptr->CreateMesh(cube_vertices, cube_elements, 24, 36);
+
+			if (currNode.IsLeaf()) {
+				m_AABBMeshList[curr.idx] = { mesh_ptr, bbox_level_type{curr.depth, true} };
+			} else {
+				m_AABBMeshList[curr.idx] = { mesh_ptr, bbox_level_type{curr.depth, false} };
+			}
+			 m_MaxDepth = curr.depth;
+
+			if (!currNode.IsLeaf()) {
+				Queue.push({currNode.m_Left, curr.depth + 1});
+				Queue.push({currNode.m_Right, curr.depth + 1});
+			}
 		}
+		LOG_INFO("BVH DebugMesh build finished at {0}", timer.ElapsedMillis());
 	}
 };
 
