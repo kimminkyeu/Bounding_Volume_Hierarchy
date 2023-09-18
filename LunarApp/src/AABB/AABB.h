@@ -285,6 +285,7 @@ private:
 #else
 		// divide BBOX
 		__SubdivideBFS(m_RootIndex); // (2) Subdivide space recursively
+//		__Subdivide_recur_old(m_RootIndex); // (3) Deprecated version, just for performace test.
 #endif
 		LOG_INFO("BVH build finished at {0} ms", timer.ElapsedMillis());
 
@@ -610,6 +611,118 @@ private:
 			Queue.push(rightChildIdx);
 		}
 	}
+
+
+
+	// NOTE: -------------------- OLD VERSION -----------------------------------------------------
+	// Surface Area Huristic, but slow version
+	float ComputeCostbySAH_old(AABBNode& node, int axis, float splitPos)
+	{
+		// determine triangle counts and bounds.
+		BoundingBox leftBox, rightBox;
+		int leftCount = 0, rightCount = 0;
+		// 모든 노드 내 삼각형에 대해 주어진 pos 기준 왼쪽, 오른쪽인지 구분.
+		for (size_t i=0; i < node.m_TriangeCount; ++i)
+		{
+			auto triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
+			auto &triangle = m_Triangles[triIdx];
+			const auto centroid = (triangle.v0[axis] + triangle.v1[axis] + triangle.v2[axis]) * 0.3333f;
+			if (centroid < splitPos)
+			{
+				++leftCount;
+				leftBox.Grow(triangle.v0.x, triangle.v0.y, triangle.v0.z);
+				leftBox.Grow(triangle.v1.x, triangle.v1.y, triangle.v1.z);
+				leftBox.Grow(triangle.v2.x, triangle.v2.y, triangle.v2.z);
+			}
+			else
+			{
+				++rightCount;
+				rightBox.Grow(triangle.v0.x, triangle.v0.y, triangle.v0.z);
+				rightBox.Grow(triangle.v1.x, triangle.v1.y, triangle.v1.z);
+				rightBox.Grow(triangle.v2.x, triangle.v2.y, triangle.v2.z);
+			}
+			//   left AABB [num of triangle] * [surface area]
+			// + right AABB [num of triangle] * [surface area]
+			// -------------------------------------------------
+			// = SAH cost
+		}
+		float cost = leftCount * leftBox.SurfaceArea() + rightCount * rightBox.SurfaceArea();
+		return cost > 0 ? cost : std::numeric_limits<float>::max();
+	}
+
+	void __Subdivide_recur_old(unsigned int parentNodeIdx)
+	{
+		AABBNode& node = m_Nodes[parentNodeIdx];
+		int bestAxis = -1;
+		float bestPos = 0;
+		float bestCost = std::numeric_limits<float>::max();
+		for (int axis=0; axis < 3; ++axis) {
+			for (size_t i=0; i < node.m_TriangeCount; i++) {
+				auto triIdx = m_TriangleIndexBuffer[node.m_TriangleStartIndex + i];
+				auto& triangle = m_Triangles[triIdx];
+				// 노드 안의 모든 삼각형들을 돌면서, 각 삼각형의 무게중심을 기준으로 SAH 계산.
+				const auto candidatePos = (triangle.v0[axis] + triangle.v1[axis] + triangle.v2[axis]) * 0.3333f;
+				const float cost = ComputeCostbySAH_old(node, axis, candidatePos);
+				if (cost < bestCost) { // find min cost
+					bestPos = candidatePos;
+					bestAxis = axis;
+					bestCost = cost;
+				}
+			}
+		}
+		int axis = bestAxis; float splitPos = bestPos;
+
+		const float parentArea = node.m_Bounds.SurfaceArea();
+		const float parentCost = node.m_TriangeCount * parentArea;
+		if (bestCost >= parentCost) return ;
+
+		unsigned int startIdx = node.m_TriangleStartIndex;
+		unsigned int endIdx = startIdx + node.m_TriangeCount - 1;
+		while (startIdx <= endIdx) {
+			const auto triIdx = m_TriangleIndexBuffer[startIdx];
+			const auto centerOfTargetPrimitiveAxis = (m_Triangles[triIdx].v0[axis] + m_Triangles[triIdx].v1[axis] + m_Triangles[triIdx].v2[axis]) * 0.3333f;
+			if (centerOfTargetPrimitiveAxis < splitPos) {
+				startIdx++;
+			} else {
+				std::swap(m_TriangleIndexBuffer[startIdx], m_TriangleIndexBuffer[endIdx--]);
+			}
+		}
+
+		// abort split if one of the sides is empty
+		size_t leftCount = startIdx - node.m_TriangleStartIndex; // NOTE: ??
+		if (leftCount == 0 || leftCount == node.m_TriangeCount) return; // NOTE: ??
+
+		unsigned int leftChildIdx = m_Nodes.size();  // if 1
+		node.m_Left = leftChildIdx;
+		m_Nodes.emplace_back(node.m_TriangleStartIndex, leftCount);
+		__UpdateNodeBounds(leftChildIdx);
+
+		unsigned int rightChildIdx = m_Nodes.size(); // then 2
+		node.m_Right = rightChildIdx;
+		m_Nodes.emplace_back(startIdx, node.m_TriangeCount - leftCount);
+		__UpdateNodeBounds(rightChildIdx);
+
+		node.m_TriangeCount = 0;
+
+		__Subdivide_recur_old(leftChildIdx);
+		__Subdivide_recur_old(rightChildIdx);
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 public:
 	void DebugRender(int bbox_show_level)
