@@ -15,9 +15,10 @@ Test Model: Stanford Bunny (2.5mb, 14 million polygons)
 ```
 
 ### Dev Todo
-[] Thread build 구조 변경을 통한 Bottleneck 해결
-[] Möller–Trumbore intersection algorithm 이랑 현재 삼각형 충돌 방식 중 나은 방안 선택
-[] Animation을 위한 Refit, Reform 로직 추가
+- [ ] Thread build 구조 변경을 통한 Bottleneck 해결
+- [ ] Möller–Trumbore intersection algorithm 이랑 현재 삼각형 충돌 방식 중 나은 방안 선택
+- [ ] Animation을 위한 Refit, Reform 로직 추가
+- [ ] Debug Mesh 생성 쓰레딩을 위해 Vulkan으로 이전할 것. (OpenGL은 thread specific이라 한계가 있음)
 
 
 ## Compile & Run
@@ -41,7 +42,6 @@ this project is for Linux, MacOS. (Windows is currently not supported)
 ---
 
 ### 1. 참고 설계
-0. SAH(surface area huristic) 을 이용한 Bounding Volume Hirachy 구현
 0. Entity Component System (ECS) 방식으로 구조 작성할 것.
     - https://github.com/skypjack/entt#introduction
 2. The Cherno GameEngine Series (Demo)
