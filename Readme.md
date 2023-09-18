@@ -3,10 +3,22 @@
 
 ![제목 없는 동영상 - Clipchamp로 제작 (2)](https://github.com/kimminkyeu/MiniBlender/assets/60287070/df4a51de-530f-443a-bb34-0930e040f66d)
 ![image](https://github.com/kimminkyeu/MiniBlender/assets/60287070/3b1711d6-be75-4bb2-b898-44f65fc5b475)
-![image](https://github.com/kimminkyeu/MiniBlender/assets/60287070/eb0c17c9-8fd3-43de-923e-be2e1da90362)
 
-sample assets from
-https://casual-effects.com/data/
+### BVH build time test (ms)
+```
+Test Model: Stanford Bunny (2.5mb, 14 million polygons)
+- sample assets from https://casual-effects.com/data/
+
+#1) SAH bruteforce approach : 938966 ms
+#2) SAH with uniform buckets binning : 204 ms
+#3) (Current Version) SAH binning with 12 threads : 140 ms --> Bottleneck !!!
+```
+
+### Dev Todo
+[] Thread build 구조 변경을 통한 Bottleneck 해결
+[] Möller–Trumbore intersection algorithm 이랑 현재 삼각형 충돌 방식 중 나은 방안 선택
+[] Animation을 위한 Refit, Reform 로직 추가
+
 
 ## Compile & Run
 this project is for Linux, MacOS. (Windows is currently not supported)
