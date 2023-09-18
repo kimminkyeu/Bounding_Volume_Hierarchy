@@ -291,7 +291,11 @@ private:
 
 
 		// create AABB mesh for visualization
+//#if (MT == 1) //
+//		__GenerateDebugMeshParallel(m_RootIndex); // NOTE: OpenGL call에 쓰레딩이 안되서 일단 사용 금지.
+//#else
 		__GenerateDebugMeshBFS(m_RootIndex); // (3) for debug render, generate mesh(VAO, VBO.. etc) for each Bounding Box;
+//#endif
 	}
 
 	void __UpdateNodeBounds(unsigned int nodeIdx)
@@ -441,6 +445,7 @@ private:
 		auto Subdivide_recur = [&](auto&& Subdivide_recur, unsigned int currIdx) -> void
 		{
 		  AABBNode& node = m_Nodes[currIdx];
+//		  LOG_TRACE("Thread {0} is subdividing node {1}", std::this_thread::get_id(), currIdx);
 
 		  // NOTE: find best split plane.
 		  SplitEvaluationResult evaluationResult = __FindBestSplitPlane(node);
@@ -799,12 +804,93 @@ private:
 		int depth = 0;
 	};
 
+	// NOTE: OpenGL 함수는 쓰레딩을 조심해야 하네...;;;
+	// 일단 OpenGL 함수 사용에 있어서 쓰레딩 구조는 빼자
+	// ------------------------------------------------------------------
+	// NOTE: https://stackoverflow.com/questions/11097170/multithreaded-rendering-on-opengl
+	// NOTE: https://www.equalizergraphics.com/documentation/parallelOpenGLFAQ.html
+	void __GenerateDebugMeshParallel(unsigned int node_idx)
+	{
+		Lunar::Timer timer;
+		LOG_INFO("Generating Threaded BVH DebugMesh...  [total {1} node, {2} triangles]", node_idx, m_NodeCount, m_TotalTriangleCount);
+
+		std::vector<std::future<void>> futures;
+		futures.reserve(m_Nodes.size());
+
+		// clear threads
+//		m_ThreadPool.Shutdown(); NOTE: Shutdown 이상한 오류 발생.
+
+		m_AABBMeshList.resize(m_Nodes.size());
+		std::queue<GenMeshFormat> Queue;
+		Queue.push({node_idx, 0});
+
+		auto GenDebugMesh = [this](unsigned int idx, int depth) -> void
+		{
+		  AABBNode& currNode = m_Nodes[idx];
+
+//		  LOG_TRACE("Thread {0} is subdividing node {1} -> depth: {2}", std::this_thread::get_id(), idx, depth);
+
+		  auto bbox = currNode.m_Bounds;
+		  const auto ub = bbox.m_UpperBound;
+		  const auto lb = bbox.m_LowerBound;
+		  float cube_vertices[] = { // https://en.wikibooks.org/wiki/OpenGL_Programming/Modern_OpenGL_Tutorial_05#Adding_the_3rd_dimension
+				  /* front */ lb.x, lb.y,  ub.z, ub.x, lb.y,  ub.z, ub.x,  ub.y,  ub.z, lb.x,  ub.y,  ub.z,
+				  /* back */ lb.x, lb.y, lb.z, ub.x, lb.y, lb.z, ub.x,  ub.y, lb.z, lb.x,  ub.y, lb.z
+		  };
+		  unsigned int cube_elements[] = {
+				  /* front */ 0, 1, 2, 2, 3, 0,
+				  /* right */ 1, 5, 6, 6, 2, 1,
+				  /* back */ 7, 6, 5, 5, 4, 7,
+				  /* left */ 4, 0, 3, 3, 7, 4,
+				  /* bottom */4, 5, 1, 1, 0, 4,
+				  /* top */ 3, 2, 6, 6, 7, 3
+		  };
+
+		  auto mesh_ptr = std::make_shared<AABB::Mesh>();
+
+		  mesh_ptr->CreateMesh(cube_vertices, cube_elements, 24, 36);
+
+		  auto p = currNode.IsLeaf();
+		  auto k = p;
+
+		  if (currNode.IsLeaf()) {
+			  m_AABBMeshList[idx] = { mesh_ptr, bbox_level_type{depth, true} };
+		  } else {
+			  m_AABBMeshList[idx] = { mesh_ptr, bbox_level_type{depth, false} };
+		  }
+
+		  {
+			  // NOTE: 별도 mutex 생성 없이 이 뮤텍스를 재사용하였음.
+			  std::lock_guard<std::mutex> lock(m_TaskMutex);
+			  m_MaxDepth = depth;
+		  }
+		};
+
+		while (!Queue.empty())
+		{
+			GenMeshFormat& curr = Queue.front(); Queue.pop();
+			AABBNode& currNode = m_Nodes[curr.idx];
+			futures.push_back(m_ThreadPool.AddTask(GenDebugMesh, curr.idx, curr.depth));
+			if (!currNode.IsLeaf()) {
+				Queue.push({currNode.m_Left, curr.depth + 1});
+				Queue.push({currNode.m_Right, curr.depth + 1});
+			}
+		}
+
+		std::for_each(futures.begin(), futures.end(), [](std::future<void> &future) -> void
+		{
+		  future.wait();
+		});
+		LOG_INFO("BVH Threaded DebugMesh build finished at {0} ms", timer.ElapsedMillis());
+	}
+
 	// Change to Queue BFS
 	void __GenerateDebugMeshBFS(unsigned int node_idx)
 	{
 		Lunar::Timer timer;
 		LOG_INFO("Generating BVH DebugMesh...  [total {1} node, {2} triangles]", node_idx, m_NodeCount, m_TotalTriangleCount);
 
+		// TODO: change to reserve
 		m_AABBMeshList.resize(m_Nodes.size());
 		//    	   idx           depth
 		std::queue<GenMeshFormat> Queue;
@@ -813,7 +899,6 @@ private:
 		while (!Queue.empty())
 		{
 			GenMeshFormat& curr = Queue.front(); Queue.pop();
-
 			AABBNode& currNode = m_Nodes[curr.idx];
 
 			// 방문
@@ -848,7 +933,7 @@ private:
 				Queue.push({currNode.m_Right, curr.depth + 1});
 			}
 		}
-		LOG_INFO("BVH DebugMesh build finished at {0}", timer.ElapsedMillis());
+		LOG_INFO("BVH DebugMesh build finished at {0} ms", timer.ElapsedMillis());
 	}
 };
 
