@@ -11,7 +11,7 @@ Test Model: Stanford Bunny (2.5mb, 14 million polygons)
 
 #1) SAH bruteforce approach : 938966 ms
 #2) SAH with uniform buckets binning : 204 ms
-#3) (Current Version) SAH binning with 12 threads : 140 ms --> Bottleneck !!!
+#3) (Current Version) SAH binning with 12 threads : 110 ms --> Bottleneck !!!
 ```
 
 ### Dev Todo
