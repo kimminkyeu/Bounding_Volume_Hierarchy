@@ -15,11 +15,12 @@ Test Model: Stanford Bunny (2.5mb, 14 million polygons)
 ```
 
 ### Dev Todo
+- [x] ✅ Möller–Trumbore intersection algorithm 이랑 현재 삼각형 충돌 방식 중 나은 방안 선택
 - [ ] Thread build 구조 변경을 통한 Bottleneck 해결
-- [x] Möller–Trumbore intersection algorithm 이랑 현재 삼각형 충돌 방식 중 나은 방안 선택
 - [ ] Animation을 위한 Refit, Reform 로직 추가
 - [ ] Debug Mesh 생성 쓰레딩을 위해 Vulkan으로 이전할 것. (OpenGL은 thread specific이라 한계가 있음)
-
+- [ ] implement Global-illumination (ray-tracing)
+- [ ] store Mesh to Half-edge structure
 
 ## Compile & Run
 this project is for Linux, MacOS. (Windows is currently not supported)
@@ -33,18 +34,8 @@ this project is for Linux, MacOS. (Windows is currently not supported)
 ```
 
 
-
----
-## To do List
-1. faster BVH build (!!!)
-2. Mesh picking (for texture coloring)
-3. implement Global-illumination (ray-tracing)
-4. store Mesh to Half-edge structure
-5. optimize ray-tracing structure (threading 구조 변경 필요)
----
-
-### 1. 참고 설계
-0. Entity Component System (ECS) 방식으로 구조 작성할 것.
+### 1. 기타 
+0. 추후 기능개발 후 Entity Component System (ECS) 방식으로 구조 작성할 것.
     - https://github.com/skypjack/entt#introduction
 2. The Cherno GameEngine Series (Demo)
     - https://www.youtube.com/watch?v=JxIZbV_XjAs&list=PLlrATfBNZ98dC-V-N3m0Go4deliWHPFwT
@@ -55,7 +46,7 @@ this project is for Linux, MacOS. (Windows is currently not supported)
 5. Walnut Framework ```Vulkan```
     - https://github.com/StudioCherno/Walnut/tree/20f940b9d23946d4836b8549ff3e2c0750c5d985/Walnut/src/Walnut
 ---
-### 2. 목표
+### 2. 장기적 목표
 0. 프로젝트마다 해당 구조를 재사용 할 수 있도록 Template화 할 것.
 1. ```OpenGL```로 먼저 구현 후, ```Vulkan```으로 이전.
 2. 구조는 Hazel Engine을  분석하여 반영할 것.
