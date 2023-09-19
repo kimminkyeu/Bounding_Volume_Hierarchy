@@ -812,10 +812,81 @@ public:
 	// and returns a new AABB that contains the transformed AABB completely.
 	AABBTree Transform(const glm::mat4x4 matrix);
 
+	// NOTE: Moller-Trumbore fast ray-intersection test algorithm.
+	// 		 paper ref: https://cadxfem.org/inf/Fast%20MinimumStorage%20RayTriangle%20Intersection.pdf
+	//		 use two affine triangle variable, U and V
+	// https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
+	// https://www.youtube.com/watch?v=EZXz-uPyCyA
+	// https://www.youtube.com/watch?v=fK1RPmF_zjQ
+	Hit IntersectTriangle_MollerTrumbore(const Ray& ray, const triangle_type& triangle)
+	{
+		const glm::vec3 v0 = triangle.v0.GetVertex();
+		const glm::vec3 v1 = triangle.v1.GetVertex();
+		const glm::vec3 v2 = triangle.v2.GetVertex();
+
+		Hit hit; // default hit = no hit
+
+		// find vectors for two edges sharing v0
+		const glm::vec3 edge1 = v1 - v0;
+		const glm::vec3 edge2 = v2 - v0;
+
+		// begin calculating determinant - also used to calculate U parameter
+		// this is need to solve with Kramer's rule.
+		// reference: https://www.youtube.com/watch?v=jBsC34PxzoM
+		const auto pVec = glm::cross(ray.direction, edge2);
+
+		// if determinant is near zero, ray lies in plane of triangle
+		const auto det = glm::dot(edge1, pVec);
+
+		// if negative, then cull back face.
+		if (det < 0.00001f) { // Epsilon
+			return hit; // no hit
+		}
+
+		// calculate distance from v0 to ray origin.
+		const auto tVec = ray.origin - v0;
+
+		// calculate U parameter and test bounds.
+		float U = glm::dot(tVec, pVec);
+		if (U < 0.0f || U > det) {
+			return hit; // no hit
+		}
+
+		// prepare to test V parameter
+		const auto qVec = glm::cross(tVec, edge1);
+
+		// calculate V parameter and test bounds.
+		float V = glm::dot(ray.direction, qVec);
+		if (V < 0.0f || U + V > det) {
+			return hit; // no hit
+		}
+
+		// calculate t, scale parameters, ray intersects triangle
+		float T = glm::dot(edge2, qVec);
+		const float invert_det = 1.0 / det;
+		T *= invert_det;
+		U *= invert_det;
+		V *= invert_det;
+
+		// all done. calcaulte return values
+		const auto faceNormal = glm::cross(v2 - v1, v0 - v1);
+		const glm::vec3 hitPoint = v0 + glm::normalize(edge1) * U + glm::normalize(edge2) * V;
+
+		const float K = 1.0f - U - V;
+		hit.blendedPointNormal = triangle.v0.GetNormal() * K + triangle.v1.GetNormal() * U + triangle.v2.GetNormal() * V;
+//		hit.blendedPointNormal = faceNormal; // flat shading
+
+		hit.distance = T;
+		hit.point = hitPoint;
+		hit.faceNormal = glm::normalize(faceNormal);
+		hit.triangle = triangle;
+		return hit;
+	}
+
 	// NOTE: if not hit, then distance is -1
-
-
-	Hit IntersectTriangle(const Ray& ray, const triangle_type& triangle)
+	// 홍정모 강의 버전 Triangle Intersection
+	// compare 3 parts of sub-triangle.
+	Hit IntersectTriangle_Hong(const Ray& ray, const triangle_type& triangle)
 	{
 		const glm::vec3 v0 = triangle.v0.GetVertex();
 		const glm::vec3 v1 = triangle.v1.GetVertex();
@@ -863,13 +934,15 @@ public:
 
 	// calculate ray-intersection.
 	// NOTE: 방문 순서를 고정된 순서가 아닌, 자식 2개중 가까운 bounding를 우선 방문하는 것으로 결정. (BFS)
-	Hit IntersectBVH(const Ray& ray, const uint nodeIdx = 0)
+	// triangleIntersectMode 0 = default
+	// triangleIntersectMode 0 = moller-trumbore
+	Hit IntersectBVH(const Ray& ray, int triangleIntersectMode = 0)
 	{
 		Hit hit;
-		if (m_Nodes[nodeIdx].m_Bounds.Intersect(ray) < 0.0f) return hit; // no hit, early return.
+		if (m_Nodes[0].m_Bounds.Intersect(ray) < 0.0f) return hit; // no hit, early return.
 
 		std::stack<uint> Stack;
-		Stack.push(nodeIdx);
+		Stack.push(0);
 		while (!Stack.empty())
 		{
 			const uint currIdx = Stack.top(); Stack.pop();
@@ -881,7 +954,12 @@ public:
 				{
 					// 여기서 삼각형 충돌을 감지했다 하더라도, 일단 모든 bvh를 돌아야 한다.
 					const size_t triangleIndex = m_TriangleIndexBuffer[node->m_TriangleStartIndex + i];
-					Hit new_hit = IntersectTriangle(ray, m_Triangles[triangleIndex]);
+					Hit new_hit;
+					if (triangleIntersectMode == 0) {
+						new_hit = IntersectTriangle_Hong(ray, m_Triangles[triangleIndex]);
+					} else {
+						new_hit = IntersectTriangle_MollerTrumbore(ray, m_Triangles[triangleIndex]);
+					}
 					if (new_hit.distance >= 0.0f) {
 						hit = new_hit; // update hit
 						break;

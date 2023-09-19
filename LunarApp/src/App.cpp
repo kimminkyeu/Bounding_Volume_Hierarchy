@@ -55,8 +55,16 @@ namespace Utils {
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.cpp
 class RayTracer
 {
+	enum class eIntesectionMode
+	{
+		DEFAULT,
+		MOLLER_TRUMBORE,
+	};
+
 public:
 	float m_LastRenderTime = 0.0f;
+	eIntesectionMode m_TriangleIntersectionMode = eIntesectionMode::DEFAULT;
+	bool m_ChangeIntersection = false;
 
 private:
 	// TODO: remove light and material later. this is just for phong test.
@@ -246,7 +254,7 @@ public:
 
 	Hit TraceRay(const Ray& ray)
 	{
-		Hit hitResult = m_ActiveAABBScene->IntersectBVH(ray);
+		Hit hitResult = m_ActiveAABBScene->IntersectBVH(ray, (int)m_ChangeIntersection);
 		return hitResult;
 	}
 };
@@ -549,11 +557,17 @@ public:
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 			ImGui::Begin("Display Mode");
-
 			ImGui::Checkbox("Ray-Tracing", &m_RayTracingMode);
+
 			if (m_RayTracingMode) // **************************************************************************
 			{
-				ImGui::Text("Last render: %.3fms", m_RayTracer.m_LastRenderTime);
+				ImGui::BeginGroup();
+				{
+					ImGui::Text("Last render: %.3fms", m_RayTracer.m_LastRenderTime);
+					ImGui::Checkbox("Moller-Trumbore", &m_RayTracer.m_ChangeIntersection);
+				}
+				ImGui::EndGroup();
+
 				ImGui::Begin("Viewport");
 				m_ViewportSize = ImGui::GetContentRegionAvail();
 				ImGui::Image(
