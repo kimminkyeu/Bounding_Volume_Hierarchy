@@ -24,6 +24,8 @@ Test Model: Stanford Bunny (2.5mb, 14 million polygons)
 ## Compile & Run
 this project is for Linux, MacOS. (Windows is currently not supported)
 ```bash
+#0) install dependency
+ sh ./dependency/build_dependency.sh
 #1) compile with cmake (Realease version)
  cmake -DCMAKE_BUILD_TYPE=Release -B release && make -C release
 #2) run program
