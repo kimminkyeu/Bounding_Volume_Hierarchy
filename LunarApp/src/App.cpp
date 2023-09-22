@@ -11,6 +11,10 @@
 #include "Lunar/Model/Model.h"
 #include "Lunar/Shader/Shader.h"
 #include "Lunar/Texture/Texture.h"
+#include "Lunar/AABB/AABB.h"
+// test for ray tracing + mouse click
+#include "Lunar/Input/Input.h"
+#include "Lunar/Thread/ThreadPool.h"
 
 #include "LunarApp/src/shaders/DisplayMode.h"
 #include "LunarApp/src/shaders/Explosion/ExplosionShader.h"
@@ -18,17 +22,10 @@
 #include "LunarApp/src/shaders/Test/TestShader.h"
 #include "LunarApp/src/shaders/Cartoon/CartoonShader.h"
 #include "LunarApp/src/shaders/DataVisualizer.h"
-#include "LunarApp/src/AABB/AABB.h"
 #include "LunarApp/src/TestObject/TestObject.h"
 
 
-// test for ray tracing + mouse click
-#include "Lunar/Input/Input.h"
 
-#include "Lunar/Input/KeyCodes.h" // including Mouse Code.
-#include "Lunar/Input/MouseCodes.h"
-
-#include "LunarApp/src/Thread/ThreadPool.h"
 
 // https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h
@@ -55,15 +52,9 @@ namespace Utils {
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.cpp
 class RayTracer
 {
-	enum class eIntesectionMode
-	{
-		DEFAULT,
-		MOLLER_TRUMBORE,
-	};
 
 public:
 	float m_LastRenderTime = 0.0f;
-	eIntesectionMode m_TriangleIntersectionMode = eIntesectionMode::DEFAULT;
 	bool m_ChangeIntersection = false;
 
 private:
@@ -74,7 +65,7 @@ private:
 
 	uint32_t* m_ImageData = nullptr;                            // ray-tracing render buffer
 	std::shared_ptr<Lunar::FrameBuffer> m_FinalImageFrameBuffer;// framebuffer
-	std::shared_ptr<AABBTree> m_ActiveAABBScene;
+	std::shared_ptr<Lunar::AABBTree> m_ActiveAABBScene;
 	const Lunar::EditorCamera* m_ActiveEditorCamera = nullptr;
 
 	// --------------------------------------------------------------------
@@ -88,13 +79,13 @@ private:
 public:
 	RayTracer() = default;
 
-	RayTracer(const std::shared_ptr<AABBTree>& aabbScene, const Lunar::EditorCamera& camera)
+	RayTracer(const std::shared_ptr<Lunar::AABBTree>& aabbScene, const Lunar::EditorCamera& camera)
 		: m_ActiveAABBScene(aabbScene), m_ActiveEditorCamera(&camera)
 	{}
 
 	RayTracer& operator=(const RayTracer& other) = delete;
 
-	void LoadAABBScene(const std::shared_ptr<AABBTree>& aabbScene)
+	void LoadAABBScene(const std::shared_ptr<Lunar::AABBTree>& aabbScene)
 	{
 		m_ActiveAABBScene = aabbScene;
 	}
@@ -204,7 +195,7 @@ public:
 
 
 private:
-	glm::vec4 GetPhongShadedColor(Hit hit)
+	glm::vec4 GetPhongShadedColor(Lunar::Hit hit)
 	{
 		glm::vec4 ambientColor = glm::vec4(m_Material.m_AmbientColor, 1.0f) * m_MainLight.GetAmbientIntensity();
 		glm::vec3 lightDir = glm::normalize(m_MainLight.GetDirection());
@@ -224,8 +215,8 @@ private:
 
 	glm::vec4 CalculateColorPerPixel(uint32_t x, uint32_t y)
 	{
-		Ray ray = ConvertPixelPositionToWorldSpaceRay(x, y);
-		Hit hit = TraceRay(ray);
+		Lunar::Ray ray = ConvertPixelPositionToWorldSpaceRay(x, y);
+		Lunar::Hit hit = TraceRay(ray);
 		if (hit.distance < 0.0f)
 			return glm::vec4(0.0f); // BLACK
 		else
@@ -234,7 +225,7 @@ private:
 
 public:
 	// NOTE: Converting screen coordinate to world space Ray
-	Ray ConvertPixelPositionToWorldSpaceRay(uint32_t pixelX, uint32_t pixelY)
+	Lunar::Ray ConvertPixelPositionToWorldSpaceRay(uint32_t pixelX, uint32_t pixelY)
 	{
 		// https://antongerdelan.net/opengl/raycasting.html
 		float NDC_X = ((2.0f * pixelX) / m_FinalImageFrameBuffer->GetWidth()) - 1.0f;
@@ -249,12 +240,12 @@ public:
 		ray_EYE = glm::vec4(ray_EYE.xy(), -1.0f, 0.0f); // forward direction vector
 		glm::vec3 ray_WORLD_DIR = glm::inverse(m_ActiveEditorCamera->GetViewMatrix()) * ray_EYE;
 		ray_WORLD_DIR = glm::normalize(ray_WORLD_DIR);
-		return Ray {m_ActiveEditorCamera->GetPosition(), ray_WORLD_DIR };
+		return Lunar::Ray {m_ActiveEditorCamera->GetPosition(), ray_WORLD_DIR };
 	}
 
-	Hit TraceRay(const Ray& ray)
+	Lunar::Hit TraceRay(const Lunar::Ray& ray)
 	{
-		Hit hitResult = m_ActiveAABBScene->IntersectBVH(ray, (int)m_ChangeIntersection);
+		Lunar::Hit hitResult = m_ActiveAABBScene->IntersectBVH(ray, (int)m_ChangeIntersection);
 		return hitResult;
 	}
 };
@@ -282,7 +273,7 @@ private:
 
 	Lunar::Model m_Model;
 	TestObject m_TestObject; // NOTE: Temporary data For AABB Test
-	std::shared_ptr<AABBTree> m_AABB = nullptr;
+	std::shared_ptr<Lunar::AABBTree> m_AABB = nullptr;
 	// -----------------------------------------------------------
 
 public:
@@ -310,9 +301,10 @@ public:
 
 	// 1. Create object
 //		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/bunny.obj");
+//		m_Model.LoadModel("LunarApp/assets/box.obj");
+//		m_Model.LoadModel("LunarApp/assets/bunny.obj");
 //				m_Model.LoadModel("LunarApp/assets/dragon.obj");
-//		m_Model.LoadModel("LunarApp/assets/sphere.obj");
+		m_Model.LoadModel("LunarApp/assets/sphere.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
@@ -343,7 +335,7 @@ public:
 #ifdef TEST
 		m_AABB = std::make_shared<AABBTree>(m_TestObject.m_Vertices, m_TestObject.m_Indices);
 #else
-		m_AABB = std::make_shared<AABBTree>(m_Model.vertices, m_Model.indices);
+		m_AABB = std::make_shared<Lunar::AABBTree>(m_Model.vertices, m_Model.indices);
 #endif
 		m_RayTracer.LoadAABBScene(m_AABB);
 		// ------------------------------------
@@ -384,7 +376,7 @@ public:
 			ray_EYE = glm::vec4(ray_EYE.xy(), -1.0f, 0.0f); // forward direction vector
 			glm::vec3 ray_WORLD_DIR = glm::inverse(m_EditorCamera.GetViewMatrix()) * ray_EYE;
 			ray_WORLD_DIR = glm::normalize(ray_WORLD_DIR);
-			Ray ray {m_EditorCamera.GetPosition(), ray_WORLD_DIR };
+			Lunar::Ray ray {m_EditorCamera.GetPosition(), ray_WORLD_DIR };
 			auto hit = m_RayTracer.TraceRay(ray);
 			const auto shaderProcPtr = dynamic_cast<PhongShader *>(m_DisplayMode.GetByName("Phong"));
 			if (hit.distance > 0.0f) {
