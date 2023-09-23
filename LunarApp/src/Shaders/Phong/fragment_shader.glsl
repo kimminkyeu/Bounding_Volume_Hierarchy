@@ -93,7 +93,8 @@ void main()
     }
     else
     {
-        // FragmentColor = texture(TextureUnit0, TexCoord) * (CalculateAmbient() + CalculateDiffuse() + CalculateSpecular());
-        FragmentColor = (CalculateAmbient() + CalculateDiffuse() + CalculateSpecular());
+//         FragmentColor = texture(TextureUnit0, TexCoord);
+         FragmentColor = texture(TextureUnit0, TexCoord) * (CalculateAmbient() + CalculateDiffuse() + CalculateSpecular());
+//        FragmentColor = (CalculateAmbient() + CalculateDiffuse() + CalculateSpecular());
     }
 }
