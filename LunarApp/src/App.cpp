@@ -1,5 +1,7 @@
 
+#include "imgui_internal.h"
 #include "glm/glm.hpp"
+
 #include "Lunar/Camera/EditorCamera.h"
 #include "Lunar/Core/Application.h"
 #include "Lunar/Core/Timer.h"
@@ -33,7 +35,7 @@
 class ExampleLayer final : public Lunar::Layer
 {
 private:
-	ImVec2 m_ViewportSize; // NOTE: ImGUI Viewport Content Size, not screen size.
+	ImVec2 m_GUIScreenSize; // NOTE: ImGUI Viewport Content Size, not screen size.
 
 	DisplayMode m_DisplayMode; // main display mode
 	DataVisualizer m_DataVisualizer; // vertex, polygon, normal visualizer
@@ -74,10 +76,11 @@ public:
 
 	// 1. Create object
 //		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/box.obj");
+//		m_Model.LoadModel("LunarApp/assets/box.obj");
 //		m_Model.LoadModel("LunarApp/assets/bunny.obj");
 //				m_Model.LoadModel("LunarApp/assets/dragon.obj");
-//		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
+		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
+//		m_Model.LoadModel("LunarApp/assets/42.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
 	// 2. Create Texture
@@ -103,7 +106,7 @@ public:
 #ifdef TEST
 		m_AABB = std::make_shared<AABBTree>(m_TestObject.m_Vertices, m_TestObject.m_Indices);
 #else
-		m_AABB = std::make_shared<Lunar::AABBTree>(m_Model.vertices, m_Model.indices);
+		m_AABB = std::make_shared<Lunar::AABBTree>(m_Model.Vertices, m_Model.Indices);
 #endif
 
 		m_RayTracer.Init(m_AABB, m_EditorCamera, width, height);
@@ -126,17 +129,15 @@ public:
 			// NOTE: mouse pos 는 glfw 윈도우 전체 기준임. 따라서 이 부분 수정 필요함.
 			glm::vec2 mouse { Lunar::Input::GetMousePosition() };
 			const auto glfwScreenHeight = Lunar::Application::Get().GetWindowData().BufferHeight;
-			mouse.y -= ((float)glfwScreenHeight - m_ViewportSize.y); // 차이 보완.
+			mouse.y -= ((float)glfwScreenHeight - m_GUIScreenSize.y); // 차이 보완.
 			const auto pos = m_EditorCamera->GetPosition();
 
-			// calcalate ray intersection
-
-//			// NOTE: Converting screen coordinate to world space Ray
-//			// -----------------------------------------------------------
-//			// https://antongerdelan.net/opengl/raycasting.html
+			// NOTE: Converting screen coordinate to world space Ray
+			// -----------------------------------------------------------
+			// https://antongerdelan.net/opengl/raycasting.html
 			// 1. xy screen coord to NDC
-			float NDC_X = ((2.0f * mouse.x) / m_ViewportSize.x) - 1.0f;
-			float NDC_Y = 1.0f - (2.0f * mouse.y) / m_ViewportSize.y;
+			float NDC_X = ((2.0f * mouse.x) / m_GUIScreenSize.x) - 1.0f;
+			float NDC_Y = 1.0f - (2.0f * mouse.y) / m_GUIScreenSize.y;
 			glm::vec4 ray_NDC = glm::vec4(NDC_X, NDC_Y, -1.0f, 0.0f); // z(-1) = far
 
 			// 2. NDC ray * Projection inverse * View inverse = World coord ray
@@ -147,28 +148,14 @@ public:
 			ray_WORLD_DIR = glm::normalize(ray_WORLD_DIR);
 			Lunar::Ray ray {m_EditorCamera->GetPosition(), ray_WORLD_DIR };
 			auto hit = m_RayTracer.TraceRay(ray);
+
 			const auto shaderProcPtr = dynamic_cast<PhongShader *>(m_DisplayMode.GetByName("Phong"));
+
 			if (hit.distance > 0.0f) {
 				shaderProcPtr->SetPickMode(1);
 				shaderProcPtr->SetPickedMeshData(hit.triangle.v0.GetVertex(), hit.triangle.v1.GetVertex(), hit.triangle.v2.GetVertex());
-				LOG_INFO("HIT SUCCESS");
-//				auto p = m_EditorCamera->GetPosition();
-//				auto k = m_EditorCamera->GetPitch(); auto e = m_EditorCame->GetYaw();
-//				LOG_INFO("camera pos    X{0} Y{1} Z{2}", p.x, p.y, p.z);
-//				LOG_INFO("camera angle  Pitch{0} Yaw{1}", k, e);
-				/*
-				LOG_INFO("*********************************************************");
-				LOG_INFO("*             HIT SUCCESS!!                             *");
-				LOG_INFO("*********************************************************");
-				LOG_INFO("Distance 		   {0}", hit.distance);
-				LOG_INFO("Point 		  X{0} Y{1} Z{2}", hit.point.x, hit.point.y, hit.point.z);
-				LOG_INFO("Surface normal  X{0} Y{1} Z{2}", hit.faceNormal.x, hit.faceNormal.y, hit.faceNormal.z);
-				LOG_INFO("Triangle v0     X{0} Y{1} Z{2}", hit.triangle.v0.x, hit.triangle.v0.y, hit.triangle.v0.z);
-				LOG_INFO("Triangle v1     X{0} Y{1} Z{2}", hit.triangle.v1.x, hit.triangle.v1.y, hit.triangle.v1.z);
-				LOG_INFO("Triangle v2     X{0} Y{1} Z{2}\n", hit.triangle.v2.x, hit.triangle.v2.y, hit.triangle.v2.z);
-				LOG_INFO("Surface normal  X{0} Y{1} Z{2}", hit.faceNormal.x, hit.faceNormal.y, hit.faceNormal.z);
-				LOG_INFO("Blended normal  X{0} Y{1} Z{2}", hit.blendedPointNormal.x, hit.blendedPointNormal.y, hit.blendedPointNormal.z);
-				*/
+				LOG_INFO("Hit Success");
+                LOG_INFO("UV x{0} y{1}", hit.uv.x, hit.uv.y);
 			}
 			else // no hit.
 			{
@@ -201,8 +188,8 @@ public:
 					shaderProcPtr->SetUniformView(glm::value_ptr(m_EditorCamera->GetViewMatrix()));
 					shaderProcPtr->SetUniformModel(glm::value_ptr(model));
 
-					m_MainLight.UseLight(*shaderProcPtr);
-					m_Model.Render(GL_TRIANGLES);
+                    m_MainLight.Use(shaderProcPtr);
+					m_Model.Render(GL_TRIANGLES, shaderProcPtr);
 					m_DisplayMode.UnbindCurrentShader();
 				}
 				// ----------------  Normal Render ------------------
@@ -291,16 +278,124 @@ public:
 		}
 	}
 
+
 	// NOTE: this is ImGui Render function
     void OnUIRender() override
 	{
+
+        /* **************************************
+         * Set Initial dock-space layout (Experimental)
+         * **************************************/
+        // https://gist.github.com/AidanSun05/953f1048ffe5699800d2c92b88c36d9f
+//        const auto& app = Lunar::Application::Get();
+//        auto appWidth = app.GetWindowData().BufferWidth;
+//        auto appHeight = app.GetWindowData().BufferHeight;
+
+        static bool firstLoop = true;
+        if (firstLoop)
+        {
+            // 1. Now we'll need to create our dock node:
+
+            ImGuiID id = ImGui::GetID("DockSpace"); // str_id set in application.cpp
+            ImGui::DockBuilderRemoveNode(id);             // Clear any preexisting layouts associated with the ID we just chose
+            ImGui::DockBuilderAddNode(id); // add node to dock full screen
+
+            // 2. Split the dock node to create spaces to put our windows in:
+
+            // Split the dock node in the left direction to create our first docking space. This will be on the left side of the node.
+            // (The 0.5f means that the new space will take up 50% of its parent - the dock node.)
+            ImGuiID dock0 = ImGui::DockBuilderSplitNode(id, ImGuiDir_Up, 0.07f, nullptr, &id);
+            ImGuiID dock1 = ImGui::DockBuilderSplitNode(id, ImGuiDir_Left, 0.7f, nullptr, &id);
+            // +-----------+
+            // |           |
+            // |     1     |
+            // |           |
+            // +-----------+
+            // Split the same dock node in the right direction to create our second docking space.
+            // At this point, the dock node has two spaces, one on the left and one on the right.
+            ImGuiID dock2 = ImGui::DockBuilderSplitNode(id, ImGuiDir_Right, 0.5f, nullptr, &id);
+            // +-----+-----+
+            // |     |     |
+            // |  1  |  2  |
+            // |     |     |
+            // +-----+-----+
+            //    split ->
+            // For our last docking space, we want it to be under the second one but not under the first.
+            // Split the second space in the down direction so that we now have an additional space under it.
+            //
+            // Notice how "dock2" is now passed rather than "id".
+            // The new space takes up 50% of the second space rather than 50% of the original dock node.
+            ImGuiID dock3 = ImGui::DockBuilderSplitNode(id, ImGuiDir_Down, 0.9f, nullptr, &dock2);
+            // +-----+-----+
+            // |     |  2  |  split
+            // |  1  +-----+    |
+            // |     |  3  |    V
+            // +-----+-----+
+
+            // 3. Add windows to each docking space:
+            ImGui::DockBuilderDockWindow("Mode Selection", dock0);
+            ImGui::DockBuilderDockWindow("Main Viewport", dock1);
+            ImGui::DockBuilderDockWindow("WINDOW_B_TOP", dock2);
+            ImGui::DockBuilderDockWindow("WINDOW_B_BOTTOM", dock3);
+
+            // 4. We're done setting up our docking configuration:
+            ImGui::DockBuilderFinish(id);
+        }
+        if (firstLoop) firstLoop = false;
+
+
+        /* **************************************
+         * Set Switch Tab button for app mode.
+         * **************************************/
+
+        ImGui::Begin("Mode Selection");
+
+        const ImVec4 CLICKED_COLOR = ImVec4{0.4f, 0.5f, 0.8f, 1.0f};
+        const ImVec4 DEFAULT_COLOR = ImVec4{0.2f, 0.3f, 0.4f, 1.0f};
+        #define PUSH_STYLE_COLOR(state, btnIdx) \
+                ((state == btnIdx)              \
+                ? ImGui::PushStyleColor(ImGuiCol_Button, CLICKED_COLOR) \
+                : ImGui::PushStyleColor(ImGuiCol_Button, DEFAULT_COLOR));
+
+
+        static int ToggledBtn = 0; // default button is 0 (Layout)
+
+        PUSH_STYLE_COLOR(ToggledBtn, 0);
+        ImGui::SameLine(0.0, 2.0f);
+        if (ImGui::Button("Layout", ImVec2(100, 20)))
+        {
+            ToggledBtn = 0;
+            m_RayTracingMode = false;
+        }
+        ImGui::PopStyleColor(1);
+
+        PUSH_STYLE_COLOR(ToggledBtn, 1);
+        ImGui::SameLine(0.0, 2.0f);
+        if (ImGui::Button("Texture Paint", ImVec2(130, 20)))
+        {
+            ToggledBtn = 1;
+            m_RayTracingMode = false;
+        }
+        ImGui::PopStyleColor(1);
+
+        PUSH_STYLE_COLOR(ToggledBtn, 2);
+        ImGui::SameLine(0.0, 2.0f);
+        if (ImGui::Button("Rendering", ImVec2(100, 20)))
+        {
+            ToggledBtn = 2;
+            m_RayTracingMode = true;
+        }
+        ImGui::PopStyleColor(1);
+
+        ImGui::End();
+
+        /* **************************************
+         * Set content of each dock.
+         * **************************************/
 		const auto currentShaderName = m_DisplayMode.GetCurrentShaderPtr()->GetName();
 		{
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-			ImGui::Begin("Display Mode");
-			ImGui::Checkbox("Ray-Tracing", &m_RayTracingMode);
-
-			if (m_RayTracingMode) // **************************************************************************
+			ImGui::Begin("WINDOW_B_TOP");
+			if (ToggledBtn == 2) // **************************************************************************
 			{
 				ImGui::BeginGroup();
 				{
@@ -309,17 +404,16 @@ public:
 				}
 				ImGui::EndGroup();
 
-				ImGui::Begin("Viewport");
-				m_ViewportSize = ImGui::GetContentRegionAvail();
+				ImGui::Begin("Main Viewport");
+                m_GUIScreenSize = ImGui::GetContentRegionAvail();
 				ImGui::Image(
-						reinterpret_cast<void *>(m_RayTracer.GetFinalImageFrameBuffer()->GetFrameTexture()),
-						m_ViewportSize,
-						ImVec2(0, 1),
-						ImVec2(1, 0)
+                        reinterpret_cast<void *>(m_RayTracer.GetFinalImageFrameBuffer()->GetFrameTexture()),
+                        m_GUIScreenSize,
+                        ImVec2(0, 1),
+                        ImVec2(1, 0)
 				);
 				// NOTE: 윈도우 사이즈는 동일하지만 ImGUI Viewport 사이즈가 바뀌었을 경우
-				m_EditorCamera->OnResize(m_ViewportSize.x, m_ViewportSize.y);
-				m_RayTracer.OnResize(m_ViewportSize.x, m_ViewportSize.y);
+				m_EditorCamera->OnResize(m_GUIScreenSize.x, m_GUIScreenSize.y);
 				ImGui::End();
 			}
 			else // shader, GPU mode. ***************************************************************************
@@ -336,7 +430,7 @@ public:
 					ImGui::EndMenu();
 				}
 				{
-					ImGui::Begin("Data Board");
+					ImGui::Begin("WINDOW_B_BOTTOM");
 					{
 						// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
 						ImGui::BeginGroup();
@@ -359,10 +453,10 @@ public:
 						{
 							if (currentShaderName == "Phong" || currentShaderName == "Cartoon")
 							{
-//								ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Material.m_AmbientColor));
-//								ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Material.m_DiffuseColor));
-//								ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Material.m_SpecularColor));
-//								ImGui::DragFloat("Specular Exponent", &m_Material.m_SpecularExponent);
+								ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Model.Material.m_AmbientColor));
+								ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Model.Material.m_DiffuseColor));
+								ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Model.Material.m_SpecularColor));
+								ImGui::DragFloat("Specular Exponent", &m_Model.Material.m_SpecularExponent);
 							}
 							else if (currentShaderName == "Explosion")
 							{
@@ -406,33 +500,30 @@ public:
 					ImGui::End();
 				}
 				{
-					ImGui::Begin("Viewport");
-					m_ViewportSize = ImGui::GetContentRegionAvail();
+					ImGui::Begin("Main Viewport");
+                    m_GUIScreenSize = ImGui::GetContentRegionAvail();
 					// NOTE: put m_FrameBuffer's image data to ImGui Image
 					// https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 					ImGui::Image(
-							reinterpret_cast<void *>(m_RasterizationFrameBuffer.GetFrameTexture()),
-							m_ViewportSize,
-							ImVec2(0, 1),
-							ImVec2(1, 0)
+                            reinterpret_cast<void *>(m_RasterizationFrameBuffer.GetFrameTexture()),
+                            m_GUIScreenSize,
+                            ImVec2(0, 1),
+                            ImVec2(1, 0)
 					);
 					// NOTE: 윈도우 사이즈는 동일하지만 ImGUI Viewport 사이즈가 바뀌었을 경우
-					m_EditorCamera->OnResize(m_ViewportSize.x, m_ViewportSize.y);
-//					m_RasterizationFrameBuffer.Resize(m_ViewportSize.x, m_ViewportSize.y);
+					m_EditorCamera->OnResize(m_GUIScreenSize.x, m_GUIScreenSize.y);
 					ImGui::End();
 				}
 			}
 			ImGui::End();
-			ImGui::PopStyleVar();
 		}
 	}
+
 
 	// called once popped from m_LayerStack
 	void OnDetach() override
 	{
 		LOG_TRACE("Layer [{0}] has been detached", _m_Name);
-//		for (auto &mesh : m_MeshList)
-//			mesh->ClearMesh(); // delete mesh buffer (VAO VBO IBO)
 	}
 
 	void OnResize(float width, float height) override
@@ -474,6 +565,28 @@ Lunar::Application* Lunar::CreateApplication(int argc, char** argv) noexcept
 			}
 			ImGui::EndMenu();
 		}
-	});
+
+        if (ImGui::BeginMenu("Edit"))
+        {
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Render"))
+        {
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Window"))
+        {
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Help"))
+        {
+            ImGui::EndMenu();
+        }
+
+
+    });
 	return (app);
 }
