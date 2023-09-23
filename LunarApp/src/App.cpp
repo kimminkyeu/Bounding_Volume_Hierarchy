@@ -16,240 +16,21 @@
 #include "Lunar/Input/Input.h"
 #include "Lunar/Thread/ThreadPool.h"
 
-#include "LunarApp/src/shaders/DisplayMode.h"
-#include "LunarApp/src/shaders/Explosion/ExplosionShader.h"
-#include "LunarApp/src/shaders/Phong/PhongShader.h"
-#include "LunarApp/src/shaders/Test/TestShader.h"
-#include "LunarApp/src/shaders/Cartoon/CartoonShader.h"
-#include "LunarApp/src/shaders/DataVisualizer.h"
+#include "LunarApp/src/RayTracer/RayTracer.h"
+#include "LunarApp/src/Shaders/DisplayMode.h"
+#include "LunarApp/src/Shaders/Explosion/ExplosionShader.h"
+#include "LunarApp/src/Shaders/Phong/PhongShader.h"
+#include "LunarApp/src/Shaders/Test/TestShader.h"
+#include "LunarApp/src/Shaders/Cartoon/CartoonShader.h"
+#include "LunarApp/src/Shaders/DataVisualizer.h"
 #include "LunarApp/src/TestObject/TestObject.h"
-
-
-
 
 // https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h
-// Image 배열에 render --> 이후 framebuffer로 복사 --> framebuffer를 imGUI로 업데이트
-
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.cpp
 
 //#define TEST
-
-namespace Utils {
-	static uint32_t ConvertToRGBA(const glm::vec4& color)
-	{
-		uint8_t r = (uint8_t)(glm::clamp(color.r, 0.0f, 1.0f) * 255.0f);
-		uint8_t g = (uint8_t)(glm::clamp(color.g, 0.0f, 1.0f) * 255.0f);
-		uint8_t b = (uint8_t)(glm::clamp(color.b, 0.0f, 1.0f) * 255.0f);
-		uint8_t a = (uint8_t)(glm::clamp(color.a, 0.0f, 1.0f) * 255.0f);
-
-		uint32_t result = (a << 24) | (b << 16) | (g << 8) | r;
-		return result;
-	}
-}
-
-// https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.cpp
-class RayTracer
-{
-
-public:
-	float m_LastRenderTime = 0.0f;
-	bool m_ChangeIntersection = false;
-
-private:
-	// TODO: remove light and material later. this is just for phong test.
-	Lunar::Light m_MainLight = { glm::vec3(2.0f, -1.0f, -1.0f), 0.1f, 0.7f, 0.5f };
-	Lunar::Material m_Material;
-	// TODO ---------------------------------------------------------------
-
-	uint32_t* m_ImageData = nullptr;                            // ray-tracing render buffer
-	std::shared_ptr<Lunar::FrameBuffer> m_FinalImageFrameBuffer;// framebuffer
-	std::shared_ptr<Lunar::AABBTree> m_ActiveAABBScene;
-	const Lunar::EditorCamera* m_ActiveEditorCamera = nullptr;
-
-	// --------------------------------------------------------------------
-
-	// for Thread
-	std::vector<uint32_t> m_ImageColumnIterator, m_ImageRowIterator;
-	// NOTE: thread pool for render
-	ThreadPool m_ThreadPool;
-
-
-public:
-	RayTracer() = default;
-
-	RayTracer(const std::shared_ptr<Lunar::AABBTree>& aabbScene, const Lunar::EditorCamera& camera)
-		: m_ActiveAABBScene(aabbScene), m_ActiveEditorCamera(&camera)
-	{}
-
-	RayTracer& operator=(const RayTracer& other) = delete;
-
-	void LoadAABBScene(const std::shared_ptr<Lunar::AABBTree>& aabbScene)
-	{
-		m_ActiveAABBScene = aabbScene;
-	}
-
-	void OnResize(uint32_t width, uint32_t height)
-	{
-		if (m_FinalImageFrameBuffer)
-		{
-			// No resize necessary
-			if (m_FinalImageFrameBuffer->GetWidth() == width && m_FinalImageFrameBuffer->GetHeight() == height)
-				return;
-			m_FinalImageFrameBuffer->Resize(width, height);
-		}
-		else
-		{
-			m_FinalImageFrameBuffer = std::make_shared<Lunar::FrameBuffer>(width, height);
-		}
-		delete[] m_ImageData;
-		m_ImageData = new uint32_t[width * height];
-
-		m_ImageRowIterator.resize(width);
-		m_ImageColumnIterator.resize(height);
-		for (uint32_t i = 0; i < width; i++)
-			m_ImageRowIterator[i] = i;
-		for (uint32_t i = 0; i < height; i++)
-			m_ImageColumnIterator[i] = i;
-	}
-
-	void Render(const Lunar::EditorCamera& camera)
-	{
-		// TODO: 이 부분에서 main thread 하나가 계속 화면에 pixel를 덮어쓰는 역할을 하고
-		// 		  worker들이 계속 배열에다가 그림을 그리는데, 화면이 바뀌어야 할 때 마다
-		// 		  기존에 하던 일을 버리고 처음부터 일을 다시 배정받는 방식으로 설계 필요.
-
-
-	//	https://alain.xyz/blog/ray-tracing-denoising
-	// render loop
-		// n개 thread 들이 m_Image를 채우는 동안.
-		// painter thread 하나가 계속 framebuffer를 update한다.
-
-		// 이때, 한줄씩 채우는 것이 아닌 clustering 방식으로 쓰레딩을 진행하는게 좋겠다.
-		// (속도 비교 필요)
-
-		// 둘째로, 화면을 움직이는 동안 accumulation 방식으로 데이터를 점점 쌓아나가는게 좋겠다.
-		// Global Illumination 으로 accumulation이 계속 진행되도록 할 것.
-
-		// 셋째, 물체를 회전시키는 도중이거나 Zoom in Zoom out 하는중 움직임이 반영될 때는
-		// Ray-tracing을 하지 않는다. Performance shader로 진행.
-
-
-
-		Lunar::Timer timer;
-		m_ActiveEditorCamera = &camera;
-
-
-#if (MT == 1) // NOTE: this variable is set by CMakelist.txt
-
-		std::vector<std::future<void>> futures;
-		futures.reserve(m_ImageColumnIterator.size());
-
-		// lamda function
-		auto DrawEachRow = [this](uint32_t y) -> void
-		{
-//			LOG_TRACE("Row {0} from thread id {1}, total busy threads are {2}", y, std::this_thread::get_id(), m_ThreadPool.BusyThreads);
-			for (unsigned int x : m_ImageRowIterator)
-			{
-					glm::vec4 color = CalculateColorPerPixel(x, y);
-					m_ImageData[(x) + ((y) * m_FinalImageFrameBuffer->GetWidth())] = Utils::ConvertToRGBA(color);
-			}
-		};
-
-		// render row
-		for (unsigned int y : m_ImageColumnIterator)
-		{
-			futures.push_back(m_ThreadPool.AddTask(DrawEachRow, y));
-		}
-
-//		// wait until all tasks all done
-		std::for_each(futures.begin(), futures.end(), [](std::future<void> &future) -> void
-		{
-		  future.wait();
-		});
-
-#else
-		for (uint32_t y = 0; y < m_FinalImageFrameBuffer->GetHeight(); y+=4)
-		{
-			for (uint32_t x = 0; x < m_FinalImageFrameBuffer->GetWidth(); x+=4)
-			{
-				// For data locality, draw the pixels in a tile of e.g. 4×4 pixels often find the same triangles
-				for (uint32_t v = 0; v < 4; v++)
-				{
-					for (uint32_t u = 0; u < 4; u++)
-					{
-						glm::vec4 color = CalculateColorPerPixel(x + u, y + v);
-						m_ImageData[(x + u) + ((y + v) * m_FinalImageFrameBuffer->GetWidth())] = Utils::ConvertToRGBA(color);
-					}
-				}
-			}
-		}
-#endif
-		m_FinalImageFrameBuffer->LoadPixelsToTexture(m_ImageData);
-		m_LastRenderTime = timer.ElapsedMillis();
-	}
-
-	std::shared_ptr<Lunar::FrameBuffer> GetFinalImageFrameBuffer() const
-	{ return m_FinalImageFrameBuffer; }
-
-
-private:
-	glm::vec4 GetPhongShadedColor(Lunar::Hit hit)
-	{
-		glm::vec4 ambientColor = glm::vec4(m_Material.m_AmbientColor, 1.0f) * m_MainLight.GetAmbientIntensity();
-		glm::vec3 lightDir = glm::normalize(m_MainLight.GetDirection());
-		float diffuseFactor = glm::max(glm::dot(-hit.blendedPointNormal, lightDir), 0.0f);
-		glm::vec4 diffuseColor = glm::vec4(m_Material.m_DiffuseColor, 1.0f) * m_MainLight.GetDiffuseIntensity() * diffuseFactor;
-		glm::vec4 specularColor { 0.0f };
-		if (diffuseFactor > 0)
-		{
-			glm::vec3 lightReflectionDir = glm::normalize(2 * dot(-hit.blendedPointNormal, lightDir) * hit.blendedPointNormal - lightDir);
-			glm::vec3 eyeToPointDir = glm::normalize(hit.point - m_ActiveEditorCamera->GetPosition());
-			float specularFactor = glm::max(glm::dot(lightReflectionDir, -eyeToPointDir), 0.0f);
-			float specularPowFactor = glm::pow(specularFactor, m_Material.m_SpecularExponent);
-			specularColor = glm::vec4(m_Material.m_SpecularColor, 1.0f) * m_MainLight.GetSpecularIntensity() * specularPowFactor;
-		}
-		return ambientColor + diffuseColor + specularColor;
-	}
-
-	glm::vec4 CalculateColorPerPixel(uint32_t x, uint32_t y)
-	{
-		Lunar::Ray ray = ConvertPixelPositionToWorldSpaceRay(x, y);
-		Lunar::Hit hit = TraceRay(ray);
-		if (hit.distance < 0.0f)
-			return glm::vec4(0.0f); // BLACK
-		else
-			return GetPhongShadedColor(hit);
-	}
-
-public:
-	// NOTE: Converting screen coordinate to world space Ray
-	Lunar::Ray ConvertPixelPositionToWorldSpaceRay(uint32_t pixelX, uint32_t pixelY)
-	{
-		// https://antongerdelan.net/opengl/raycasting.html
-		float NDC_X = ((2.0f * pixelX) / m_FinalImageFrameBuffer->GetWidth()) - 1.0f;
-		float NDC_Y = 1.0f - (2.0f * pixelY) / m_FinalImageFrameBuffer->GetHeight();
-		// ---------------------------------------------------------
-		NDC_Y = -NDC_Y; // NOTE: 이 부분 해결 필요. 왜 뒤집히는 건지?
-		// ---------------------------------------------------------
-		glm::vec4 ray_NDC = glm::vec4(NDC_X, NDC_Y, -1.0f, 1.0f); // z(-1) = far
-		// 2. NDC ray * Projection inverse * View inverse = World coord ray
-		// +) homogeneous coordinate의 마지막 w 가 1.0이면 point이고, 0.0이면 벡터이다.
-		glm::vec4 ray_EYE = glm::inverse(m_ActiveEditorCamera->GetProjection()) * ray_NDC;
-		ray_EYE = glm::vec4(ray_EYE.xy(), -1.0f, 0.0f); // forward direction vector
-		glm::vec3 ray_WORLD_DIR = glm::inverse(m_ActiveEditorCamera->GetViewMatrix()) * ray_EYE;
-		ray_WORLD_DIR = glm::normalize(ray_WORLD_DIR);
-		return Lunar::Ray {m_ActiveEditorCamera->GetPosition(), ray_WORLD_DIR };
-	}
-
-	Lunar::Hit TraceRay(const Lunar::Ray& ray)
-	{
-		Lunar::Hit hitResult = m_ActiveAABBScene->IntersectBVH(ray, (int)m_ChangeIntersection);
-		return hitResult;
-	}
-};
-
 
 class ExampleLayer final : public Lunar::Layer
 {
@@ -274,7 +55,6 @@ private:
 	Lunar::Model m_Model;
 	TestObject m_TestObject; // NOTE: Temporary data For AABB Test
 	std::shared_ptr<Lunar::AABBTree> m_AABB = nullptr;
-	// -----------------------------------------------------------
 
 public:
 	ExampleLayer()
@@ -331,17 +111,15 @@ public:
 		m_DisplayMode.Add( new CartoonShader() );
         m_DataVisualizer.Init(); // init wireframe, normal, vertex (Shader)
 
-		// ------ AABB TEST -------------------
+
 #ifdef TEST
 		m_AABB = std::make_shared<AABBTree>(m_TestObject.m_Vertices, m_TestObject.m_Indices);
 #else
 		m_AABB = std::make_shared<Lunar::AABBTree>(m_Model.vertices, m_Model.indices);
 #endif
-		m_RayTracer.LoadAABBScene(m_AABB);
-		// ------------------------------------
+		m_RayTracer.SetAABBScene(m_AABB);
 	}
 
-	// x, y 픽셀이 입력되면, 이 픽셀을 이용해 World Space에 대한 Ray를 계산하여 반환.
 
 
 	// called every render loop

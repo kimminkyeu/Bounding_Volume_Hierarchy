@@ -847,13 +847,10 @@ namespace Lunar
 			const auto faceNormal = glm::cross(v2 - v1, v0 - v1);
 			const glm::vec3 hitPoint = v0 + glm::normalize(edge1) * U + glm::normalize(edge2) * V;
 
-			const float K = 1.0f - U - V;
-			hit.blendedPointNormal = triangle.v0.GetNormal() * K + triangle.v1.GetNormal() * U + triangle.v2.GetNormal() * V;
-			//		hit.blendedPointNormal = faceNormal; // flat shading
-
 			hit.distance = T;
 			hit.point = hitPoint;
 			hit.faceNormal = glm::normalize(faceNormal);
+			hit.blendedPointNormal = hit.faceNormal; // flat shading
 			hit.triangle = triangle;
 			return hit;
 		}
@@ -861,7 +858,7 @@ namespace Lunar
 		// NOTE: if not hit, then distance is -1
 		// 홍정모 강의 버전 Triangle Intersection
 		// compare 3 parts of sub-triangle.
-		Hit IntersectTriangle_Hong(const Ray& ray, const triangle_type& triangle)
+		Hit IntersectTriangle_Basic(const Ray& ray, const triangle_type& triangle)
 		{
 			const glm::vec3 v0 = triangle.v0.GetVertex();
 			const glm::vec3 v1 = triangle.v1.GetVertex();
@@ -929,7 +926,7 @@ namespace Lunar
 						const size_t triangleIndex = m_TriangleIndexBuffer[node->m_TriangleStartIndex + i];
 						Hit new_hit;
 						if (triangleIntersectMode == 0) {
-							new_hit = IntersectTriangle_Hong(ray, m_Triangles[triangleIndex]);
+							new_hit = IntersectTriangle_Basic(ray, m_Triangles[triangleIndex]);
 						} else {
 							new_hit = IntersectTriangle_MollerTrumbore(ray, m_Triangles[triangleIndex]);
 						}
