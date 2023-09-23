@@ -17,6 +17,7 @@ Test Model: Stanford Bunny (2.5mb, 14 million polygons)
 ### Dev Todo
 - [x] ✅ Möller–Trumbore intersection algorithm 이랑 현재 삼각형 충돌 방식 중 나은 방안 선택
 - [ ] Thread build 구조 변경을 통한 Bottleneck 해결
+- [ ] UV unwrap algorithm?
 - [ ] Animation을 위한 Refit, Reform 로직 추가
 - [ ] Debug Mesh 생성 쓰레딩을 위해 Vulkan으로 이전할 것. (OpenGL은 thread specific이라 한계가 있음)
 - [ ] implement Global-illumination (ray-tracing)
