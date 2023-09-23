@@ -52,7 +52,8 @@ set( SOURCE_FILES
         Lunar/Material/Material.cpp
         Lunar/FrameBuffer/FrameBuffer.cpp
         Lunar/AABB/Mesh.cpp
-        LunarApp/src/RayTracer/RayTracer.cpp LunarApp/src/RayTracer/RayTracer.h)
+        LunarApp/src/RayTracer/RayTracer.cpp
+        )
 # configure cmake project
 # ----------------------------------------------------------------------------
 project( ${NAME} ) # set project name
