@@ -6,18 +6,18 @@
 #define SCOOP_DATAVISUALIZER_H
 
 // NOTE: Normal, Polygon, Vertex Visualizer
-#include "LunarApp/src/shaders/Point/PointShader.h"
-#include "LunarApp/src/shaders/Wireframe/WireframeShader.h"
-#include "LunarApp/src/shaders/Normal/NormalShader.h"
-#include "LunarApp/src/shaders/AABB/AABBShader.h"
-#include "LunarApp/src/shaders/Grid/GridShader.h"
+#include "LunarApp/src/Shaders/Point/PointShader.h"
+#include "LunarApp/src/Shaders/Wireframe/WireframeShader.h"
+#include "LunarApp/src/Shaders/Normal/NormalShader.h"
+#include "LunarApp/src/Shaders/AABB/AABBShader.h"
+#include "LunarApp/src/Shaders/Grid/GridShader.h"
 
 class DataVisualizer
 {
 public:
 	bool m_ShowNormal = false;
 	bool m_ShowWireframe = true;
-	bool m_ShowPoint = true;
+	bool m_ShowPoint = false;
 	bool m_ShowAABB = false;
 	bool m_ShowGrid = true;
 
