@@ -23,16 +23,17 @@ namespace Lunar {
 	{
 	public: // NOTE: temporary data for AABB creation. delete later!
 		glm::mat4 ModelMatrix {1.0f}; // init unit matrix
-		std::vector<float> vertices;
-		std::vector<unsigned int> indices;
+		std::vector<float> Vertices;
+		std::vector<unsigned int> Indices;
+        Material Material;
 
 	public:
 		Model();
 		~Model();
 		void LoadModel(const std::string& filePath);
-		void Render(GLenum mode);
+		void Render(GLenum mode, const Shader* shader = nullptr);
 		void ClearModel();
-		void SetTexture();
+//		void SetTexture();
 
 	private:
 		void LoadNode(aiNode* node, const aiScene* scene);
@@ -41,7 +42,7 @@ namespace Lunar {
 
 		std::vector<Mesh*> m_MeshList;
 		std::vector<Texture*> m_TextureList; // model에서 여러개의 텍스쳐 사용.
-		std::vector<Material*> m_MaterialList;
+//		std::vector<Material*> m_MaterialList;
 
 		std::vector<unsigned int> m_MeshToTexture; // mesh-텍스쳐 매칭 인덱스를 배열로 저장.
 	};

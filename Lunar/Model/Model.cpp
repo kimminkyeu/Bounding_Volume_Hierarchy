@@ -52,23 +52,23 @@ namespace Lunar {
 
 		for (size_t i=0; i<mesh->mNumVertices; i++)
 		{
-			vertices.insert(vertices.end(),
-					{ mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z });
+			Vertices.insert(Vertices.end(),
+                            { mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z });
 
 			// Texture 가 있을 경우.
 			if(mesh->mTextureCoords[0])
 			{
-				vertices.insert(vertices.end(),
-					{ mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y });
+				Vertices.insert(Vertices.end(),
+                                { mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y });
 			}
 			else // 만약 Texture 가 없을 경우
 			{
-				vertices.insert(vertices.end(),
-					{ 0.0f, 0.0f });
+				Vertices.insert(Vertices.end(),
+                                { 0.0f, 0.0f });
 			}
 			// Normals (근데 OBJ에 normal이 없는데...?)
-			vertices.insert(vertices.end(),
-					{ mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z });
+			Vertices.insert(Vertices.end(),
+                            { mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z });
 		}
 
 		// Update Indices
@@ -77,14 +77,14 @@ namespace Lunar {
 			aiFace face = mesh->mFaces[i];
 			for (size_t j=0; j<face.mNumIndices; j++)
 			{
-				indices.push_back(face.mIndices[j]);
+				Indices.push_back(face.mIndices[j]);
 			}
 		}
 
 		Mesh* newMesh = new Mesh();
 
 		// NOTE: Create VAO for each Mesh
-		newMesh->CreateMesh(&vertices[0], &indices[0], vertices.size(), indices.size());
+		newMesh->CreateMesh(&Vertices[0], &Indices[0], Vertices.size(), Indices.size());
 		m_MeshList.push_back(newMesh);
 		m_MeshToTexture.push_back(mesh->mMaterialIndex);
 	}
@@ -122,14 +122,14 @@ namespace Lunar {
 			}
 			if (!m_TextureList[i]) // if no texture
 			{
-				m_TextureList[i] = new Texture("LunarApp/assets/white-transparent.png");
+				m_TextureList[i] = new Texture("LunarApp/assets/brick.png");
 				m_TextureList[i]->LoadTexture();
 			}
 		}
 	}
 
 	// NOTE: !!!! MOST IMPORTANT
-	void Model::Render(GLenum mode)
+	void Model::Render(GLenum mode, const Shader* shader)
 	{
 		for (size_t i=0; i<m_MeshList.size(); i++)
 		{
@@ -139,6 +139,7 @@ namespace Lunar {
 			{
 				m_TextureList[materialIndex]->UseTexture();
 //				m_MaterialList[materialIndex]->UseMaterial();
+                if (shader) { Material.Use(shader); }
 			}
 			m_MeshList[i]->RenderMesh(mode);
 		}
