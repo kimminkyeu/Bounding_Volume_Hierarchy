@@ -218,6 +218,8 @@ namespace Lunar
 
 		triangle_type triangle;// 충돌한 삼각형 3개의 각 vertex data.
 		glm::vec3 faceNormal;  // hit point normal
+
+        glm::vec2 uv;
 	};
 
 	// ------------------------------------------------
@@ -852,6 +854,8 @@ namespace Lunar
 			hit.faceNormal = glm::normalize(faceNormal);
 			hit.blendedPointNormal = hit.faceNormal; // flat shading
 			hit.triangle = triangle;
+//            hit.uv = glm::vec2(triangle.v0.GetUV() * w0 + triangle.v1.GetUV() * w1 + triangle.v2.GetUV() * w2);
+
 			return hit;
 		}
 
@@ -901,6 +905,7 @@ namespace Lunar
 			hit.point = point;
 			hit.faceNormal = glm::normalize(faceNormal);
 			hit.triangle = triangle;
+            hit.uv = glm::vec2(triangle.v0.GetUV() * w0 + triangle.v1.GetUV() * w1 + triangle.v2.GetUV() * w2);
 			return hit;
 		}
 
