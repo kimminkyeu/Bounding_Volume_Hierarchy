@@ -30,7 +30,7 @@ namespace Lunar {
 			return ;
 		}
 		LoadNode(scene->mRootNode, scene);
-//		LoadMaterials(scene);
+		LoadMaterials(scene);
 	}
 
 	void Model::LoadNode(aiNode* node, const aiScene* scene)
@@ -120,16 +120,16 @@ namespace Lunar {
 					}
 				}
 			}
-			if (!m_TextureList[i]) // no texture
+			if (!m_TextureList[i]) // if no texture
 			{
-				m_TextureList[i] = new Texture("LunarApp/assets/brick.png");
+				m_TextureList[i] = new Texture("LunarApp/assets/white-transparent.png");
 				m_TextureList[i]->LoadTexture();
 			}
 		}
 	}
 
 	// NOTE: !!!! MOST IMPORTANT
-	void Model::RenderModel(GLenum mode)
+	void Model::Render(GLenum mode)
 	{
 		for (size_t i=0; i<m_MeshList.size(); i++)
 		{
@@ -138,6 +138,7 @@ namespace Lunar {
 			if ((materialIndex < m_TextureList.size()) && m_TextureList[materialIndex])
 			{
 				m_TextureList[materialIndex]->UseTexture();
+//				m_MaterialList[materialIndex]->UseMaterial();
 			}
 			m_MeshList[i]->RenderMesh(mode);
 		}

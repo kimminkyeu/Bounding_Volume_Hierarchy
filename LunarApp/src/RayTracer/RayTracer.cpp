@@ -4,14 +4,9 @@
 
 #include "RayTracer.h"
 
-RayTracer::RayTracer(const std::shared_ptr<Lunar::AABBTree>& aabbScene, const Lunar::EditorCamera& camera)
-		: m_ActiveAABBScene(aabbScene), m_ActiveEditorCamera(&camera)
+RayTracer::RayTracer(const std::shared_ptr<Lunar::AABBTree>& aabbScene, const std::shared_ptr<Lunar::EditorCamera>& camera)
+		: m_ActiveAABBScene(aabbScene), m_ActiveCamera(camera)
 {}
-
-void RayTracer::SetAABBScene(const std::shared_ptr<Lunar::AABBTree>& aabbScene)
-{
-	m_ActiveAABBScene = aabbScene;
-}
 
 void RayTracer::OnResize(uint32_t width, uint32_t height)
 {
@@ -37,10 +32,11 @@ void RayTracer::OnResize(uint32_t width, uint32_t height)
 		m_ImageColumnIterator[i] = i;
 }
 
-void RayTracer::Render(const Lunar::EditorCamera& camera)
+void RayTracer::Render()
 {
+	assert(m_ActiveCamera && m_ActiveAABBScene && "Need to Init camera and AABBScene before render call");
+
 	Lunar::Timer timer;
-	m_ActiveEditorCamera = &camera;
 
 #if (MT == 1) // NOTE: this variable is set by CMakelist.txt
 
@@ -101,13 +97,12 @@ Lunar::Ray RayTracer::ConvertPixelPositionToWorldSpaceRay(uint32_t pixelX, uint3
 	glm::vec4 ray_NDC = glm::vec4(NDC_X, NDC_Y, -1.0f, 1.0f); // z(-1) = far
 	// 2. NDC ray * Projection inverse * View inverse = World coord ray
 	// +) homogeneous coordinate의 마지막 w 가 1.0이면 point이고, 0.0이면 벡터이다.
-	glm::vec4 ray_EYE = glm::inverse(m_ActiveEditorCamera->GetProjection()) * ray_NDC;
+	glm::vec4 ray_EYE = glm::inverse(m_ActiveCamera->GetProjection()) * ray_NDC;
 	ray_EYE = glm::vec4(ray_EYE.xy(), -1.0f, 0.0f); // forward direction vector
-	glm::vec3 ray_WORLD_DIR = glm::inverse(m_ActiveEditorCamera->GetViewMatrix()) * ray_EYE;
+	glm::vec3 ray_WORLD_DIR = glm::inverse(m_ActiveCamera->GetViewMatrix()) * ray_EYE;
 	ray_WORLD_DIR = glm::normalize(ray_WORLD_DIR);
-	return Lunar::Ray {m_ActiveEditorCamera->GetPosition(), ray_WORLD_DIR };
+	return Lunar::Ray {m_ActiveCamera->GetPosition(), ray_WORLD_DIR };
 }
-
 Lunar::Hit RayTracer::TraceRay(const Lunar::Ray& ray)
 {
 	Lunar::Hit hitResult = m_ActiveAABBScene->IntersectBVH(ray, (int)m_ChangeIntersection);
@@ -124,7 +119,7 @@ glm::vec4 RayTracer::_GetPhongShadedColor(Lunar::Hit hit)
 	if (diffuseFactor > 0)
 	{
 		glm::vec3 lightReflectionDir = glm::normalize(2 * dot(-hit.blendedPointNormal, lightDir) * hit.blendedPointNormal - lightDir);
-		glm::vec3 eyeToPointDir = glm::normalize(hit.point - m_ActiveEditorCamera->GetPosition());
+		glm::vec3 eyeToPointDir = glm::normalize(hit.point - m_ActiveCamera->GetPosition());
 		float specularFactor = glm::max(glm::dot(lightReflectionDir, -eyeToPointDir), 0.0f);
 		float specularPowFactor = glm::pow(specularFactor, m_Material.m_SpecularExponent);
 		specularColor = glm::vec4(m_Material.m_SpecularColor, 1.0f) * m_MainLight.GetSpecularIntensity() * specularPowFactor;
@@ -140,4 +135,11 @@ glm::vec4 RayTracer::_CalculateColorPerPixel(uint32_t x, uint32_t y)
 		return glm::vec4(0.0f); // BLACK
 	else
 		return _GetPhongShadedColor(hit);
+}
+
+void RayTracer::Init(const std::shared_ptr<Lunar::AABBTree>& aabbScene, const std::shared_ptr<Lunar::EditorCamera>& camera, uint32_t width, uint32_t height)
+{
+	m_ActiveAABBScene = aabbScene;
+	m_ActiveCamera = camera;
+	OnResize(width, height);
 }

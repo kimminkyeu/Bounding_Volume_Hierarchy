@@ -24,13 +24,18 @@ class RayTracer
 
 public:
 	RayTracer() = default;
-	RayTracer(const std::shared_ptr<Lunar::AABBTree>& aabbScene, const Lunar::EditorCamera& camera);
+	RayTracer(const std::shared_ptr<Lunar::AABBTree>& aabbScene, const std::shared_ptr<Lunar::EditorCamera>& camera);
 	RayTracer& operator=(const RayTracer& other) = delete;
+
+	// set camera, aabb scene, and framebuffer
+	void Init(const std::shared_ptr<Lunar::AABBTree>& aabbScene, const std::shared_ptr<Lunar::EditorCamera>& camera, uint32_t frameBufferWidth, uint32_t frameBufferHeight);
+
+	void OnResize(uint32_t width, uint32_t height);
+
+	void Render();
+
 	inline std::shared_ptr<Lunar::FrameBuffer> GetFinalImageFrameBuffer() const { return m_FinalImageFrameBuffer; }
 
-	void SetAABBScene(const std::shared_ptr<Lunar::AABBTree>& aabbScene);
-	void OnResize(uint32_t width, uint32_t height);
-	void Render(const Lunar::EditorCamera& camera);
 
 public:
 	// Converting screen coordinate to world space Ray
@@ -48,11 +53,14 @@ private: // private method
 
 private: // private data member
 	uint32_t* m_ImageData = nullptr;                            // ray-tracing render buffer
+	std::shared_ptr<Lunar::FrameBuffer> m_FinalImageFrameBuffer;// framebuffer
+
 	Lunar::Light m_MainLight = { glm::vec3(2.0f, -1.0f, -1.0f), 0.1f, 0.7f, 0.5f };
 	Lunar::Material m_Material;
-	std::shared_ptr<Lunar::FrameBuffer> m_FinalImageFrameBuffer;// framebuffer
-	std::shared_ptr<Lunar::AABBTree> m_ActiveAABBScene;
-	const Lunar::EditorCamera* m_ActiveEditorCamera = nullptr;
+
+	std::shared_ptr<Lunar::AABBTree> m_ActiveAABBScene = nullptr;
+	std::shared_ptr<Lunar::EditorCamera> m_ActiveCamera = nullptr;
+
 	ThreadPool m_ThreadPool; // for Thread Pool
 	std::vector<uint32_t> m_ImageColumnIterator, m_ImageRowIterator;
 };
