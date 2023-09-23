@@ -82,8 +82,10 @@ namespace Lunar {
 		inline GLint GetUniformProjectionLocation() const { return m_UniformProjectionLocation; };
 		inline GLint GetUniformModelLocation() const { return m_UniformModelLocation; };
 		inline GLint GetUniformViewLocation() const { return m_UniformModelLocation; };
-		inline t_UniformDirectionLight GetUniformDirectionLight() const { return m_UniformDirectionLight; };
-		inline t_UniformMaterial GetUniformMaterial() const { return m_UniformMaterial; };
+
+		inline t_UniformDirectionLight GetUniformDirectionLightLocations() const { return m_UniformDirectionLight; };
+		inline t_UniformMaterial GetUniformMaterialLocations() const { return m_UniformMaterial; };
+
 		inline std::string GetName() const { return m_DebugName; };
 
 		// 각 쉐이더 헤더에서 업데이트 함수 구현.
