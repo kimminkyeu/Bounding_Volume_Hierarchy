@@ -11,9 +11,10 @@ namespace Lunar {
 		  m_IndexOfRefraction(IOR), m_Dissolve(dissolve), m_IlluminationModel(illuminationModel)
 	{}
 
-	void Material::UseMaterial(const Shader& shader) const
+	void Material::Use(const Lunar::Shader *shaderPtr) const
 	{
-		const auto locs = shader.GetUniformMaterial();
+        // shader의 unform 변수들 위치 얻어내기
+		const auto locs = shaderPtr->GetUniformMaterialLocations();
 		glUniform3f(locs.SpecularColorLocation, m_SpecularColor.r, m_SpecularColor.g, m_SpecularColor.b);
 		glUniform3f(locs.AmbientColorLocation, m_AmbientColor.r, m_AmbientColor.g, m_AmbientColor.b);
 		glUniform3f(locs.DiffuseColorLocation, m_DiffuseColor.r, m_DiffuseColor.g, m_DiffuseColor.b);

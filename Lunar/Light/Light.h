@@ -22,7 +22,7 @@ namespace Lunar {
 		Light() = default;
 		Light(const glm::vec3& direction, float ambientIntensity, float diffuseIntensity, float specularIntensity);
 		~Light();
-		void UseLight(const Lunar::Shader& shader);
+		void Use(const Lunar::Shader* shaderPtr);
 
 		inline void SetDirection(const glm::vec3& dir) { m_Direction = dir; }
 		inline void SetAmbientIntensity(float intensity) { m_AmbientIntensity = intensity; }

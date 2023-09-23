@@ -25,7 +25,7 @@ namespace Lunar {
 
 	public:
 		// set each member data to uniform shader variable
-		void UseMaterial(const Lunar::Shader& shader) const;
+		void Use(const Lunar::Shader *shaderPtr) const;
 
 	public:
 		glm::vec3	m_SpecularColor;
