@@ -18,6 +18,7 @@
 #include "Lunar/Input/Input.h"
 #include "Lunar/Thread/ThreadPool.h"
 
+#include "LunarApp/src/GUI/GUI.h"
 #include "LunarApp/src/RayTracer/RayTracer.h"
 #include "LunarApp/src/Shaders/DisplayMode.h"
 #include "LunarApp/src/Shaders/Explosion/ExplosionShader.h"
@@ -76,10 +77,10 @@ public:
 
 	// 1. Create object
 //		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-//		m_Model.LoadModel("LunarApp/assets/box.obj");
+		m_Model.LoadModel("LunarApp/assets/box.obj");
 //		m_Model.LoadModel("LunarApp/assets/bunny.obj");
 //				m_Model.LoadModel("LunarApp/assets/dragon.obj");
-		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
+//		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
 //		m_Model.LoadModel("LunarApp/assets/42.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
@@ -175,8 +176,6 @@ public:
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // 1. Unbind current frame buffer data.
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			{
-				glm::mat4 model(1.0f); // init unit matrix
-
 				if (m_ShowMesh)
 				{
 					glEnable(GL_DEPTH_TEST); // 약간 야매 방식. depth buffer 없이 실시간 검사로 일단 테스트 (임시 방편)
@@ -186,8 +185,7 @@ public:
 					shaderProcPtr->SetUniformEyePos(m_EditorCamera->GetPosition());
 					shaderProcPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera->GetProjection()));
 					shaderProcPtr->SetUniformView(glm::value_ptr(m_EditorCamera->GetViewMatrix()));
-					shaderProcPtr->SetUniformModel(glm::value_ptr(model));
-
+					shaderProcPtr->SetUniformModel(glm::value_ptr(m_Model.ModelMatrix));
                     m_MainLight.Use(shaderProcPtr);
 					m_Model.Render(GL_TRIANGLES, shaderProcPtr);
 					m_DisplayMode.UnbindCurrentShader();
@@ -201,7 +199,7 @@ public:
 						normalShaderPtr->Bind();
 						normalShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera->GetProjection()));
 						normalShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera->GetViewMatrix()));
-						normalShaderPtr->SetUniformModel(glm::value_ptr(model));
+						normalShaderPtr->SetUniformModel(glm::value_ptr(m_Model.ModelMatrix));
 						m_Model.Render(GL_TRIANGLES);
 						normalShaderPtr->Unbind();
 					}
@@ -215,7 +213,7 @@ public:
 						wireframeShaderPtr->Bind();
 						wireframeShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera->GetProjection()));
 						wireframeShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera->GetViewMatrix()));
-						wireframeShaderPtr->SetUniformModel(glm::value_ptr(model));
+						wireframeShaderPtr->SetUniformModel(glm::value_ptr(m_Model.ModelMatrix));
 						m_Model.Render(GL_TRIANGLES);
 						wireframeShaderPtr->Unbind();
 					}
@@ -229,12 +227,8 @@ public:
 						pointShaderPtr->Bind();
 						pointShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera->GetProjection()));
 						pointShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera->GetViewMatrix()));
-						pointShaderPtr->SetUniformModel(glm::value_ptr(model));
-#ifdef TEST
-						m_TestObject.Render(GL_POINTS);
-#else
+						pointShaderPtr->SetUniformModel(glm::value_ptr(m_Model.ModelMatrix));
 						m_Model.Render(GL_POINTS);
-#endif
 						pointShaderPtr->Unbind();
 					}
 				}
@@ -246,7 +240,7 @@ public:
 						aabbShaderPtr->Bind();
 						aabbShaderPtr->SetUniformProjection(glm::value_ptr(m_EditorCamera->GetProjection()));
 						aabbShaderPtr->SetUniformView(glm::value_ptr(m_EditorCamera->GetViewMatrix()));
-						aabbShaderPtr->SetUniformModel(glm::value_ptr(model));
+						aabbShaderPtr->SetUniformModel(glm::value_ptr(m_Model.ModelMatrix));
 						if (m_AABB)
 							m_AABB->DebugRender(m_BBoxDebugDrawLevel);
 						aabbShaderPtr->Unbind();
@@ -257,10 +251,8 @@ public:
 					auto* gridShaderPtr = dynamic_cast<GridShader *>(m_DataVisualizer.m_GridShader);
 					if (gridShaderPtr)
 					{
-						// NOTE: Grid는 VAO/VBO가 필요 없다...
-						// NOTE: Draw a full screen covering triangle for bufferless rendering...
+						// Draw a full screen covering triangle for bufferless rendering
 						// https://trass3r.github.io/coding/2019/09/11/bufferless-rendering.html
-						// https://asliceofrendering.com/scene%20helper/2020/01/05/InfiniteGrid/
 						gridShaderPtr->m_FarClip = m_EditorCamera->GetFarClip();
 						gridShaderPtr->m_NearClip = m_EditorCamera->GetNearClip();
 						gridShaderPtr->Bind();
@@ -278,12 +270,6 @@ public:
 		}
 	}
 
-	enum class ButtonToggleFlags
-	{
-		LayoutMode			= 0,
-		TexturePaintMode	= 1,
-		RenderMode			= 1 << 1,
-	};
 
 	// NOTE: this is ImGui Render function
     void OnUIRender() override
@@ -293,9 +279,6 @@ public:
          * Set Initial dock-space layout (Experimental)
          * **************************************/
         // https://gist.github.com/AidanSun05/953f1048ffe5699800d2c92b88c36d9f
-//        const auto& app = Lunar::Application::Get();
-//        auto appWidth = app.GetWindowData().BufferWidth;
-//        auto appHeight = app.GetWindowData().BufferHeight;
 
         static bool firstLoop = true;
         if (firstLoop)
@@ -343,7 +326,6 @@ public:
             ImGui::DockBuilderDockWindow("Main Viewport", dock1_a);
 			ImGui::DockBuilderDockWindow("Second Viewport", dock1_b);
             ImGui::DockBuilderDockWindow("Property", dock2);
-//            ImGui::DockBuilderDockWindow("Property", dock3);
 
             // 4. We're done setting up our docking configuration:
             ImGui::DockBuilderFinish(id);
@@ -355,192 +337,166 @@ public:
          * Set Switch Tab button for app mode.
          * **************************************/
 
+		static ButtonToggleFlags ToggledBtn = ButtonToggleFlags::LayoutMode; // default button is 0 (Layout)
         ImGui::Begin("Mode Selection");
+		{
+			GUI_PUSH_STYLE_COLOR_BY_BUTTON_STATE(ToggledBtn, ButtonToggleFlags::LayoutMode);
+			ImGui::SameLine(0.0, 2.0f);
+			if (ImGui::Button("Layout", ImVec2(100, 20)))
+			{
+				ToggledBtn = ButtonToggleFlags::LayoutMode;
+				m_RayTracingMode = false;
+			}
+			ImGui::PopStyleColor(1);
 
-        const ImVec4 CLICKED_COLOR = ImVec4{0.4f, 0.5f, 0.8f, 1.0f};
-        const ImVec4 DEFAULT_COLOR = ImVec4{0.2f, 0.3f, 0.4f, 1.0f};
-        #define LUNAR_PUSH_STYLE_COLOR(state, btnIdx) \
-                ((state == btnIdx)              \
-                ? ImGui::PushStyleColor(ImGuiCol_Button, CLICKED_COLOR) \
-                : ImGui::PushStyleColor(ImGuiCol_Button, DEFAULT_COLOR));
+			GUI_PUSH_STYLE_COLOR_BY_BUTTON_STATE(ToggledBtn, ButtonToggleFlags::TexturePaintMode);
+			ImGui::SameLine(0.0, 2.0f);
+			if (ImGui::Button("Texture Paint", ImVec2(130, 20)))
+			{
+				ToggledBtn = ButtonToggleFlags::TexturePaintMode;
+				m_RayTracingMode = false;
+			}
+			ImGui::PopStyleColor(1);
 
+			GUI_PUSH_STYLE_COLOR_BY_BUTTON_STATE(ToggledBtn, ButtonToggleFlags::RenderMode);
+			ImGui::SameLine(0.0, 2.0f);
+			if (ImGui::Button("Rendering", ImVec2(100, 20)))
+			{
+				ToggledBtn = ButtonToggleFlags::RenderMode;
+				m_RayTracingMode = true;
+			}
+			ImGui::PopStyleColor(1);
 
-        static ButtonToggleFlags ToggledBtn; // default button is 0 (Layout)
-
-		LUNAR_PUSH_STYLE_COLOR(ToggledBtn, ButtonToggleFlags::LayoutMode);
-        ImGui::SameLine(0.0, 2.0f);
-        if (ImGui::Button("Layout", ImVec2(100, 20)))
-        {
-			ToggledBtn = ButtonToggleFlags::LayoutMode;
-            m_RayTracingMode = false;
-        }
-        ImGui::PopStyleColor(1);
-
-		LUNAR_PUSH_STYLE_COLOR(ToggledBtn, ButtonToggleFlags::TexturePaintMode);
-        ImGui::SameLine(0.0, 2.0f);
-        if (ImGui::Button("Texture Paint", ImVec2(130, 20)))
-        {
-            ToggledBtn = ButtonToggleFlags::TexturePaintMode;
-            m_RayTracingMode = false;
-        }
-        ImGui::PopStyleColor(1);
-
-		LUNAR_PUSH_STYLE_COLOR(ToggledBtn, ButtonToggleFlags::RenderMode);
-        ImGui::SameLine(0.0, 2.0f);
-        if (ImGui::Button("Rendering", ImVec2(100, 20)))
-        {
-            ToggledBtn = ButtonToggleFlags::RenderMode;
-            m_RayTracingMode = true;
-        }
-        ImGui::PopStyleColor(1);
+			GUI_PUSH_STYLE_COLOR_BY_BUTTON_STATE(ToggledBtn, ButtonToggleFlags::ModelingMode);
+			ImGui::SameLine(0.0, 2.0f);
+			if (ImGui::Button("Modeling", ImVec2(100, 20)))
+			{
+				ToggledBtn = ButtonToggleFlags::ModelingMode;
+				m_RayTracingMode = false;
+			}
+			ImGui::PopStyleColor(1);
+		}
         ImGui::End();
 
         /* **************************************
          * Set content of each dock.
          * **************************************/
-		#define LUNAR_PUSH_IMAGE_TO_VIEWPORT(targetDockNode_str, image_texture) 									 \
-					ImGui::Begin((targetDockNode_str)); 														 \
-					m_GUIScreenSize = ImGui::GetContentRegionAvail(); 											 \
-					ImGui::Image( 																				 \
-							reinterpret_cast<void *>((image_texture)), 											 \
-							m_GUIScreenSize, 																	 \
-							ImVec2(0, 1), 																		 \
-							ImVec2(1, 0)                                                       					 \
-							); 																					 \
-					m_EditorCamera->OnResize(m_GUIScreenSize.x, m_GUIScreenSize.y); 							 \
-					ImGui::End();
-
 
 		const auto currentShaderName = m_DisplayMode.GetCurrentShaderPtr()->GetName();
+		if (ToggledBtn == ButtonToggleFlags::RenderMode) // **************************************************************************
 		{
-			if (ToggledBtn == ButtonToggleFlags::RenderMode) // **************************************************************************
+			m_GUIScreenSize = ImGui::GetContentRegionAvail();
+			GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RayTracer.GetFinalImageFrameBuffer()->GetFrameTexture(), m_EditorCamera);
+			ImGui::Begin("Property");
+			ImGui::BeginGroup();
 			{
-				LUNAR_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RayTracer.GetFinalImageFrameBuffer()->GetFrameTexture());
-//				ImGui::Begin("Main Viewport");
-//				m_GUIScreenSize = ImGui::GetContentRegionAvail();
-//				ImGui::Image(
-//						reinterpret_cast<void *>(m_RayTracer.GetFinalImageFrameBuffer()->GetFrameTexture()),
-//						m_GUIScreenSize,
-//						ImVec2(0, 1),
-//						ImVec2(1, 0)
-//				);
-//				m_EditorCamera->OnResize(m_GUIScreenSize.x, m_GUIScreenSize.y);
-//				ImGui::End();
-
-				ImGui::Begin("Property");
-				ImGui::BeginGroup();
-				{
-					ImGui::Text("Last render: %.3fms", m_RayTracer.m_LastRenderTime);
-					ImGui::Checkbox("Moller-Trumbore", &m_RayTracer.m_ChangeIntersection);
-				}
-				ImGui::EndGroup();
-				ImGui::End();
+				ImGui::Text("Last render: %.3fms", m_RayTracer.m_LastRenderTime);
+				ImGui::Checkbox("Moller-Trumbore", &m_RayTracer.m_ChangeIntersection);
 			}
-			else if (ToggledBtn == ButtonToggleFlags::LayoutMode) // shader, GPU mode. ***************************************************************************
-			{
-				LUNAR_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture());
-//				ImGui::Begin("Main Viewport");
-//				m_GUIScreenSize = ImGui::GetContentRegionAvail(); // https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-//				ImGui::Image(
-//						reinterpret_cast<void *>(m_RasterizationFrameBuffer.GetFrameTexture()),
-//						m_GUIScreenSize,
-//						ImVec2(0, 1),
-//						ImVec2(1, 0)
-//				);
-//				m_EditorCamera->OnResize(m_GUIScreenSize.x, m_GUIScreenSize.y);
-//				ImGui::End();
-
-				// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
-				ImGui::Begin("Property");
-				// https://uysalaltas.github.io/2022/01/09/OpenGL_Imgui.html
-				if (ImGui::BeginMenu(currentShaderName.c_str()))
-				{
-					for (auto &itr : m_DisplayMode.GetShaderMap())
-					{
-						if (ImGui::MenuItem(itr.first.c_str())) {
-							m_DisplayMode.SetCurrentShader(itr.first);
-						}
-					}
-					ImGui::EndMenu();
-				}
-				ImGui::BeginGroup();
-				{
-					ImGui::Checkbox("Grid", &m_DataVisualizer.m_ShowGrid);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowGrid ? "On" : "Off");
-					ImGui::Checkbox("Mesh", &m_ShowMesh);
-					ImGui::SameLine(); ImGui::Text("%s", m_ShowMesh ? "On" : "Off");
-					ImGui::Checkbox("Edge", &m_DataVisualizer.m_ShowWireframe);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowWireframe ? "On" : "Off");
-					ImGui::Checkbox("Vetex", &m_DataVisualizer.m_ShowPoint);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowPoint ? "On" : "Off");
-					ImGui::Checkbox("Normal", &m_DataVisualizer.m_ShowNormal);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowNormal ? "On" : "Off");
-					ImGui::Checkbox("AABB", &m_DataVisualizer.m_ShowAABB);
-					ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowAABB ? "On" : "Off");
-				}
-				ImGui::EndGroup();
-				ImGui::BeginGroup();
-				{
-					if (currentShaderName == "Phong" || currentShaderName == "Cartoon")
-					{
-						ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Model.Material.m_AmbientColor));
-						ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Model.Material.m_DiffuseColor));
-						ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Model.Material.m_SpecularColor));
-						ImGui::DragFloat("Specular Exponent", &m_Model.Material.m_SpecularExponent);
-					}
-					else if (currentShaderName == "Explosion")
-					{
-						auto* ptr = dynamic_cast<ExplosionShader *>(m_DisplayMode.GetCurrentShaderPtr());
-						if (ptr != nullptr) {
-							ImGui::SliderFloat("Explosion Degree", &(ptr->m_Degree), 0.0f, 10.0f, "%.1f");
-						}
-					}
-					if (m_DataVisualizer.m_ShowWireframe)
-					{
-						auto* ptr = dynamic_cast<WireframeShader *>(m_DataVisualizer.m_WireframeShader);
-						if (ptr != nullptr) {
-							ImGui::ColorEdit3("Wireframe Color", glm::value_ptr(ptr->m_WireframeColor));
-						}
-					}
-					if (m_DataVisualizer.m_ShowPoint)
-					{
-						auto* ptr = dynamic_cast<PointShader *>(m_DataVisualizer.m_PointShader);
-						if (ptr != nullptr) {
-							ImGui::ColorEdit3("Point Color", glm::value_ptr(ptr->m_PointColor));
-						}
-					}
-					if (m_DataVisualizer.m_ShowAABB)
-					{
-						auto* ptr = dynamic_cast<AABBShader*>(m_DataVisualizer.m_AABBShader);
-						if (ptr != nullptr) {
-							ImGui::ColorEdit3("AABB Color", glm::value_ptr(ptr->m_AABBColor));
-							ImGui::SliderInt("AABB Depth", &m_BBoxDebugDrawLevel, 0, static_cast<int>(m_AABB->m_MaxDepth));
-						}
-					}
-					if (m_DataVisualizer.m_ShowGrid)
-					{
-						auto* ptr = dynamic_cast<GridShader*>(m_DataVisualizer.m_GridShader);
-						if (ptr != nullptr) {
-							ImGui::ColorEdit3("Grid Color", glm::value_ptr(ptr->m_GridColor));
-						}
-					}
-				}
-				ImGui::EndGroup();
-				ImGui::End();
-			}
-			else if (ToggledBtn == ButtonToggleFlags::TexturePaintMode)
-			{
-				LUNAR_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture());
-
-				ImGui::Begin("Second Viewport");
-				// ...
-				ImGui::End();
-
-				ImGui::Begin("Property");
-				// ...
-				ImGui::End();
-			}
+			ImGui::EndGroup();
+			ImGui::End();
 		}
+		else if (ToggledBtn == ButtonToggleFlags::LayoutMode) // shader, GPU mode. ***************************************************************************
+		{
+			m_GUIScreenSize = ImGui::GetContentRegionAvail();
+			GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture(), m_EditorCamera);
+			// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
+			ImGui::Begin("Property");
+			// https://uysalaltas.github.io/2022/01/09/OpenGL_Imgui.html
+			if (ImGui::BeginMenu(currentShaderName.c_str()))
+			{
+				for (auto &itr : m_DisplayMode.GetShaderMap())
+				{
+					if (ImGui::MenuItem(itr.first.c_str())) {
+						m_DisplayMode.SetCurrentShader(itr.first);
+					}
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::BeginGroup();
+			{
+				ImGui::Checkbox("Grid", &m_DataVisualizer.m_ShowGrid);
+				ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowGrid ? "On" : "Off");
+				ImGui::Checkbox("Mesh", &m_ShowMesh);
+				ImGui::SameLine(); ImGui::Text("%s", m_ShowMesh ? "On" : "Off");
+				ImGui::Checkbox("Edge", &m_DataVisualizer.m_ShowWireframe);
+				ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowWireframe ? "On" : "Off");
+				ImGui::Checkbox("Vetex", &m_DataVisualizer.m_ShowPoint);
+				ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowPoint ? "On" : "Off");
+				ImGui::Checkbox("Normal", &m_DataVisualizer.m_ShowNormal);
+				ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowNormal ? "On" : "Off");
+				ImGui::Checkbox("AABB", &m_DataVisualizer.m_ShowAABB);
+				ImGui::SameLine(); ImGui::Text("%s", m_DataVisualizer.m_ShowAABB ? "On" : "Off");
+			}
+			ImGui::EndGroup();
+			ImGui::BeginGroup();
+			{
+				if (currentShaderName == "Phong" || currentShaderName == "Cartoon")
+				{
+					ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Model.Material.m_AmbientColor));
+					ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Model.Material.m_DiffuseColor));
+					ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Model.Material.m_SpecularColor));
+					ImGui::DragFloat("Specular Exponent", &m_Model.Material.m_SpecularExponent);
+				}
+				else if (currentShaderName == "Explosion")
+				{
+					auto* ptr = dynamic_cast<ExplosionShader *>(m_DisplayMode.GetCurrentShaderPtr());
+					if (ptr != nullptr) {
+						ImGui::SliderFloat("Explosion Degree", &(ptr->m_Degree), 0.0f, 10.0f, "%.1f");
+					}
+				}
+				if (m_DataVisualizer.m_ShowWireframe)
+				{
+					auto* ptr = dynamic_cast<WireframeShader *>(m_DataVisualizer.m_WireframeShader);
+					if (ptr != nullptr) {
+						ImGui::ColorEdit3("Wireframe Color", glm::value_ptr(ptr->m_WireframeColor));
+					}
+				}
+				if (m_DataVisualizer.m_ShowPoint)
+				{
+					auto* ptr = dynamic_cast<PointShader *>(m_DataVisualizer.m_PointShader);
+					if (ptr != nullptr) {
+						ImGui::ColorEdit3("Point Color", glm::value_ptr(ptr->m_PointColor));
+					}
+				}
+				if (m_DataVisualizer.m_ShowAABB)
+				{
+					auto* ptr = dynamic_cast<AABBShader*>(m_DataVisualizer.m_AABBShader);
+					if (ptr != nullptr) {
+						ImGui::ColorEdit3("AABB Color", glm::value_ptr(ptr->m_AABBColor));
+						ImGui::SliderInt("AABB Depth", &m_BBoxDebugDrawLevel, 0, static_cast<int>(m_AABB->m_MaxDepth));
+					}
+				}
+				if (m_DataVisualizer.m_ShowGrid)
+				{
+					auto* ptr = dynamic_cast<GridShader*>(m_DataVisualizer.m_GridShader);
+					if (ptr != nullptr) {
+						ImGui::ColorEdit3("Grid Color", glm::value_ptr(ptr->m_GridColor));
+					}
+				}
+			}
+			ImGui::EndGroup();
+			ImGui::End();
+		}
+		else if (ToggledBtn == ButtonToggleFlags::TexturePaintMode)
+		{
+			m_GUIScreenSize = ImGui::GetContentRegionAvail();
+			GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture(), m_EditorCamera);
+
+			ImGui::Begin("Second Viewport");
+			// ...
+			ImGui::End();
+
+			ImGui::Begin("Property");
+			// ...
+			ImGui::End();
+		}
+		else if (ToggledBtn == ButtonToggleFlags::ModelingMode)
+		{ /* ... */ }
+		else if (ToggledBtn == ButtonToggleFlags::SculptingMode)
+		{ /* ... */ }
+		else
+		{ /* ... */ }
 	}
 
 
