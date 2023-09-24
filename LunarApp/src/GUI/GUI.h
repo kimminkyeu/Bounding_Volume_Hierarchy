@@ -18,11 +18,11 @@ enum class ButtonToggleFlags
 	SculptingMode       = 1 << 3,
 };
 
-void GUI_PUSH_IMAGE_TO_VIEWPORT(const char* name, unsigned int texture_id, const std::shared_ptr<Lunar::EditorCamera>& cameraPtr)
+ImVec2 GUI_PUSH_IMAGE_TO_VIEWPORT(const char* name, unsigned int texture_id, const std::shared_ptr<Lunar::EditorCamera>& cameraPtr)
 {
+	ImGui::Begin(name);
 	ImVec2 avail = ImGui::GetContentRegionAvail();
 	cameraPtr->OnResize(avail.x, avail.y);
-	ImGui::Begin(name);
 	ImGui::Image(
 			reinterpret_cast<ImTextureID>(texture_id),
 			avail,
@@ -30,6 +30,7 @@ void GUI_PUSH_IMAGE_TO_VIEWPORT(const char* name, unsigned int texture_id, const
 			ImVec2(1, 0)
 	);
 	ImGui::End();
+	return avail;
 }
 
 void GUI_PUSH_STYLE_COLOR_BY_BUTTON_STATE(ButtonToggleFlags current_state, ButtonToggleFlags target)

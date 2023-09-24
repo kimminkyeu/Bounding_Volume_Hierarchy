@@ -36,7 +36,7 @@
 class ExampleLayer final : public Lunar::Layer
 {
 private:
-	ImVec2 m_GUIScreenSize; // NOTE: ImGUI Viewport Content Size, not screen size.
+	ImVec2 m_GuiMainViewportSize; // NOTE: ImGUI Viewport Content Size, not screen size.
 
 	DisplayMode m_DisplayMode; // main display mode
 	DataVisualizer m_DataVisualizer; // vertex, polygon, normal visualizer
@@ -77,10 +77,10 @@ public:
 
 	// 1. Create object
 //		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/box.obj");
+//		m_Model.LoadModel("LunarApp/assets/box.obj");
 //		m_Model.LoadModel("LunarApp/assets/bunny.obj");
 //				m_Model.LoadModel("LunarApp/assets/dragon.obj");
-//		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
+		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
 //		m_Model.LoadModel("LunarApp/assets/42.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
@@ -130,15 +130,15 @@ public:
 			// NOTE: mouse pos 는 glfw 윈도우 전체 기준임. 따라서 이 부분 수정 필요함.
 			glm::vec2 mouse { Lunar::Input::GetMousePosition() };
 			const auto glfwScreenHeight = Lunar::Application::Get().GetWindowData().BufferHeight;
-			mouse.y -= ((float)glfwScreenHeight - m_GUIScreenSize.y); // 차이 보완.
+			mouse.y -= ((float)glfwScreenHeight - m_GuiMainViewportSize.y); // 차이 보완.
 			const auto pos = m_EditorCamera->GetPosition();
 
 			// NOTE: Converting screen coordinate to world space Ray
 			// -----------------------------------------------------------
 			// https://antongerdelan.net/opengl/raycasting.html
 			// 1. xy screen coord to NDC
-			float NDC_X = ((2.0f * mouse.x) / m_GUIScreenSize.x) - 1.0f;
-			float NDC_Y = 1.0f - (2.0f * mouse.y) / m_GUIScreenSize.y;
+			float NDC_X = ((2.0f * mouse.x) / m_GuiMainViewportSize.x) - 1.0f;
+			float NDC_Y = 1.0f - (2.0f * mouse.y) / m_GuiMainViewportSize.y;
 			glm::vec4 ray_NDC = glm::vec4(NDC_X, NDC_Y, -1.0f, 0.0f); // z(-1) = far
 
 			// 2. NDC ray * Projection inverse * View inverse = World coord ray
@@ -385,8 +385,7 @@ public:
 		const auto currentShaderName = m_DisplayMode.GetCurrentShaderPtr()->GetName();
 		if (ToggledBtn == ButtonToggleFlags::RenderMode) // **************************************************************************
 		{
-			m_GUIScreenSize = ImGui::GetContentRegionAvail();
-			GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RayTracer.GetFinalImageFrameBuffer()->GetFrameTexture(), m_EditorCamera);
+			m_GuiMainViewportSize = GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RayTracer.GetFinalImageFrameBuffer()->GetFrameTexture(), m_EditorCamera);
 			ImGui::Begin("Property");
 			ImGui::BeginGroup();
 			{
@@ -398,11 +397,8 @@ public:
 		}
 		else if (ToggledBtn == ButtonToggleFlags::LayoutMode) // shader, GPU mode. ***************************************************************************
 		{
-			m_GUIScreenSize = ImGui::GetContentRegionAvail();
-			GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture(), m_EditorCamera);
-			// Material // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/WalnutApp.cpp
+			m_GuiMainViewportSize = GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture(), m_EditorCamera);
 			ImGui::Begin("Property");
-			// https://uysalaltas.github.io/2022/01/09/OpenGL_Imgui.html
 			if (ImGui::BeginMenu(currentShaderName.c_str()))
 			{
 				for (auto &itr : m_DisplayMode.GetShaderMap())
@@ -480,8 +476,7 @@ public:
 		}
 		else if (ToggledBtn == ButtonToggleFlags::TexturePaintMode)
 		{
-			m_GUIScreenSize = ImGui::GetContentRegionAvail();
-			GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture(), m_EditorCamera);
+			m_GuiMainViewportSize = GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture(), m_EditorCamera);
 
 			ImGui::Begin("Second Viewport");
 			// ...
