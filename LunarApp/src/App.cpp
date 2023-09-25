@@ -33,10 +33,26 @@
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.h
 // https://github.com/TheCherno/RayTracing/blob/master/RayTracing/src/Renderer.cpp
 
+
+struct GuiLayout
+{
+	float	WindowPadding;
+	float	MenubarHeight;
+	ImVec2  ModeSelectionPanelSize;
+	ImVec2  MainViewportSize;
+	ImVec2  SecondViewportSize;
+	ImVec2  PropertyPanelSize;
+};
+
 class ExampleLayer final : public Lunar::Layer
 {
+
+// ImGUI info
 private:
-	ImVec2 m_GuiMainViewportSize; // NOTE: ImGUI Viewport Content Size, not screen size.
+	GuiLayout m_GuiLayout;
+
+// Layer members
+private:
 
 	DisplayMode m_DisplayMode; // main display mode
 	DataVisualizer m_DataVisualizer; // vertex, polygon, normal visualizer
@@ -73,14 +89,16 @@ public:
 		const auto& app = Lunar::Application::Get();
 		auto width = app.GetWindowData().BufferWidth;
 		auto height = app.GetWindowData().BufferHeight;
+		m_GuiLayout.MenubarHeight = app.GetSpecification().Height; // 초기 값을 window 전체로 수정.
+		m_GuiLayout.WindowPadding = app.GetWindowData().Padding;
 
 
 	// 1. Create object
 //		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-//		m_Model.LoadModel("LunarApp/assets/box.obj");
+		m_Model.LoadModel("LunarApp/assets/box.obj");
 //		m_Model.LoadModel("LunarApp/assets/bunny.obj");
 //				m_Model.LoadModel("LunarApp/assets/dragon.obj");
-		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
+//		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
 //		m_Model.LoadModel("LunarApp/assets/42.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
@@ -122,23 +140,27 @@ public:
 	{
 		m_EditorCamera->OnUpdate(ts); // 2. update camera geometry
 
-		// NOTE: mouse click ray-tracing test --> 나중에 리팩토링 할 것.
-		// TODO: implement mouse click --> Raytracing
+		// Mouse Click
 		if (!Lunar::Input::IsKeyPressed(Lunar::Key::LeftAlt)
 			&& Lunar::Input::IsMouseButtonPressedOnce(Lunar::Mouse::ButtonLeft))
 		{
-			// NOTE: mouse pos 는 glfw 윈도우 전체 기준임. 따라서 이 부분 수정 필요함.
-			glm::vec2 mouse { Lunar::Input::GetMousePosition() };
-			const auto glfwScreenHeight = Lunar::Application::Get().GetWindowData().BufferHeight;
-			mouse.y -= ((float)glfwScreenHeight - m_GuiMainViewportSize.y); // 차이 보완.
-			const auto pos = m_EditorCamera->GetPosition();
-
-			// NOTE: Converting screen coordinate to world space Ray
-			// -----------------------------------------------------------
+			// Convert screen coordinate to world space Ray
 			// https://antongerdelan.net/opengl/raycasting.html
+			glm::vec2 mousePos = this->GetRelativeMousePosition(Widget::MainViewport);
+
+//			/*
+			LOG_INFO("ImGUI mouse pos        X{0} Y{1}", mousePos.x, mousePos.y);
+			LOG_ERROR("Menubar                Height {0}", m_GuiLayout.MenubarHeight);
+			LOG_ERROR("Mode Selection Panel   X{0} Y{1}", m_GuiLayout.ModeSelectionPanelSize.x, m_GuiLayout.ModeSelectionPanelSize.y);
+			LOG_ERROR("Main Viewport          X{0} Y{1}", m_GuiLayout.MainViewportSize.x, m_GuiLayout.MainViewportSize.y);
+			LOG_ERROR("Second Viewport        X{0} Y{1}", m_GuiLayout.SecondViewportSize.x, m_GuiLayout.SecondViewportSize.y);
+			LOG_ERROR("Property Panel         X{0} Y{1}", m_GuiLayout.PropertyPanelSize.x, m_GuiLayout.PropertyPanelSize.y);
+//			 */
+
 			// 1. xy screen coord to NDC
-			float NDC_X = ((2.0f * mouse.x) / m_GuiMainViewportSize.x) - 1.0f;
-			float NDC_Y = 1.0f - (2.0f * mouse.y) / m_GuiMainViewportSize.y;
+			float NDC_X = ((2.0f * mousePos.x) / (m_GuiLayout.MainViewportSize.x - (2 * m_GuiLayout.WindowPadding))) - 1.0f;
+			float NDC_Y = 1.0f - (2.0f * mousePos.y) / (m_GuiLayout.MainViewportSize.y - (2 * m_GuiLayout.WindowPadding));
+
 			glm::vec4 ray_NDC = glm::vec4(NDC_X, NDC_Y, -1.0f, 0.0f); // z(-1) = far
 
 			// 2. NDC ray * Projection inverse * View inverse = World coord ray
@@ -148,6 +170,7 @@ public:
 			glm::vec3 ray_WORLD_DIR = glm::inverse(m_EditorCamera->GetViewMatrix()) * ray_EYE;
 			ray_WORLD_DIR = glm::normalize(ray_WORLD_DIR);
 			Lunar::Ray ray {m_EditorCamera->GetPosition(), ray_WORLD_DIR };
+
 			auto hit = m_RayTracer.TraceRay(ray);
 
 			const auto shaderProcPtr = dynamic_cast<PhongShader *>(m_DisplayMode.GetByName("Phong"));
@@ -155,8 +178,8 @@ public:
 			if (hit.distance > 0.0f) {
 				shaderProcPtr->SetPickMode(1);
 				shaderProcPtr->SetPickedMeshData(hit.triangle.v0.GetVertex(), hit.triangle.v1.GetVertex(), hit.triangle.v2.GetVertex());
-				LOG_INFO("Hit Success");
-                LOG_INFO("UV x{0} y{1}", hit.uv.x, hit.uv.y);
+//				LOG_INFO("Hit Success");
+//                LOG_INFO("UV x{0} y{1}", hit.uv.x, hit.uv.y);
 			}
 			else // no hit.
 			{
@@ -293,7 +316,7 @@ public:
 
             // Split the dock node in the left direction to create our first docking space. This will be on the left side of the node.
             // (The 0.5f means that the new space will take up 50% of its parent - the dock node.)
-            ImGuiID dock0 = ImGui::DockBuilderSplitNode(id, ImGuiDir_Up, 0.07f, nullptr, &id);
+            ImGuiID dock0 = ImGui::DockBuilderSplitNode(id, ImGuiDir_Up, 0.05f, nullptr, &id);
 			ImGuiID dock2 = ImGui::DockBuilderSplitNode(id, ImGuiDir_Right, 0.2f, nullptr, &id);
             ImGuiID dock1_a = ImGui::DockBuilderSplitNode(id, ImGuiDir_Left, 0.5f, nullptr, &id);
 			ImGuiID dock1_b = ImGui::DockBuilderSplitNode(dock1_a, ImGuiDir_Left, 0.5f, nullptr, &dock1_a);
@@ -330,7 +353,6 @@ public:
             // 4. We're done setting up our docking configuration:
             ImGui::DockBuilderFinish(id);
         }
-        if (firstLoop) firstLoop = false;
 
 
         /* **************************************
@@ -340,6 +362,8 @@ public:
 		static ButtonToggleFlags ToggledBtn = ButtonToggleFlags::LayoutMode; // default button is 0 (Layout)
         ImGui::Begin("Mode Selection");
 		{
+			m_GuiLayout.ModeSelectionPanelSize = ImGui::GetWindowSize();
+
 			GUI_PUSH_STYLE_COLOR_BY_BUTTON_STATE(ToggledBtn, ButtonToggleFlags::LayoutMode);
 			ImGui::SameLine(0.0, 2.0f);
 			if (ImGui::Button("Layout", ImVec2(100, 20)))
@@ -385,8 +409,11 @@ public:
 		const auto currentShaderName = m_DisplayMode.GetCurrentShaderPtr()->GetName();
 		if (ToggledBtn == ButtonToggleFlags::RenderMode) // **************************************************************************
 		{
-			m_GuiMainViewportSize = GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RayTracer.GetFinalImageFrameBuffer()->GetFrameTexture(), m_EditorCamera);
+			m_GuiLayout.SecondViewportSize = ImVec2 { 0.0f, 0.0f };
+			m_GuiLayout.MainViewportSize = GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RayTracer.GetFinalImageFrameBuffer()->GetFrameTexture(), m_EditorCamera);
+
 			ImGui::Begin("Property");
+			m_GuiLayout.PropertyPanelSize = ImGui::GetWindowSize();
 			ImGui::BeginGroup();
 			{
 				ImGui::Text("Last render: %.3fms", m_RayTracer.m_LastRenderTime);
@@ -397,8 +424,11 @@ public:
 		}
 		else if (ToggledBtn == ButtonToggleFlags::LayoutMode) // shader, GPU mode. ***************************************************************************
 		{
-			m_GuiMainViewportSize = GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture(), m_EditorCamera);
+			m_GuiLayout.SecondViewportSize = ImVec2 { 0.0f, 0.0f };
+			m_GuiLayout.MainViewportSize = GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture(), m_EditorCamera);
+
 			ImGui::Begin("Property");
+			m_GuiLayout.PropertyPanelSize = ImGui::GetWindowSize();
 			if (ImGui::BeginMenu(currentShaderName.c_str()))
 			{
 				for (auto &itr : m_DisplayMode.GetShaderMap())
@@ -476,14 +506,19 @@ public:
 		}
 		else if (ToggledBtn == ButtonToggleFlags::TexturePaintMode)
 		{
-			m_GuiMainViewportSize = GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture(), m_EditorCamera);
+			m_GuiLayout.MainViewportSize = GUI_PUSH_IMAGE_TO_VIEWPORT("Main Viewport", m_RasterizationFrameBuffer.GetFrameTexture(), m_EditorCamera);
 
 			ImGui::Begin("Second Viewport");
-			// ...
+			{
+				m_GuiLayout.SecondViewportSize = ImGui::GetWindowSize();
+				// ...
+			}
 			ImGui::End();
 
 			ImGui::Begin("Property");
-			// ...
+			{
+				m_GuiLayout.PropertyPanelSize = ImGui::GetWindowSize();
+			}
 			ImGui::End();
 		}
 		else if (ToggledBtn == ButtonToggleFlags::ModelingMode)
@@ -492,6 +527,54 @@ public:
 		{ /* ... */ }
 		else
 		{ /* ... */ }
+
+		if (firstLoop) {
+			m_GuiLayout.MenubarHeight -= ( m_GuiLayout.MainViewportSize.y + m_GuiLayout.ModeSelectionPanelSize.y );
+		}
+
+		if (firstLoop) firstLoop = false;
+	}
+
+	enum class Widget
+	{
+		MainViewport        = 0, // main 화면.
+		SecondViewport      = 1, // 보조 화면.
+		PropertyPanel       = 1 << 1, // 우측 컨트롤 패널.
+		ModeSelectionPanel  = 1 << 2, // 상단 모드 선택 버튼 패널
+	};
+
+	// ImGUI 위젯의 내부 상대 위치를 조정해서 반환.
+	// name: 위젯의 이름.
+	// Main Viewport, Second Viewport, Property, Mode Selection 총 4개중 선택.
+	// TODO: padding 정보 활용해서 수정할 것.
+	glm::vec2 GetRelativeMousePosition(Widget target)
+	{
+		const ImVec2 mousePosImGUI = ImGui::GetMousePos();
+		glm::vec2 mousePos { mousePosImGUI.x, mousePosImGUI.y };
+		switch (target)
+		{
+			case Widget::MainViewport:
+				mousePos.x -= m_GuiLayout.SecondViewportSize.x;
+				mousePos.y -= m_GuiLayout.MenubarHeight;
+				mousePos.y -= m_GuiLayout.ModeSelectionPanelSize.y;
+				break;
+			case Widget::SecondViewport:
+				mousePos.y -= m_GuiLayout.MenubarHeight;
+				mousePos.y -= m_GuiLayout.ModeSelectionPanelSize.y;
+				break;
+			case Widget::PropertyPanel:
+				mousePos.x -= m_GuiLayout.MainViewportSize.x;
+				mousePos.x -= m_GuiLayout.SecondViewportSize.x;
+				mousePos.y -= m_GuiLayout.MenubarHeight;
+				break;
+			case Widget::ModeSelectionPanel:
+				mousePos.y -= m_GuiLayout.MenubarHeight;
+				break;
+			default:
+				assert(false && "Target widget doesn't exist");
+		}
+		mousePos -= m_GuiLayout.WindowPadding;
+		return mousePos;
 	}
 
 

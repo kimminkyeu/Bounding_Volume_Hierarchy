@@ -4,6 +4,7 @@
 
 // https://github.com/StudioCherno/Walnut/blob/3b8e414fdecfc6c8b58816106fe8d912bd172e31/Walnut/src/Walnut/Application.cpp
 #include "Application.h"
+#include "imgui_internal.h"
 #include "Log.h" // 이건 cpp에만 설정.
 
 extern bool g_ApplicationRunning;
@@ -50,11 +51,8 @@ namespace Lunar {
 		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Allow forward compatibility
 
 		m_Window.Handle = glfwCreateWindow((int)m_Specification.Width, (int)m_Specification.Height, m_Specification.Name, nullptr, nullptr);
-		if (!m_Window.Handle)
-		{
-			glfwTerminate();
-			assert(false && "GLFW window creation failed");
-		}
+		assert(m_Window.Handle && "GLFW window creation failed");
+
 		// set the current context
 		glfwMakeContextCurrent(m_Window.Handle); // Set context for GLEW to use (그럼 multiple context 존재? 여러 화면?)
 
@@ -74,29 +72,21 @@ namespace Lunar {
 
 		ImGui::StyleColorsDark();
 //		ImGui::StyleColorsLight();
-//		ImGuiStyle& style = ImGui::GetStyle();
-//		style.Colors[ImGuiCol_WindowBg] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-//		style.Colors[ImGuiCol_Border] = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
-//		style.Colors[ImGuiCol_FrameBg] = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
-		// When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-//		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-//		{
-//			style.WindowRounding = 0.0f;
-//			style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-//		}
-		// set ImGui Style (Dark or Light)
-//		ImGui::StyleColorsDark();
+		ImGuiStyle& style = ImGui::GetStyle();
+		const float PADDING = 20.0f;
+		style.WindowPadding = ImVec2(PADDING, PADDING);
+		m_Window.Padding = PADDING;
 
 		// setup platform/renderer backends
-		ImGui_ImplOpenGL3_Init("#version 330");
 		ImGui_ImplGlfw_InitForOpenGL(m_Window.Handle, true);
+		ImGui_ImplOpenGL3_Init("#version 330");
 
 		// 윈도우에 따라 getWindowUserPointer가 반환해줄 값을 설정(나를 위함) --> 이후 callback에서 사용.
 		glfwSetWindowUserPointer(m_Window.Handle, this);
 		// [SWAP BUFFER SYNC] : https://www.glfw.org/docs/3.3/quick.html#quick_swap_buffers
 		glfwSwapInterval(1);
 		// Get Buffer size information (data for window rendering) : https://www.glfw.org/docs/3.3/window_guide.html#window_fbsize
-		glfwGetFramebufferSize(m_Window.Handle, &m_Window.BufferWidth, &m_Window.BufferHeight);
+		glfwGetFramebufferSize(m_Window.Handle, &m_Window.BufferWidth, &m_Window.BufferHeight); // Mac은 해상도 2배로 잡기 때문에, 실제 spec 크기보다 크게 잡힌다.
 
 		// TODO: remove later!
 		glewExperimental = GL_TRUE; // Allow modern extension features
@@ -106,11 +96,7 @@ namespace Lunar {
 			glfwTerminate();
 			assert(false && "glew initialization failed");
 		}
-
-		m_Window.BufferWidth = m_Specification.Width;
-		m_Window.BufferHeight = m_Specification.Height;
 		glViewport(0, 0, m_Window.BufferWidth, m_Window.BufferHeight); // Setup Viewport size (OpenGL functionality)
-
 
 		// set GLFW callbacks
 		glfwSetWindowSizeCallback(m_Window.Handle,[](GLFWwindow* currentWindow, int width, int height) -> void
@@ -145,18 +131,17 @@ namespace Lunar {
 		   io.AddMouseButtonEvent(button, action);
 
 		   // (2) ONLY forward mouse data to your underlying app/game.
-		   if (!io.WantCaptureMouse)
-		   {
+//		   if (!io.WantCaptureMouse)
+//		   {
 //			   my_game->HandleMouseData(...);
-		   }
+//		   }
 	   });
 
         // set GLFW callbacks
         glfwSetCursorPosCallback(m_Window.Handle, [](GLFWwindow* window, double xPos, double yPos) -> void
         {
 			 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
-//		     const ImVec2 AppPos = ImGui::GetMainViewport()->Pos;
-//		     LOG_TRACE("Mouse X{0} Y{1}    AppPos X{2} Y{3}", xPos, yPos, AppPos.x, AppPos.y);
+		     const ImVec2 AppPos = ImGui::GetMainViewport()->Pos;
 			 ImGuiIO& io = ImGui::GetIO();
 			 io.AddMousePosEvent(xPos, yPos);
 		 });
@@ -187,9 +172,7 @@ namespace Lunar {
     void Application::Run() noexcept
     {
         m_Running = true;
-//		ImGuiIO& io = ImGui::GetIO();
 
-		// NOTE: This is main render loop (m_Running을 먼저 끊어줘야 한다)
         while (!glfwWindowShouldClose(m_Window.Handle) && m_Running)
         {
 			// Poll and handle events (inputs, window resize, etc.)
@@ -199,20 +182,18 @@ namespace Lunar {
 			// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
             glfwPollEvents();
 
-			// NOTE: Update every render layer
+			// Update every render layer
 			for (auto& layer : m_LayerStack) {
 				layer->OnUpdate(m_TimeStep);
 			}
-
-			// NOTE: Start the Dear ImGui frame
+			// Start the Dear ImGui frame
+			// https://github.com/StudioCherno/Walnut/blob/20f940b9d23946d4836b8549ff3e2c0750c5d985/Walnut/src/Walnut/Application.cpp
 			ImGui_ImplOpenGL3_NewFrame();
 			ImGui_ImplGlfw_NewFrame();
+
 			ImGui::NewFrame();
-
-			// https://github.com/StudioCherno/Walnut/blob/20f940b9d23946d4836b8549ff3e2c0750c5d985/Walnut/src/Walnut/Application.cpp
-
 			{
-				static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+				static ImGuiDockNodeFlags dockspace_flags =  ImGuiDockNodeFlags_NoCloseButton | ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoDocking | ImGuiDockNodeFlags_NoTabBar;
 
 				// We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
 				// because it would be confusing to have two docking targets within each others.
@@ -224,7 +205,6 @@ namespace Lunar {
 				ImGui::SetNextWindowPos(viewport->WorkPos);
 				ImGui::SetNextWindowSize(viewport->WorkSize);
 
-//				LOG_INFO("{0} {1}", viewport->WorkSize.x, viewport->WorkSize.y);
 				ImGui::SetNextWindowViewport(viewport->ID);
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
@@ -244,40 +224,14 @@ namespace Lunar {
 				// any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
 				ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 				ImGui::Begin("DockSpace", nullptr, window_flags);
-				ImGui::PopStyleVar();
+				ImGui::PopStyleVar(3);
 
-				ImGui::PopStyleVar(2);
-
-				// Set Initial DockSpace
-				// https://gist.github.com/PossiblyAShrub/0aea9511b84c34e191eaa90dd7225969
+				// Set Initial DockSpace // https://gist.github.com/PossiblyAShrub/0aea9511b84c34e191eaa90dd7225969
 				ImGuiIO& io = ImGui::GetIO();
 				if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
 				{
 					ImGuiID dockspace_id = ImGui::GetID("DockSpace");
 					ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-
-					/*
-					static bool first_time = true;
-					if (first_time)
-					{
-						first_time = false;
-
-						ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-						ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-						ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
-
-						// split the dockspace into 2 nodes -- DockBuilderSplitNode takes in the following args in the following order
-						//   window ID to split, direction, fraction (between 0 and 1), the final two setting let's us choose which id we want (which ever one we DON'T set as NULL, will be returned by the function)
-						//                                                              out_id_at_dir is the id of the node in the direction we specified earlier, out_id_at_opposite_dir is in the opposite direction
-						auto dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.2f, nullptr, &dockspace_id);
-						auto dock_id_down = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.25f, nullptr, &dockspace_id);
-
-						// we now dock our windows into the docking node we made above
-						ImGui::DockBuilderDockWindow("Down", dock_id_down);
-						ImGui::DockBuilderDockWindow("Left", dock_id_left);
-						ImGui::DockBuilderFinish(dockspace_id);
-					}
-					 */
 				}
 
 				if (m_MenubarCallback)
@@ -289,29 +243,32 @@ namespace Lunar {
 					}
 				}
 
-				for (auto& layer : m_LayerStack) {
+				for (auto& layer : m_LayerStack)
 					layer->OnUIRender();
-				}
+
 				ImGui::End();
 			}
 
-			// NOTE: Rendering GUI
-			// (Your code clears your framebuffer, renders your other stuff etc.)
+			// Rendering GUI (Your code clears your framebuffer, renders your other stuff etc.)
 			ImGui::Render(); // finalize ImGui drawData.
+//			ImGui::EndFrame(); // <-- Added
+
 			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 			// Update and Render additional Platform Windows
-			if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-			{
-				GLFWwindow* backup_current_context = glfwGetCurrentContext();
-				ImGui::UpdatePlatformWindows();
-				ImGui::RenderPlatformWindowsDefault();
-				glfwMakeContextCurrent(backup_current_context);
-			}
+//			if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+//			{
+//				GLFWwindow* backup_current_context = glfwGetCurrentContext();
+//				ImGui::UpdatePlatformWindows();
+//				ImGui::RenderPlatformWindowsDefault();
+//				glfwMakeContextCurrent(backup_current_context);
+//			}
 
-            // NOTE: Swap GLFW Buffer
+            // Swap GLFW Buffer
 			glfwSwapBuffers(m_Window.Handle);
+			glfwPollEvents();
 
-            // NOTE: Update time past (for animation)
+            // Update time past (for animation)
             float time = Application::GetTime();
             m_FrameTime = time - m_LastFrameTime;
             m_TimeStep = glm::min<float>(m_FrameTime, 0.0333f);

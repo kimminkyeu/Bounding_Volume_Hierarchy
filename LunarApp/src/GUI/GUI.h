@@ -21,6 +21,7 @@ enum class ButtonToggleFlags
 ImVec2 GUI_PUSH_IMAGE_TO_VIEWPORT(const char* name, unsigned int texture_id, const std::shared_ptr<Lunar::EditorCamera>& cameraPtr)
 {
 	ImGui::Begin(name);
+	ImVec2 windowSize = ImGui::GetWindowSize();
 	ImVec2 avail = ImGui::GetContentRegionAvail();
 	cameraPtr->OnResize(avail.x, avail.y);
 	ImGui::Image(
@@ -30,7 +31,7 @@ ImVec2 GUI_PUSH_IMAGE_TO_VIEWPORT(const char* name, unsigned int texture_id, con
 			ImVec2(1, 0)
 	);
 	ImGui::End();
-	return avail;
+	return windowSize;
 }
 
 void GUI_PUSH_STYLE_COLOR_BY_BUTTON_STATE(ButtonToggleFlags current_state, ButtonToggleFlags target)

@@ -44,6 +44,7 @@ namespace Lunar {
 		GLFWwindow* Handle = nullptr;
 		GLint BufferWidth = 0;
 		GLint BufferHeight = 0;
+		float Padding = 0.0f;
 	};
 
 	class Application
@@ -72,6 +73,7 @@ namespace Lunar {
 
 		static Application& Get() noexcept;
 		const WindowData& GetWindowData() const;
+		const ApplicationSpecification& GetSpecification() const { return m_Specification; };
         GLFWwindow* GetWindowHandle() const noexcept;
 
 		void Run() noexcept;
