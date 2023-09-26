@@ -10,7 +10,7 @@
 class GridShader : public Lunar::Shader
 {
 public:
-	glm::vec4 m_GridColor = glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
+	glm::vec4 m_GridColor = glm::vec4(0.45f, 0.45f, 0.45f, 1.0f);
 	float m_FarClip = 1000.0f;
 	float m_NearClip = 0.01f;
 
@@ -38,12 +38,17 @@ private:
 	 void OnBind() override
 	 {
 		 glEnable(GL_PROGRAM_POINT_SIZE);
+
+		 glEnable(GL_BLEND); // alpah 투명도를 색상에 적용하기 위함.
+		 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 		 glUniform4fv(m_GridColorLocation, 1, glm::value_ptr(m_GridColor));
 		 glUniform1f(m_FarLocation, m_FarClip);
 		 glUniform1f(m_NearLocation, m_NearClip);
 	 };
 	 void OnUnbind() override
 	 {
+		 glDisable(GL_BLEND);
 		 glDisable(GL_PROGRAM_POINT_SIZE);
 	 };
 
@@ -52,7 +57,6 @@ public:
 	 {
 		 // NOTE: bind dummy vao just for grid.
 		 glBindVertexArray(m_DummyVAO);
-//		 glDrawArrays(GL_TRIANGLES, 0, 6);
 		 glDrawArrays(GL_TRIANGLES, 0, 6);
 	 }
 };

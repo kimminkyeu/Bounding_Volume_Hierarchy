@@ -38,7 +38,6 @@ set( SOURCE_FILES
     # Project
         LunarApp/src/App.cpp
         LunarApp/src/shaders/DisplayMode.cpp
-        LunarApp/src/shaders/DataVisualizer.cpp
         # Lunar Core
         Lunar/Core/Application.cpp
         Lunar/Input/Input.cpp

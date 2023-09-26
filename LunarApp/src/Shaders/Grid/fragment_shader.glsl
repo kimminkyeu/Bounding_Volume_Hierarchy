@@ -25,7 +25,7 @@ vec4 grid(vec3 fragPos3D, float scale, bool drawAxis) {
     float line = min(grid.x, grid.y);
     float minimumz = min(derivative.y, 1);
     float minimumx = min(derivative.x, 1);
-    float LINE_WIDTH = 0.2f;
+    float LINE_WIDTH = 0.7f;
 
     // z axis
     if ((fragPos3D.x > LINE_WIDTH * (-minimumx)) && (fragPos3D.x < LINE_WIDTH * minimumx))
@@ -64,13 +64,12 @@ void main()
 
     float linearDepth = computeLinearDepth(fragPos3D);
     float fading = max((1.0f - linearDepth), 0.0f); // 0.0 ~ 1.0f
-    float fadingPow = pow(fading, 8.0f);
+    float fadingPow = pow(fading, 7.0f);
 
     if (fading < 0.2f) {
-        FragmentColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+        discard ;
     } else {
-//        FragmentColor = grid(fragPos3D, 1, true) * float(t > 0);
         FragmentColor = (grid(fragPos3D, 10, true) + grid(fragPos3D, 1, true)) * float(t > 0); // adding multiple resolution for the grid
-        FragmentColor *= fadingPow;
+        FragmentColor.w *= fadingPow; // depth가 클수록 alpha에 fade를 주어야 함.
     }
 }
