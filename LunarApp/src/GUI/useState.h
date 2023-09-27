@@ -12,25 +12,25 @@ namespace React
 {
     // const [state, setState] = React::UseState<int>();
 
-
+	template <typename T>
+	struct Hook
+	{
+		mutable T state = T(); // non-const
+		std::function < void (const T&) > setState = {}; // const-qualified ?
+	};
 
     template <typename T>
     class UseState
     {
     private:
         // https://en.cppreference.com/w/cpp/language/structured_binding
-        struct Hook
-        {
-            mutable T state = T(); // non-const
-            volatile std::function<void()> setState = {}; // const-qualified
-        };
 
     private:
-        static Hook m_Hook;
+        static Hook<T> m_Hook;
 
     public:
 
-        const Hook& operator() (const T& initialValue = T())
+        static const Hook<T>& operator() (const T& initialValue = T())
         {
             m_Hook.state = initialValue;
 
@@ -46,8 +46,9 @@ namespace React
 
 void test()
 {
-    auto s = React::UseState<int> ();
-    auto p = s();
+    const React::Hook<int>& s = React::UseState<int>::operator()(3);
+//	Class s = s.function(3);
+//    const React::Hook<int>& h = s();
 }
 
 
