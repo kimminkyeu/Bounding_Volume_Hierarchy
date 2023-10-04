@@ -93,10 +93,10 @@ public:
 
 	// 1. Create object
 //		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
-		m_Model.LoadModel("LunarApp/assets/box.obj");
+//		m_Model.LoadModel("LunarApp/assets/box.obj");
 //		m_Model.LoadModel("LunarApp/assets/bunny.obj");
 //				m_Model.LoadModel("LunarApp/assets/dragon.obj");
-//		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
+		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
 //		m_Model.LoadModel("LunarApp/assets/42.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
@@ -139,14 +139,12 @@ public:
 			// https://antongerdelan.net/opengl/raycasting.html
 			glm::vec2 mousePos = this->GetRelativeMousePosition(Widget::MainViewport);
 
-//			/*
-//			LOG_INFO("ImGUI mouse pos        X{0} Y{1}", mousePos.x, mousePos.y);
-//			LOG_ERROR("Menubar                Height {0}", m_GuiLayout.MenubarHeight);
-//			LOG_ERROR("Mode Selection Panel   X{0} Y{1}", m_GuiLayout.ModeSelectionPanelSize.x, m_GuiLayout.ModeSelectionPanelSize.y);
-//			LOG_ERROR("Main Viewport          X{0} Y{1}", m_GuiLayout.MainViewportSize.x, m_GuiLayout.MainViewportSize.y);
-//			LOG_ERROR("Second Viewport        X{0} Y{1}", m_GuiLayout.SecondViewportSize.x, m_GuiLayout.SecondViewportSize.y);
-//			LOG_ERROR("Property Panel         X{0} Y{1}", m_GuiLayout.PropertyPanelSize.x, m_GuiLayout.PropertyPanelSize.y);
-//			 */
+			LOG_INFO("ImGUI mouse pos        X{0} Y{1}", mousePos.x, mousePos.y);
+			LOG_ERROR("Menubar                Height {0}", m_GuiLayout.MenubarHeight);
+			LOG_ERROR("Mode Selection Panel   X{0} Y{1}", m_GuiLayout.ModeSelectionPanelSize.x, m_GuiLayout.ModeSelectionPanelSize.y);
+			LOG_ERROR("Main Viewport          X{0} Y{1}", m_GuiLayout.MainViewportSize.x, m_GuiLayout.MainViewportSize.y);
+			LOG_ERROR("Second Viewport        X{0} Y{1}", m_GuiLayout.SecondViewportSize.x, m_GuiLayout.SecondViewportSize.y);
+			LOG_ERROR("Property Panel         X{0} Y{1}", m_GuiLayout.PropertyPanelSize.x, m_GuiLayout.PropertyPanelSize.y);
 
 			// 1. xy screen coord to NDC
 			float NDC_X = ((2.0f * mousePos.x) / (m_GuiLayout.MainViewportSize.x - (2 * m_GuiLayout.WindowPadding))) - 1.0f;
@@ -443,11 +441,17 @@ public:
 		else
 		{ /* ... */ }
 
-		if (firstLoop)
-		{   // calculate initial Menubar size on first loop
+        // IMGUI 첫 프레임 렌더시 IMGUI::GetWindowSize의 반환값이 잘못 나옴. 따라서 마우스 클릭이 되지 않음. 이 부분 예외 처리.
+        static bool imgui_test = true;
+		if (imgui_test && m_GuiLayout.MainViewportSize.x > 0 && m_GuiLayout.MainViewportSize.y > 0)
+		{
 			m_GuiLayout.MenubarHeight -= ( m_GuiLayout.MainViewportSize.y + m_GuiLayout.ModeSelectionPanelSize.y );
-			firstLoop = false;
+            imgui_test = false;
 		}
+
+        if (firstLoop) {
+            firstLoop = false;
+        }
 	}
 
 	// called once popped from m_LayerStack

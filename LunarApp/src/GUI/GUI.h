@@ -75,9 +75,14 @@ ImVec2 GUI_VIEWPORT_IMAGE_COMPONENT(const char* name, unsigned int texture_id, c
 				ImVec2(0, 1),
 				ImVec2(1, 0)
 		);
+        ImGui::End();
+        return windowSize;
 	}
-	ImGui::End();
-	return windowSize;
+    else // 첫 프레임 렌더.
+    {
+        ImGui::End();
+        return {-1, -1};
+    }
 }
 
 void GUI_VISUALIZER_BUTTON_COMPONENT(Option buttonType, DataVisualizer* dataVisualizerPtr, std::function<void()>&& OnClickFn = {})

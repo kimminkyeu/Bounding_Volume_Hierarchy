@@ -28,17 +28,23 @@
 // std::unique_lock
 // std::defer_lock
 
+// TODO: Request Shutdown 버그 수정 (무한 대기)
+
+
+
 class ThreadPool
 {
 	friend class ThreadWorker;
 
 public:
-	int BusyThreads;
+	int BusyThreads; // 이 부분은 아직 미완성. (wait 조건 때문)
 
 private:
 	bool m_ShutdownRequested = false;
 
-	mutable std::mutex m_Mutex; // mutable https://modoocode.com/253
+	mutable std::mutex m_TaskQueueMutex; // mutable https://modoocode.com/253
+//    mutable std::mutex m_BusyThreadMutex;
+
 	std::condition_variable m_ConditionVariable;
 	std::vector<std::thread> m_Threads; // worker pool
 	std::queue<std::function<void()>> m_TaskQueue; // queue of callable objects.
@@ -84,7 +90,7 @@ public:
 	{
 		{
 			// std::lock_gaurd 는 Scope를 벗어나면 자동으로 Unlock 하는 Wrapper이다.(명시적 unlock 불가능)
-			std::lock_guard<std::mutex> lock(m_Mutex);
+			std::lock_guard<std::mutex> lock(m_TaskQueueMutex);
 			m_ShutdownRequested = true;
 			m_ConditionVariable.notify_all(); // Unblocks all threads currently waiting for *this.
 		}
@@ -111,7 +117,7 @@ public:
 
 		{
 			// std::lock_gaurd 는 Scope를 벗어나면 자동으로 Unlock 하는 Wrapper이다.(명시적 unlock 불가능)
-			std::lock_guard<std::mutex> lock(m_Mutex);
+			std::lock_guard<std::mutex> lock(m_TaskQueueMutex);
 			m_TaskQueue.push(wrapper_func);
 			// Wake up one thread if its waiting
 			m_ConditionVariable.notify_one();
@@ -125,7 +131,7 @@ public:
 	size_t GetTaskQueueSize() const
 	{
 		// Automatically calls lock on mutex
-		std::unique_lock<std::mutex> lock(m_Mutex);
+		std::unique_lock<std::mutex> lock(m_TaskQueueMutex);
 		return m_TaskQueue.size();
 	}
 
@@ -144,28 +150,37 @@ private:
 
 		void operator()()
 		{
-			std::unique_lock<std::mutex> lock(m_ThreadPoolPtr->m_Mutex);
-			// Note: 아래 조건 주의할 것. TaskQueue가 빌 때 까지는 비우지 않는 방식임.
+			std::unique_lock<std::mutex> taskQueue_lock(m_ThreadPoolPtr->m_TaskQueueMutex);
+//            std::unique_lock<std::mutex> busyThread_lock(m_ThreadPoolPtr->m_BusyThreadMutex);
+
+			// Note: 아래 조건 주의할 것. Shutdown 요쳥이 와도 TaskQueue가 빌 때 까지 기다리는 형태임.
 			while ( (!m_ThreadPoolPtr->m_ShutdownRequested)
 					|| ( m_ThreadPoolPtr->m_ShutdownRequested && !m_ThreadPoolPtr->m_TaskQueue.empty()) )
 			{
-				m_ThreadPoolPtr->BusyThreads--;
-				m_ThreadPoolPtr->m_ConditionVariable.wait(lock, [this]
+
+//				m_ThreadPoolPtr->BusyThreads--;
+
+                // https://en.cppreference.com/w/cpp/thread/condition_variable/wait
+                // cond.wait = taskQeue_lock을 알아서 lock 하고 unlock하도록 조건 자동화.
+                // wait 조건. m_ShutdownRequest가 true이거나 혹은 queue가 비어있지 않을 경우
+				m_ThreadPoolPtr->m_ConditionVariable.wait(taskQueue_lock, [this]
 				{
 				  return (this->m_ThreadPoolPtr->m_ShutdownRequested || !this->m_ThreadPoolPtr->m_TaskQueue.empty());
+                  // 위 조건이 true라면, taskQueue_lock을 lock처리한다.
 				});
 
-				m_ThreadPoolPtr->BusyThreads++;
+//				m_ThreadPoolPtr->BusyThreads++;
 
 				if (!this->m_ThreadPoolPtr->m_TaskQueue.empty())
 				{
 					auto func = m_ThreadPoolPtr->m_TaskQueue.front();
 					m_ThreadPoolPtr->m_TaskQueue.pop();
 
-					lock.unlock();
+					taskQueue_lock.unlock();
 					func();
-					lock.lock();
+					taskQueue_lock.lock();
 				}
+
 			}
 		}
 	};
