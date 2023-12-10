@@ -13,8 +13,8 @@ class CartoonShader : public Lunar::Shader
 public:
 	CartoonShader()
 			: Lunar::Shader("Cartoon",
-							"LunarApp/src/shaders/Cartoon/vertex_shader.glsl",
-							"LunarApp/src/shaders/Cartoon/fragment_shader.glsl"
+							"LunarApp/src/Shaders/Cartoon/vertex_shader.glsl",
+							"LunarApp/src/Shaders/Cartoon/fragment_shader.glsl"
 	)
 	{
 

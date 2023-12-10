@@ -16,9 +16,9 @@ private:
 public:
 	AABBShader()
 		: Lunar::Shader("AABB",
-						"LunarApp/src/shaders/AABB/vertex_shader.glsl",
-						"LunarApp/src/shaders/AABB/fragment_shader.glsl",
-						"LunarApp/src/shaders/AABB/geometry_shader.glsl"
+						"LunarApp/src/Shaders/AABB/vertex_shader.glsl",
+						"LunarApp/src/Shaders/AABB/fragment_shader.glsl",
+						"LunarApp/src/Shaders/AABB/geometry_shader.glsl"
 		  )
 				  {
 					  m_AABBColorLocation = this->_GetUniformLocation("AABBColor");
