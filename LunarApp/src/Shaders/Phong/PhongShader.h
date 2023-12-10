@@ -24,8 +24,8 @@ private:
 public:
 	PhongShader()
 			: Lunar::Shader("Phong",
-							"LunarApp/src/shaders/Phong/vertex_shader.glsl",
-							"LunarApp/src/shaders/Phong/fragment_shader.glsl"
+							"LunarApp/src/Shaders/Phong/vertex_shader.glsl",
+							"LunarApp/src/Shaders/Phong/fragment_shader.glsl"
 	)
 	{
 		m_PickModeLocation = this->_GetUniformLocation("PickMode");

@@ -16,8 +16,8 @@ private:
 public:
 	PointShader()
 			: Lunar::Shader("Point",
-							"LunarApp/src/shaders/Point/vertex_shader.glsl",
-							"LunarApp/src/shaders/Point/fragment_shader.glsl"
+							"LunarApp/src/Shaders/Point/vertex_shader.glsl",
+							"LunarApp/src/Shaders/Point/fragment_shader.glsl"
 	)
 	{
 		m_PointColorLocation = this->_GetUniformLocation("PointColor");

@@ -12,8 +12,8 @@ class TestShader : public Lunar::Shader
 public:
 	TestShader()
 			: Lunar::Shader("Test",
-							"LunarApp/src/shaders/Test/vertex_shader.glsl",
-							"LunarApp/src/shaders/Test/fragment_shader.glsl"
+							"LunarApp/src/Shaders/Test/vertex_shader.glsl",
+							"LunarApp/src/Shaders/Test/fragment_shader.glsl"
 	)
 	{};
 

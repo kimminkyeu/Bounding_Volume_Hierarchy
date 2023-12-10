@@ -23,8 +23,8 @@ private:
 public:
 	GridShader()
 		: Lunar::Shader("Grid",
-						"LunarApp/src/shaders/Grid/vertex_shader.glsl",
-						"LunarApp/src/shaders/Grid/fragment_shader.glsl"
+						"LunarApp/src/Shaders/Grid/vertex_shader.glsl",
+						"LunarApp/src/Shaders/Grid/fragment_shader.glsl"
 		  )
 				  {
 					  m_GridColorLocation = this->_GetUniformLocation("GridColor");

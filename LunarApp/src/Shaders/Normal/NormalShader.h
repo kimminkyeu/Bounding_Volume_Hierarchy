@@ -12,9 +12,9 @@ class NormalShader : public Lunar::Shader
 public:
 	NormalShader()
 		: Lunar::Shader("Normal",
-						"LunarApp/src/shaders/Normal/vertex_shader.glsl",
-						"LunarApp/src/shaders/Normal/fragment_shader.glsl",
-						"LunarApp/src/shaders/Normal/geometry_shader.glsl"
+						"LunarApp/src/Shaders/Normal/vertex_shader.glsl",
+						"LunarApp/src/Shaders/Normal/fragment_shader.glsl",
+						"LunarApp/src/Shaders/Normal/geometry_shader.glsl"
 		  ) {};
 
 private:

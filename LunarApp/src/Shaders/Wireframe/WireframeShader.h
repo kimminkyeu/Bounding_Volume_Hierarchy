@@ -16,9 +16,9 @@ private:
 public:
 	WireframeShader()
 		: Lunar::Shader("Wireframe",
-						"LunarApp/src/shaders/Wireframe/vertex_shader.glsl",
-						"LunarApp/src/shaders/Wireframe/fragment_shader.glsl",
-						"LunarApp/src/shaders/Wireframe/geometry_shader.glsl"
+						"LunarApp/src/Shaders/Wireframe/vertex_shader.glsl",
+						"LunarApp/src/Shaders/Wireframe/fragment_shader.glsl",
+						"LunarApp/src/Shaders/Wireframe/geometry_shader.glsl"
 		  )
 				  {
 					  m_WireframeColorLocation = this->_GetUniformLocation("WireframeColor");
