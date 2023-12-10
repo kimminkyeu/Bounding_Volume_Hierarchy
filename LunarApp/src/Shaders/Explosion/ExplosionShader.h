@@ -17,9 +17,9 @@ private:
 public:
 	ExplosionShader()
 		: Lunar::Shader("Explosion",
-									"LunarApp/src/shaders/Explosion/vertex_shader.glsl",
-									"LunarApp/src/shaders/Explosion/fragment_shader.glsl",
-									"LunarApp/src/shaders/Explosion/geometry_shader.glsl"
+									"LunarApp/src/Shaders/Explosion/vertex_shader.glsl",
+									"LunarApp/src/Shaders/Explosion/fragment_shader.glsl",
+									"LunarApp/src/Shaders/Explosion/geometry_shader.glsl"
 						)
 	{
 		m_DegreeLocation = this->_GetUniformLocation("ExplosionDegree");
