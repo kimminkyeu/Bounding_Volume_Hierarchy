@@ -94,9 +94,9 @@ public:
 	// 1. Create object
 //		 m_Model.LoadModel("LunarApp/assets/teapot2.obj");
 //		m_Model.LoadModel("LunarApp/assets/box.obj");
-//		m_Model.LoadModel("LunarApp/assets/bunny.obj");
+		m_Model.LoadModel("LunarApp/assets/bunny.obj");
 //				m_Model.LoadModel("LunarApp/assets/dragon.obj");
-		m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
+		// m_Model.LoadModel("LunarApp/assets/sphere.obj"); // 여기서 mtl까지 전부 load.
 //		m_Model.LoadModel("LunarApp/assets/42.obj");
 //		m_Model.LoadModel("LunarApp/assets/shaderBall.obj");
 
@@ -369,10 +369,10 @@ public:
 					ImGui::ColorEdit3("Background Color", glm::value_ptr(m_Background_Color));
 					if (currentShaderName == "Phong" || currentShaderName == "Cartoon")
 					{
-						ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Model.Material.m_AmbientColor));
-						ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Model.Material.m_DiffuseColor));
-						ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Model.Material.m_SpecularColor));
-						ImGui::DragFloat("Specular Exponent", &m_Model.Material.m_SpecularExponent);
+						ImGui::ColorEdit3("Ambient Color", glm::value_ptr(m_Model._Material.m_AmbientColor));
+						ImGui::ColorEdit3("Diffuse Color", glm::value_ptr(m_Model._Material.m_DiffuseColor));
+						ImGui::ColorEdit3("Specular Color", glm::value_ptr(m_Model._Material.m_SpecularColor));
+						ImGui::DragFloat("Specular Exponent", &m_Model._Material.m_SpecularExponent);
 					}
 					else if (currentShaderName == "Explosion")
 					{

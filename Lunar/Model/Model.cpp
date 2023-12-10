@@ -139,7 +139,7 @@ namespace Lunar {
 			{
 				m_TextureList[materialIndex]->UseTexture();
 //				m_MaterialList[materialIndex]->UseMaterial();
-                if (shader) { Material.Use(shader); }
+                if (shader) { this->_Material.Use(shader); }
 			}
 			m_MeshList[i]->RenderMesh(mode);
 		}

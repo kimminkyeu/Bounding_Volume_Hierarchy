@@ -25,7 +25,7 @@ namespace Lunar {
 		glm::mat4 ModelMatrix {1.0f}; // init unit matrix
 		std::vector<float> Vertices;
 		std::vector<unsigned int> Indices;
-        Material Material;
+        Material _Material;
 
 	public:
 		Model();
